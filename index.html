@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BookTrack — Share Your Reading</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">📚</span>
+      <h1>BookTrack</h1>
+      <span class="tagline">Strava for readers</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="controls">
+      <div class="card">
+        <h2>1. Upload a photo</h2>
+        <label class="upload-zone" id="uploadZone">
+          <input type="file" id="photoInput" accept="image/*" hidden />
+          <div class="upload-inner">
+            <span class="upload-icon">📷</span>
+            <span class="upload-text">Tap to choose a photo</span>
+            <span class="upload-hint">Book cover, reading nook, your shelf…</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>2. Your reading stats</h2>
+        <div class="grid two">
+          <label class="field">
+            <span>Book title</span>
+            <input type="text" id="bookTitle" placeholder="The Midnight Library" />
+          </label>
+          <label class="field">
+            <span>Author</span>
+            <input type="text" id="bookAuthor" placeholder="Matt Haig" />
+          </label>
+          <label class="field">
+            <span>Minutes read</span>
+            <input type="number" id="minutesRead" min="0" placeholder="42" />
+          </label>
+          <label class="field">
+            <span>Pages</span>
+            <input type="number" id="pagesRead" min="0" placeholder="58" />
+          </label>
+          <label class="field">
+            <span>Day streak 🔥</span>
+            <input type="number" id="streakDays" min="0" placeholder="12" />
+          </label>
+          <label class="field">
+            <span>Books this year</span>
+            <input type="number" id="booksYear" min="0" placeholder="17" />
+          </label>
+        </div>
+
+        <div class="field">
+          <span>Rating</span>
+          <div class="stars" id="stars" role="radiogroup" aria-label="Star rating">
+            <button type="button" class="star" data-value="1" aria-label="1 star">★</button>
+            <button type="button" class="star" data-value="2" aria-label="2 stars">★</button>
+            <button type="button" class="star" data-value="3" aria-label="3 stars">★</button>
+            <button type="button" class="star" data-value="4" aria-label="4 stars">★</button>
+            <button type="button" class="star" data-value="5" aria-label="5 stars">★</button>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Quote / note (optional)</span>
+          <textarea id="quote" rows="2" maxlength="140" placeholder="“We do not have to live as if we are one thing.”"></textarea>
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>3. Style</h2>
+        <div class="field">
+          <span>Format</span>
+          <div class="seg" id="formatSeg">
+            <button type="button" class="seg-btn active" data-format="square">Square 1:1</button>
+            <button type="button" class="seg-btn" data-format="story">Story 9:16</button>
+          </div>
+        </div>
+        <div class="field">
+          <span>Theme</span>
+          <div class="seg" id="themeSeg">
+            <button type="button" class="seg-btn active" data-theme="dark">Dark</button>
+            <button type="button" class="seg-btn" data-theme="light">Light</button>
+            <button type="button" class="seg-btn" data-theme="ember">Ember</button>
+            <button type="button" class="seg-btn" data-theme="forest">Forest</button>
+          </div>
+        </div>
+        <div class="field">
+          <span>Layout</span>
+          <div class="seg" id="layoutSeg">
+            <button type="button" class="seg-btn active" data-layout="bottom">Bottom card</button>
+            <button type="button" class="seg-btn" data-layout="top">Top banner</button>
+            <button type="button" class="seg-btn" data-layout="minimal">Minimal</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card actions">
+        <button id="downloadBtn" class="btn primary">⬇ Download</button>
+        <button id="shareBtn" class="btn">📤 Share to Instagram</button>
+        <p class="hint" id="shareHint">On mobile, Share opens Instagram and other apps directly.</p>
+      </div>
+    </section>
+
+    <section class="preview-wrap">
+      <div class="preview-shell" id="previewShell">
+        <canvas id="canvas" width="1080" height="1080"></canvas>
+        <div class="preview-empty" id="previewEmpty">
+          <span>📖</span>
+          <p>Upload a photo to start</p>
+        </div>
+      </div>
+      <p class="preview-caption">Live preview — exports at 1080px</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
