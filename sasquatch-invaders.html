@@ -197,8 +197,8 @@
       bClouds.push({ x: Math.random(), y: 0.16 + Math.random() * 0.28, s: 0.5 + Math.random() * 0.7, spd: 0.0008 + Math.random() * 0.0016 });
     }
   }
-  function bCloud(x, y, s) {
-    bctx.fillStyle = 'rgba(70,52,92,0.45)';
+  function bCloud(x, y, s, day) {
+    bctx.fillStyle = day ? 'rgba(255,255,255,0.5)' : 'rgba(70,52,92,0.45)';
     bctx.beginPath();
     bctx.ellipse(x, y, 26 * s, 9 * s, 0, 0, Math.PI*2);
     bctx.ellipse(x + 18 * s, y + 3 * s, 18 * s, 7 * s, 0, 0, Math.PI*2);
@@ -239,26 +239,29 @@
   function drawBanner(t) {
     if (!bClouds) initBanner();
     if (bW === 0) return;
-    // dusk sky
+    const th = theme();
+    const day = th.body === 'sun';
+    // sky matching the current level's time of day
     const g = bctx.createLinearGradient(0, 0, 0, bH);
-    g.addColorStop(0, '#2b1d4e'); g.addColorStop(0.5, '#5a3c79');
-    g.addColorStop(0.8, '#b1607e'); g.addColorStop(1, '#e6915a');
+    for (const s of th.sky) g.addColorStop(s[0], s[1]);
     bctx.fillStyle = g; bctx.fillRect(0, 0, bW, bH);
-    // twinkling stars
-    for (let i = 0; i < 30; i++) {
-      const x = (i * 73) % bW, y = (i * 41) % (bH * 0.5);
-      const tw = 0.4 + 0.6 * Math.abs(Math.sin(t / 600 + i));
-      bctx.fillStyle = `rgba(255,255,255,${0.5 * tw})`;
-      bctx.fillRect(x, y, 1.3, 1.3);
+    // twinkling stars (only when the sky is dark enough)
+    if (th.stars > 0) {
+      for (let i = 0; i < 30; i++) {
+        const x = (i * 73) % bW, y = (i * 41) % (bH * 0.5);
+        const tw = 0.4 + 0.6 * Math.abs(Math.sin(t / 600 + i));
+        bctx.fillStyle = `rgba(255,255,255,${th.stars * tw})`;
+        bctx.fillRect(x, y, 1.3, 1.3);
+      }
     }
-    // moon with glow
-    const mx = bW * 0.84, my = bH * 0.30, mr = Math.max(10, bH * 0.12);
-    const mg = bctx.createRadialGradient(mx, my, 2, mx, my, mr * 2.2);
-    mg.addColorStop(0, 'rgba(238,238,214,0.5)'); mg.addColorStop(1, 'rgba(238,238,214,0)');
-    bctx.fillStyle = mg; bctx.beginPath(); bctx.arc(mx, my, mr * 2.2, 0, Math.PI*2); bctx.fill();
-    bctx.fillStyle = 'rgba(240,240,218,0.95)'; bctx.beginPath(); bctx.arc(mx, my, mr, 0, Math.PI*2); bctx.fill();
-    // drifting clouds
-    for (const c of bClouds) { c.x += c.spd; if (c.x > 1.25) c.x = -0.25; bCloud(c.x * bW, c.y * bH, c.s); }
+    // sun or moon with glow
+    const cx = bW * 0.84, cy = bH * th.cy, cr = Math.max(9, bH * 0.13);
+    const cg = bctx.createRadialGradient(cx, cy, 2, cx, cy, cr * 2.4);
+    cg.addColorStop(0, th.glow); cg.addColorStop(1, 'rgba(255,255,255,0)');
+    bctx.fillStyle = cg; bctx.beginPath(); bctx.arc(cx, cy, cr * 2.4, 0, Math.PI*2); bctx.fill();
+    bctx.fillStyle = th.disc; bctx.beginPath(); bctx.arc(cx, cy, cr, 0, Math.PI*2); bctx.fill();
+    // drifting clouds (white by day, dusky by night)
+    for (const c of bClouds) { c.x += c.spd; if (c.x > 1.25) c.x = -0.25; bCloud(c.x * bW, c.y * bH, c.s, day); }
     // mountains
     bctx.fillStyle = '#412e5c';
     bctx.beginPath();
@@ -274,6 +277,15 @@
     }
     // Bigfoot among the trees
     bBigfoot(bW * 0.5, gy, t);
+    // time-of-day label
+    const lvl = Math.min(Math.max(wave, 1), 10);
+    bctx.textAlign = 'left';
+    bctx.font = `600 ${Math.max(12, Math.round(bH * 0.12))}px 'Trebuchet MS', sans-serif`;
+    bctx.shadowColor = day ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.65)';
+    bctx.shadowBlur = 4;
+    bctx.fillStyle = day ? 'rgba(28,26,48,0.9)' : 'rgba(245,240,225,0.95)';
+    bctx.fillText('Level ' + lvl + ' · ' + timeName(), 12, Math.max(18, bH * 0.17));
+    bctx.shadowBlur = 0;
   }
 
   const MAX_LIVES = 6;
@@ -1035,6 +1047,9 @@
     /* L10 night        */ { sky:[[0,'#080818'],[0.5,'#10102a'],[1,'#1c1c3a']],                   stars:1,    body:'moon', disc:'rgba(244,244,226,0.98)', glow:'rgba(238,238,214,0.5)',  cy:0.14 },
   ];
   function theme() { return SKY_THEMES[Math.min(Math.max(wave, 1), 10) - 1]; }
+  const TIME_NAMES = ['Early Morning', 'Morning', 'Late Morning', 'Midday', 'Afternoon',
+                      'Golden Hour', 'Sunset', 'Dusk', 'Twilight', 'Night'];
+  function timeName() { return TIME_NAMES[Math.min(Math.max(wave, 1), 10) - 1]; }
 
   function drawSky() {
     const th = theme();
