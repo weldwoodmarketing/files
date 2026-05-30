@@ -26,24 +26,24 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    height: 100vh;
-    gap: 12px;
-    padding: 12px;
-  }
-  #banner-wrap { width: min(92vw, 760px); }
-  #banner {
-    display: block;
-    width: 100%;
-    height: clamp(110px, 21vh, 200px);
-    border-radius: 12px;
-    border: 1px solid #2a2440;
-    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    justify-content: flex-start;
+    min-height: 100vh;
+    gap: 10px;
+    padding: 10px 12px 12px;
   }
   #title {
     display: block;
     width: min(92vw, 760px);
-    height: clamp(56px, 11vh, 92px);
+    height: clamp(56px, 10vh, 92px);
+  }
+  #timeofday {
+    width: min(92vw, 760px);
+    text-align: center;
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    color: var(--accent);
+    text-shadow: 0 1px 2px rgba(0,0,0,.5);
   }
   h1 {
     margin: 0;
@@ -128,6 +128,7 @@
     #overlay h2 { font-size: 22px; }
     #overlay p { font-size: 13.5px; max-width: 100%; }
     #overlay .keys { font-size: 12px; }
+    #timeofday { font-size: 13px; }
     .hint { font-size: 11px; }
     .big-emoji { font-size: 32px; }
     button { padding: 10px 22px; font-size: 16px; }
@@ -136,7 +137,6 @@
 </head>
 <body>
 <div id="wrap">
-  <div id="banner-wrap"><canvas id="banner"></canvas></div>
   <canvas id="title"></canvas>
   <div id="hud">
     <div><div class="label">Score</div><div class="val" id="score">0</div></div>
@@ -145,6 +145,7 @@
     <div><div class="label">Power</div><div class="val" id="power">—</div></div>
     <div><div class="label">Best</div><div class="val" id="best">0</div></div>
   </div>
+  <div id="timeofday" aria-live="polite">Level 1 · Early Morning</div>
   <div id="stage">
     <canvas id="game" width="800" height="600"></canvas>
     <div id="overlay">
@@ -175,56 +176,15 @@
   const livesEl = document.getElementById('lives');
   const powerEl = document.getElementById('power');
   const bestEl  = document.getElementById('best');
+  const timeEl  = document.getElementById('timeofday');
   const overlay = document.getElementById('overlay');
   const startBtn = document.getElementById('startBtn');
 
   let best = +(localStorage.getItem('sasquatchBest') || 0);
   bestEl.textContent = best;
 
-  // ---- Decorative animated banner ----
-  const banner = document.getElementById('banner');
-  const bctx = banner.getContext('2d');
-  let bW = 0, bH = 0;
-  let bClouds = null;
-  function fitBanner() {
-    const r = banner.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    bW = r.width; bH = r.height;
-    banner.width = Math.round(bW * dpr);
-    banner.height = Math.round(bH * dpr);
-    bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  window.addEventListener('resize', fitBanner);
-  function initBanner() {
-    fitBanner();
-    bClouds = [];
-    for (let i = 0; i < 4; i++) {
-      bClouds.push({ x: Math.random(), y: 0.16 + Math.random() * 0.28, s: 0.5 + Math.random() * 0.7, spd: 0.0008 + Math.random() * 0.0016 });
-    }
-  }
-  function bCloud(x, y, s, day) {
-    bctx.fillStyle = day ? 'rgba(255,255,255,0.5)' : 'rgba(70,52,92,0.45)';
-    bctx.beginPath();
-    bctx.ellipse(x, y, 26 * s, 9 * s, 0, 0, Math.PI*2);
-    bctx.ellipse(x + 18 * s, y + 3 * s, 18 * s, 7 * s, 0, 0, Math.PI*2);
-    bctx.ellipse(x - 18 * s, y + 3 * s, 16 * s, 6 * s, 0, 0, Math.PI*2);
-    bctx.fill();
-  }
-  function bPine(x, baseY, h, w, color) {
-    bctx.fillStyle = color;
-    for (let i = 0; i < 3; i++) {
-      const ly = baseY - i * (h * 0.30);
-      const lw = w * (1 - i * 0.24);
-      bctx.beginPath();
-      bctx.moveTo(x, ly - h * 0.42);
-      bctx.lineTo(x - lw / 2, ly);
-      bctx.lineTo(x + lw / 2, ly);
-      bctx.closePath();
-      bctx.fill();
-    }
-  }
   // Classic mid-stride Bigfoot silhouette (the Patterson pose), facing right.
-  // Outline points are in a 0..0 baseline space: x roughly -34..46, y -100 (crown) .. 0 (feet).
+  // Outline points: x roughly -34..46, y -100 (crown) .. 0 (feet). Used by the playable Sasquatch.
   const BF_OUTLINE = [
     [10,-100],[20,-98],[26,-92],[24,-84],          // crown, brow, jaw, neck
     [33,-66],[36,-48],[31,-35],                     // chest, belly, front hip
@@ -234,94 +194,6 @@
     [-15,-25],[-24,-44],[-27,-62],[-22,-82],        // buttock, lower back, mid back, shoulder hump
     [-6,-95]                                          // back of head
   ];
-  function bBigfoot(cx, gy, t, rim) {
-    const S = Math.min(bH * 0.62, 86) / 100;
-    bctx.save();
-    bctx.translate(cx + Math.sin(t / 900) * 1.2, gy);
-    bctx.scale(S, S);
-    bctx.lineJoin = 'round'; bctx.lineCap = 'round';
-    // body silhouette
-    bctx.fillStyle = '#0d0916';
-    bctx.beginPath();
-    bctx.moveTo(BF_OUTLINE[0][0], BF_OUTLINE[0][1]);
-    for (let i = 1; i < BF_OUTLINE.length; i++) bctx.lineTo(BF_OUTLINE[i][0], BF_OUTLINE[i][1]);
-    bctx.closePath(); bctx.fill();
-    // near arm swinging in front
-    const sw = Math.sin(t / 900) * 4;
-    bctx.strokeStyle = '#0d0916'; bctx.lineWidth = 12;
-    bctx.beginPath();
-    bctx.moveTo(19, -80);
-    bctx.quadraticCurveTo(33, -58, 27 + sw, -33);
-    bctx.stroke();
-    bctx.beginPath(); bctx.arc(27 + sw, -31, 6.5, 0, Math.PI*2); bctx.fill(); // hand
-    // rim light along the lit (right/front) edge
-    if (rim) {
-      bctx.strokeStyle = rim; bctx.lineWidth = 2.6; bctx.globalAlpha = 0.8;
-      bctx.beginPath();
-      bctx.moveTo(10, -100);
-      bctx.lineTo(20, -98); bctx.lineTo(26, -92); bctx.lineTo(24, -84);
-      bctx.lineTo(33, -66); bctx.lineTo(36, -48); bctx.lineTo(31, -35);
-      bctx.lineTo(35, -20); bctx.lineTo(46, -4);
-      bctx.stroke();
-      bctx.globalAlpha = 1;
-    }
-    // glowing eye near the face
-    const blink = (Math.sin(t / 1500 + 0.5) > 0.92) ? 0.1 : 1;
-    bctx.fillStyle = `rgba(224,170,72,${0.9 * blink})`;
-    bctx.beginPath(); bctx.arc(20, -90, 2.4, 0, Math.PI*2); bctx.fill();
-    bctx.restore();
-  }
-  function drawBanner(t) {
-    if (!bClouds) initBanner();
-    if (bW === 0) return;
-    const th = theme();
-    const day = th.body === 'sun';
-    // sky matching the current level's time of day
-    const g = bctx.createLinearGradient(0, 0, 0, bH);
-    for (const s of th.sky) g.addColorStop(s[0], s[1]);
-    bctx.fillStyle = g; bctx.fillRect(0, 0, bW, bH);
-    // twinkling stars (only when the sky is dark enough)
-    if (th.stars > 0) {
-      for (let i = 0; i < 30; i++) {
-        const x = (i * 73) % bW, y = (i * 41) % (bH * 0.5);
-        const tw = 0.4 + 0.6 * Math.abs(Math.sin(t / 600 + i));
-        bctx.fillStyle = `rgba(255,255,255,${th.stars * tw})`;
-        bctx.fillRect(x, y, 1.3, 1.3);
-      }
-    }
-    // sun or moon with glow
-    const cx = bW * 0.84, cy = bH * th.cy, cr = Math.max(9, bH * 0.13);
-    const cg = bctx.createRadialGradient(cx, cy, 2, cx, cy, cr * 2.4);
-    cg.addColorStop(0, th.glow); cg.addColorStop(1, 'rgba(255,255,255,0)');
-    bctx.fillStyle = cg; bctx.beginPath(); bctx.arc(cx, cy, cr * 2.4, 0, Math.PI*2); bctx.fill();
-    bctx.fillStyle = th.disc; bctx.beginPath(); bctx.arc(cx, cy, cr, 0, Math.PI*2); bctx.fill();
-    // drifting clouds (white by day, dusky by night)
-    for (const c of bClouds) { c.x += c.spd; if (c.x > 1.25) c.x = -0.25; bCloud(c.x * bW, c.y * bH, c.s, day); }
-    // mountains tinted to the time of day
-    bctx.fillStyle = th.mtn;
-    bctx.beginPath();
-    bctx.moveTo(0, bH); bctx.lineTo(0, bH * 0.72); bctx.lineTo(bW * 0.20, bH * 0.46);
-    bctx.lineTo(bW * 0.40, bH * 0.70); bctx.lineTo(bW * 0.62, bH * 0.42);
-    bctx.lineTo(bW * 0.85, bH * 0.68); bctx.lineTo(bW, bH * 0.50); bctx.lineTo(bW, bH);
-    bctx.closePath(); bctx.fill();
-    // treeline
-    const gy = bH - 1;
-    for (let x = -6; x < bW + 12; x += 22) {
-      const h = 14 + ((x * 37) % 6) * 3;
-      bPine(x, gy, h, 16, '#1a1228');
-    }
-    // Bigfoot among the trees, rim-lit by the sun/moon
-    bBigfoot(bW * 0.5, gy, t, th.rim);
-    // time-of-day label
-    const lvl = Math.min(Math.max(wave, 1), 10);
-    bctx.textAlign = 'left';
-    bctx.font = `600 ${Math.max(12, Math.round(bH * 0.12))}px 'Trebuchet MS', sans-serif`;
-    bctx.shadowColor = day ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.65)';
-    bctx.shadowBlur = 4;
-    bctx.fillStyle = day ? 'rgba(28,26,48,0.9)' : 'rgba(245,240,225,0.95)';
-    bctx.fillText('Level ' + lvl + ' · ' + timeName(), 12, Math.max(18, bH * 0.17));
-    bctx.shadowBlur = 0;
-  }
 
   // ---- Stick-letter game title: "CAMPSITE INVADERS" drawn from twigs ----
   const titleCanvas = document.getElementById('title');
@@ -586,6 +458,7 @@
     const now = performance.now();
     scoreEl.textContent = score;
     waveEl.textContent = wave;
+    timeEl.textContent = 'Level ' + Math.min(Math.max(wave, 1), 10) + ' · ' + timeName();
     livesEl.textContent = lives > 0 ? '🌲'.repeat(Math.min(lives, MAX_LIVES)) : '—';
     if (powerStacks > 0 && now < powerUntil) {
       const secs = Math.ceil((powerUntil - now) / 1000);
@@ -1284,7 +1157,6 @@
     update();
     updateCritters();
     render();
-    drawBanner(performance.now());
     if (!titleDrawn && titleCanvas.getBoundingClientRect().width > 0) { drawTitle(); titleDrawn = true; }
     requestAnimationFrame(loop);
   }
