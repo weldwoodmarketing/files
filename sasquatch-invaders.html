@@ -342,22 +342,38 @@
     'R': [[0,1,0,0],[0,0,0.8,0],[0.8,0,1,0.26],[1,0.26,0.8,0.52],[0.8,0.52,0,0.52],[0.36,0.52,1,1]],
     ' ': []
   };
+  function hash2(a, b) { const h = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return h - Math.floor(h); }
   function drawStick(x1, y1, x2, y2, wd) {
-    tctx.lineCap = 'round';
-    tctx.strokeStyle = '#2e1c0d'; tctx.lineWidth = wd + 2.5;            // bark outline
-    tctx.beginPath(); tctx.moveTo(x1, y1); tctx.lineTo(x2, y2); tctx.stroke();
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;                       // perpendicular
+    const bend = (hash2(x1 + x2, y1 + y2) - 0.5) * Math.min(len * 0.16, wd * 1.6); // gentle bow
+    const mx = (x1 + x2) / 2 + nx * bend, my = (y1 + y2) / 2 + ny * bend;
+    const curve = (col, w) => {
+      tctx.strokeStyle = col; tctx.lineWidth = w; tctx.lineCap = 'round';
+      tctx.beginPath(); tctx.moveTo(x1, y1); tctx.quadraticCurveTo(mx, my, x2, y2); tctx.stroke();
+    };
+    curve('#2e1c0d', wd + 2.5);                                // bark outline
     const g = tctx.createLinearGradient(x1, y1, x2, y2);
     g.addColorStop(0, '#7a5126'); g.addColorStop(0.5, '#9c6b34'); g.addColorStop(1, '#6e4a23');
-    tctx.strokeStyle = g; tctx.lineWidth = wd;                          // wood body
-    tctx.beginPath(); tctx.moveTo(x1, y1); tctx.lineTo(x2, y2); tctx.stroke();
-    tctx.strokeStyle = 'rgba(206,166,108,0.5)'; tctx.lineWidth = Math.max(1, wd * 0.26); // grain highlight
-    tctx.beginPath(); tctx.moveTo(x1, y1); tctx.lineTo(x2, y2); tctx.stroke();
-    const len = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.floor(len / 16)); // knots
+    curve(g, wd);                                              // wood body
+    curve('rgba(206,166,108,0.5)', Math.max(1, wd * 0.26));    // grain highlight
+    // knots along the (bowed) length
+    const n = Math.max(1, Math.floor(len / 16));
     tctx.fillStyle = 'rgba(58,36,16,0.55)';
     for (let i = 1; i <= n; i++) {
-      const f = i / (n + 1);
-      tctx.beginPath(); tctx.arc(x1 + (x2 - x1) * f, y1 + (y2 - y1) * f, wd * 0.17, 0, Math.PI*2); tctx.fill();
+      const f = i / (n + 1), b = bend * (1 - Math.abs(2 * f - 1));
+      tctx.beginPath(); tctx.arc(x1 + dx * f + nx * b, y1 + dy * f + ny * b, wd * 0.17, 0, Math.PI*2); tctx.fill();
     }
+    // little branch nubs sprouting off the twig
+    const ang = Math.atan2(dy, dx);
+    const nub = (f, dir, scl) => {
+      const bx = x1 + dx * f, by = y1 + dy * f, a = ang + dir, nl = wd * scl;
+      tctx.strokeStyle = '#5a3a1c'; tctx.lineWidth = Math.max(1.5, wd * 0.45); tctx.lineCap = 'round';
+      tctx.beginPath(); tctx.moveTo(bx, by); tctx.lineTo(bx + Math.cos(a) * nl, by + Math.sin(a) * nl); tctx.stroke();
+    };
+    const r1 = hash2(x1, y2), r2 = hash2(x2, y1);
+    if (r1 > 0.45) nub(0.28, r1 > 0.72 ? 0.9 : -0.9, 1.5);
+    if (r2 > 0.5)  nub(0.72, r2 > 0.75 ? -1.0 : 1.0, 1.3);
   }
   function drawTitle() {
     const r = titleCanvas.getBoundingClientRect();
@@ -794,80 +810,56 @@
   }
 
   // ---- Drawing ----
+  // The playable Sasquatch uses the same classic walking silhouette (BF_OUTLINE),
+  // rendered in brown fur, facing the direction of travel, with an animated throwing arm.
   function drawSasquatch(x, y) {
     const f = sasquatch.facing;
-    const bob = Math.sin(walkPhase) * 1.5;
-    const stride = Math.sin(walkPhase) * 6;
-    const fur = '#3a2a1a', furD = '#2a1d10', furL = '#4d3823';
+    const feetY = y + sasquatch.h / 2;
+    const S = sasquatch.h / 100;
+    const moving = keys.left || keys.right || pointerActive;
+    const bob = moving ? Math.sin(walkPhase) * 1.5 : 0;
+    const fur = '#5b432c', furD = '#3e2d1b', furL = '#7a5c3e';
 
-    // ground shadow (unflipped, on the ground)
+    // ground shadow
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(x, feetY);
     ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.beginPath(); ctx.ellipse(0, 42, 30, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 2, 30, 7, 0, 0, Math.PI*2); ctx.fill();
     ctx.restore();
 
     ctx.save();
-    ctx.translate(x, y + bob);
-    ctx.scale(f, 1);
+    ctx.translate(x, feetY + bob);
+    ctx.scale(f * S, S);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
-    // back arm (behind body)
-    ctx.strokeStyle = furD; ctx.lineWidth = 11; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-8, -14); ctx.quadraticCurveTo(-20, 2, -16, 22); ctx.stroke();
-
-    // legs, mid-stride
-    ctx.strokeStyle = fur; ctx.lineWidth = 15; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-4, 6); ctx.lineTo(-10 - stride, 38); ctx.stroke(); // back leg
-    ctx.beginPath(); ctx.moveTo(6, 6);  ctx.lineTo(12 + stride, 38); ctx.stroke(); // front leg
-    // big feet
-    ctx.fillStyle = furD;
-    ctx.beginPath(); ctx.ellipse(-12 - stride, 40, 10, 5, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(15 + stride, 40, 11, 5, 0, 0, Math.PI*2); ctx.fill();
-
-    // hulking, forward-leaning torso
+    // body silhouette
     ctx.fillStyle = fur;
     ctx.beginPath();
-    ctx.moveTo(-16, -18);
-    ctx.quadraticCurveTo(-22, 2, -13, 14);
-    ctx.quadraticCurveTo(0, 22, 16, 12);
-    ctx.quadraticCurveTo(23, -2, 16, -18);
-    ctx.quadraticCurveTo(20, -30, 8, -33);
-    ctx.quadraticCurveTo(-8, -35, -16, -18);
+    ctx.moveTo(BF_OUTLINE[0][0], BF_OUTLINE[0][1]);
+    for (let i = 1; i < BF_OUTLINE.length; i++) ctx.lineTo(BF_OUTLINE[i][0], BF_OUTLINE[i][1]);
     ctx.closePath(); ctx.fill();
-
-    // sloped head with heavy brow, no neck (classic Bigfoot profile)
-    ctx.beginPath();
-    ctx.moveTo(2, -26);
-    ctx.quadraticCurveTo(27, -29, 23, -44);   // jaw/brow pushed forward
-    ctx.quadraticCurveTo(17, -55, 2, -51);    // crown peak
-    ctx.quadraticCurveTo(-13, -47, -9, -30);  // sloping back of head
-    ctx.quadraticCurveTo(-5, -24, 2, -26);
-    ctx.closePath(); ctx.fill();
-
-    // lighter muzzle/face
-    ctx.fillStyle = furL;
-    ctx.beginPath(); ctx.ellipse(17, -35, 6.5, 8, 0.25, 0, Math.PI*2); ctx.fill();
-    // dark brow ridge
-    ctx.fillStyle = furD;
-    ctx.beginPath(); ctx.ellipse(13, -45, 9, 4, 0.1, 0, Math.PI*2); ctx.fill();
-    // eye
-    ctx.fillStyle = '#120c06';
-    ctx.beginPath(); ctx.arc(16, -40, 2, 0, Math.PI*2); ctx.fill();
-
-    // front / throwing arm (raises when throwing)
-    const tt = throwT;
-    const sx = 9, sy = -16;
-    const hx = 18 + (24 - 18) * tt;
-    const hy = 20 + (-42 - 20) * tt;
-    const ex = (sx + hx) / 2 + 7;
-    const ey = (sy + hy) / 2;
-    ctx.strokeStyle = fur; ctx.lineWidth = 12;
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(ex, ey, hx, hy); ctx.stroke();
-    if (tt > 0.25) { ctx.fillStyle = '#9a9a9a'; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI*2); ctx.fill(); }
 
     // shaggy fur fringe down the back
-    ctx.strokeStyle = furD; ctx.lineWidth = 2;
-    for (let i = 0; i < 5; i++) { const yy = -16 + i * 8; ctx.beginPath(); ctx.moveTo(-16, yy); ctx.lineTo(-23, yy + 3); ctx.stroke(); }
+    ctx.strokeStyle = furD; ctx.lineWidth = 2.5;
+    for (let i = 0; i < 6; i++) { const yy = -28 - i * 10; ctx.beginPath(); ctx.moveTo(-25, yy); ctx.lineTo(-32, yy - 4); ctx.stroke(); }
+
+    // throwing arm — hangs in front, swings up overhead when throwing
+    const tt = throwT;
+    const sx = 19, sy = -80;
+    const hx = 27 + (32 - 27) * tt;
+    const hy = -33 + (-106 - (-33)) * tt;
+    const ex = (sx + hx) / 2 + 9;
+    const ey = (sy + hy) / 2;
+    ctx.strokeStyle = fur; ctx.lineWidth = 13;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(ex, ey, hx, hy); ctx.stroke();
+    if (tt > 0.25) { ctx.fillStyle = '#9a9a9a'; ctx.beginPath(); ctx.arc(hx, hy, 6.5, 0, Math.PI*2); ctx.fill(); }
+    else { ctx.fillStyle = fur; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI*2); ctx.fill(); }
+
+    // lighter muzzle + eye near the face
+    ctx.fillStyle = furL;
+    ctx.beginPath(); ctx.ellipse(21, -88, 6, 7.5, 0.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#120c06';
+    ctx.beginPath(); ctx.arc(20, -91, 2.2, 0, Math.PI*2); ctx.fill();
 
     ctx.restore();
   }
