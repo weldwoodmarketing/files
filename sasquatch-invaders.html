@@ -31,6 +31,15 @@
     gap: 12px;
     padding: 12px;
   }
+  #banner-wrap { width: min(92vw, 760px); }
+  #banner {
+    display: block;
+    width: 100%;
+    height: clamp(110px, 21vh, 200px);
+    border-radius: 12px;
+    border: 1px solid #2a2440;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
   h1 {
     margin: 0;
     font-size: clamp(20px, 4vw, 34px);
@@ -122,6 +131,7 @@
 </head>
 <body>
 <div id="wrap">
+  <div id="banner-wrap"><canvas id="banner"></canvas></div>
   <h1>🦶 Sasquatch <span>Invaders</span> 🪨</h1>
   <div id="hud">
     <div><div class="label">Score</div><div class="val" id="score">0</div></div>
@@ -165,6 +175,106 @@
 
   let best = +(localStorage.getItem('sasquatchBest') || 0);
   bestEl.textContent = best;
+
+  // ---- Decorative animated banner ----
+  const banner = document.getElementById('banner');
+  const bctx = banner.getContext('2d');
+  let bW = 0, bH = 0;
+  let bClouds = null;
+  function fitBanner() {
+    const r = banner.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    bW = r.width; bH = r.height;
+    banner.width = Math.round(bW * dpr);
+    banner.height = Math.round(bH * dpr);
+    bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', fitBanner);
+  function initBanner() {
+    fitBanner();
+    bClouds = [];
+    for (let i = 0; i < 4; i++) {
+      bClouds.push({ x: Math.random(), y: 0.16 + Math.random() * 0.28, s: 0.5 + Math.random() * 0.7, spd: 0.0008 + Math.random() * 0.0016 });
+    }
+  }
+  function bCloud(x, y, s) {
+    bctx.fillStyle = 'rgba(70,52,92,0.45)';
+    bctx.beginPath();
+    bctx.ellipse(x, y, 26 * s, 9 * s, 0, 0, Math.PI*2);
+    bctx.ellipse(x + 18 * s, y + 3 * s, 18 * s, 7 * s, 0, 0, Math.PI*2);
+    bctx.ellipse(x - 18 * s, y + 3 * s, 16 * s, 6 * s, 0, 0, Math.PI*2);
+    bctx.fill();
+  }
+  function bPine(x, baseY, h, w, color) {
+    bctx.fillStyle = color;
+    for (let i = 0; i < 3; i++) {
+      const ly = baseY - i * (h * 0.30);
+      const lw = w * (1 - i * 0.24);
+      bctx.beginPath();
+      bctx.moveTo(x, ly - h * 0.42);
+      bctx.lineTo(x - lw / 2, ly);
+      bctx.lineTo(x + lw / 2, ly);
+      bctx.closePath();
+      bctx.fill();
+    }
+  }
+  function bBigfoot(cx, gy, t) {
+    const hgt = Math.min(bH * 0.55, 76);
+    const w = hgt * 0.52;
+    bctx.save();
+    bctx.translate(cx + Math.sin(t / 900) * 1.5, gy);
+    bctx.fillStyle = '#0d0916';
+    bctx.fillRect(-w * 0.30, -hgt * 0.34, w * 0.22, hgt * 0.34);  // back leg
+    bctx.fillRect(w * 0.08, -hgt * 0.34, w * 0.22, hgt * 0.34);   // front leg
+    bctx.beginPath(); bctx.ellipse(0, -hgt * 0.5, w * 0.44, hgt * 0.33, 0, 0, Math.PI*2); bctx.fill(); // body
+    bctx.fillRect(-w * 0.52, -hgt * 0.72, w * 0.16, hgt * 0.5);   // arms
+    bctx.fillRect(w * 0.36, -hgt * 0.72, w * 0.16, hgt * 0.5);
+    bctx.beginPath(); bctx.ellipse(0, -hgt * 0.84, w * 0.27, hgt * 0.22, 0, 0, Math.PI*2); bctx.fill(); // head
+    const blink = (Math.sin(t / 1500 + 0.5) > 0.92) ? 0.1 : 1;   // occasional blink
+    bctx.fillStyle = `rgba(224,170,72,${0.9 * blink})`;
+    bctx.beginPath(); bctx.arc(-w * 0.11, -hgt * 0.86, hgt * 0.032, 0, Math.PI*2); bctx.fill();
+    bctx.beginPath(); bctx.arc(w * 0.11, -hgt * 0.86, hgt * 0.032, 0, Math.PI*2); bctx.fill();
+    bctx.restore();
+  }
+  function drawBanner(t) {
+    if (!bClouds) initBanner();
+    if (bW === 0) return;
+    // dusk sky
+    const g = bctx.createLinearGradient(0, 0, 0, bH);
+    g.addColorStop(0, '#2b1d4e'); g.addColorStop(0.5, '#5a3c79');
+    g.addColorStop(0.8, '#b1607e'); g.addColorStop(1, '#e6915a');
+    bctx.fillStyle = g; bctx.fillRect(0, 0, bW, bH);
+    // twinkling stars
+    for (let i = 0; i < 30; i++) {
+      const x = (i * 73) % bW, y = (i * 41) % (bH * 0.5);
+      const tw = 0.4 + 0.6 * Math.abs(Math.sin(t / 600 + i));
+      bctx.fillStyle = `rgba(255,255,255,${0.5 * tw})`;
+      bctx.fillRect(x, y, 1.3, 1.3);
+    }
+    // moon with glow
+    const mx = bW * 0.84, my = bH * 0.30, mr = Math.max(10, bH * 0.12);
+    const mg = bctx.createRadialGradient(mx, my, 2, mx, my, mr * 2.2);
+    mg.addColorStop(0, 'rgba(238,238,214,0.5)'); mg.addColorStop(1, 'rgba(238,238,214,0)');
+    bctx.fillStyle = mg; bctx.beginPath(); bctx.arc(mx, my, mr * 2.2, 0, Math.PI*2); bctx.fill();
+    bctx.fillStyle = 'rgba(240,240,218,0.95)'; bctx.beginPath(); bctx.arc(mx, my, mr, 0, Math.PI*2); bctx.fill();
+    // drifting clouds
+    for (const c of bClouds) { c.x += c.spd; if (c.x > 1.25) c.x = -0.25; bCloud(c.x * bW, c.y * bH, c.s); }
+    // mountains
+    bctx.fillStyle = '#412e5c';
+    bctx.beginPath();
+    bctx.moveTo(0, bH); bctx.lineTo(0, bH * 0.72); bctx.lineTo(bW * 0.20, bH * 0.46);
+    bctx.lineTo(bW * 0.40, bH * 0.70); bctx.lineTo(bW * 0.62, bH * 0.42);
+    bctx.lineTo(bW * 0.85, bH * 0.68); bctx.lineTo(bW, bH * 0.50); bctx.lineTo(bW, bH);
+    bctx.closePath(); bctx.fill();
+    // treeline
+    const gy = bH - 1;
+    for (let x = -6; x < bW + 12; x += 22) {
+      const h = 14 + ((x * 37) % 6) * 3;
+      bPine(x, gy, h, 16, '#1a1228');
+    }
+    // Bigfoot among the trees
+    bBigfoot(bW * 0.5, gy, t);
+  }
 
   const MAX_LIVES = 6;
   const DOUBLE_MS = 12000;
@@ -1048,6 +1158,7 @@
     update();
     updateCritters();
     render();
+    drawBanner(performance.now());
     requestAnimationFrame(loop);
   }
   loop();
