@@ -41,7 +41,7 @@
   h1 span { color: var(--accent2); }
   #hud {
     display: flex;
-    gap: 24px;
+    gap: 18px;
     font-size: 16px;
     font-weight: bold;
     width: min(92vw, 760px);
@@ -53,6 +53,7 @@
   }
   #hud .label { color: #8aa; font-weight: normal; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
   #hud .val { color: var(--text); font-size: 20px; }
+  #hud #power.active { color: var(--accent); }
   #stage {
     position: relative;
     width: min(92vw, 760px);
@@ -83,7 +84,7 @@
   }
   #overlay.hidden { display: none; }
   #overlay h2 { margin: 0; font-size: clamp(22px, 5vw, 40px); color: var(--accent); }
-  #overlay p { margin: 0; max-width: 420px; line-height: 1.5; color: #cdd; }
+  #overlay p { margin: 0; max-width: 440px; line-height: 1.5; color: #cdd; }
   #overlay .keys { font-size: 14px; color: #9ab; }
   #overlay .keys b { color: var(--accent2); }
   button {
@@ -106,25 +107,26 @@
 </head>
 <body>
 <div id="wrap">
-  <h1>🦍 Sasquatch <span>Invaders</span> 🪨</h1>
+  <h1>🦶 Sasquatch <span>Invaders</span> 🪨</h1>
   <div id="hud">
     <div><div class="label">Score</div><div class="val" id="score">0</div></div>
     <div><div class="label">Wave</div><div class="val" id="wave">1</div></div>
     <div><div class="label">Lives</div><div class="val" id="lives">🌲🌲🌲</div></div>
+    <div><div class="label">Power</div><div class="val" id="power">—</div></div>
     <div><div class="label">Best</div><div class="val" id="best">0</div></div>
   </div>
   <div id="stage">
     <canvas id="game" width="800" height="600"></canvas>
     <div id="overlay">
-      <div class="big-emoji">🦍🪨🦝</div>
+      <div class="big-emoji">🦶🪨🦝</div>
       <h2>Sasquatch Invaders</h2>
-      <p>The raccoons raided the campsite! Help Sasquatch defend the forest by pelting them with rocks before they reach the ground.</p>
+      <p>The raccoons raided the campsite! Help Bigfoot defend the forest by pelting them with rocks before they reach the ground. Grab green power-ups to throw two rocks at once, clear a wave to earn an extra tree, and watch for the crowned boss raccoon — it takes three solid hits!</p>
       <div class="keys">
         Move: <b>◀ ▶</b> / <b>A D</b> &nbsp;•&nbsp; Throw rock: <b>Space</b><br>
         On mobile: <b>drag to move</b>, <b>tap to throw</b>
       </div>
       <button id="startBtn">Start Throwing</button>
-      <div class="hint">Don't let a raccoon touch the forest floor — and watch out for the acorns they chuck back!</div>
+      <div class="hint">Don't let a raccoon touch the campsite — and dodge the acorns they chuck back!</div>
     </div>
   </div>
 </div>
@@ -136,10 +138,12 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
+  const GROUND_Y = H - 18;
 
   const scoreEl = document.getElementById('score');
   const waveEl  = document.getElementById('wave');
   const livesEl = document.getElementById('lives');
+  const powerEl = document.getElementById('power');
   const bestEl  = document.getElementById('best');
   const overlay = document.getElementById('overlay');
   const startBtn = document.getElementById('startBtn');
@@ -147,32 +151,96 @@
   let best = +(localStorage.getItem('sasquatchBest') || 0);
   bestEl.textContent = best;
 
+  const MAX_LIVES = 6;
+  const DOUBLE_MS = 12000;
+
+  // ---- Sound (Web Audio) ----
+  let actx = null;
+  function ac() {
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    return actx;
+  }
+  let noiseBuffer = null;
+  function getNoise() {
+    const c = ac(); if (!c) return null;
+    if (!noiseBuffer) {
+      noiseBuffer = c.createBuffer(1, c.sampleRate * 0.4, c.sampleRate);
+      const d = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    return noiseBuffer;
+  }
+  // The squash/splat — filtered noise sweeping down + a wet pitch drop
+  function playSquash(big) {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    const src = c.createBufferSource(); src.buffer = getNoise();
+    const f = c.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(big ? 1100 : 850, t);
+    f.frequency.exponentialRampToValueAtTime(110, t + (big ? 0.26 : 0.18));
+    const g = c.createGain();
+    g.gain.setValueAtTime(big ? 0.6 : 0.45, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + (big ? 0.3 : 0.22));
+    src.connect(f); f.connect(g); g.connect(c.destination);
+    src.start(t); src.stop(t + 0.32);
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(big ? 360 : 460, t);
+    o.frequency.exponentialRampToValueAtTime(75, t + 0.17);
+    const og = c.createGain();
+    og.gain.setValueAtTime(0.28, t);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.19);
+    o.connect(og); og.connect(c.destination);
+    o.start(t); o.stop(t + 0.2);
+  }
+  function tone(freq, dur, type = 'square', vol = 0.2, slideTo = null) {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    const o = c.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function throwSound()   { tone(680, 0.05, 'triangle', 0.07, 320); }
+  function powerupSound() { tone(440,0.08,'square',0.18); setTimeout(()=>tone(660,0.08,'square',0.18),80); setTimeout(()=>tone(880,0.12,'square',0.18),160); }
+  function heartSound()   { tone(523,0.1,'sine',0.22); setTimeout(()=>tone(784,0.18,'sine',0.22),100); }
+  function hurtSound()    { tone(300,0.25,'sawtooth',0.2,80); }
+  function bossHitSound() { tone(150,0.12,'square',0.25,70); }
+
   // ---- Game state ----
   const STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3 };
   let state = STATE.MENU;
 
-  const sasquatch = { x: W/2, y: H - 56, w: 64, h: 72, speed: 6 };
+  const sasquatch = { x: W/2, y: GROUND_Y - 40, w: 56, h: 80, speed: 6, facing: 1 };
   let rocks = [];      // sasquatch's projectiles (going up)
   let acorns = [];     // raccoon projectiles (going down)
   let raccoons = [];
+  let boss = null;
+  let powerups = [];
   let particles = [];
+  let floats = [];
 
   let score = 0;
   let lives = 3;
   let wave = 1;
+  let doubleUntil = 0;
+  let walkPhase = 0;
+  let throwT = 0;
 
   // raccoon fleet movement
-  let fleetDir = 1;          // 1 = right, -1 = left
-  let fleetSpeed = 0.6;      // horizontal px per frame (scaled by wave)
-  let fleetDropPending = false;
+  let fleetDir = 1;
+  let fleetSpeed = 0.6;
 
   const keys = { left: false, right: false, fire: false };
   let lastShot = 0;
 
   // ---- Input ----
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { keys.left = true; sasquatch.facing = -1; }
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') { keys.right = true; sasquatch.facing = 1; }
     if (e.code === 'Space') { keys.fire = true; e.preventDefault(); }
     if (e.code === 'Enter' && state !== STATE.PLAY) startGame();
   });
@@ -192,13 +260,17 @@
   function onDown(e) {
     if (state !== STATE.PLAY) return;
     pointerActive = true;
-    sasquatch.x = pointerPos(e);
+    const nx = pointerPos(e);
+    sasquatch.facing = nx >= sasquatch.x ? 1 : -1;
+    sasquatch.x = nx;
     keys.fire = true;
     e.preventDefault();
   }
   function onMove(e) {
     if (!pointerActive) return;
-    sasquatch.x = pointerPos(e);
+    const nx = pointerPos(e);
+    if (Math.abs(nx - sasquatch.x) > 1) sasquatch.facing = nx > sasquatch.x ? 1 : -1;
+    sasquatch.x = nx;
     e.preventDefault();
   }
   function onUp() { pointerActive = false; keys.fire = false; }
@@ -209,16 +281,18 @@
   canvas.addEventListener('touchmove', onMove, { passive: false });
   window.addEventListener('touchend', onUp);
 
-  startBtn.addEventListener('click', startGame);
+  startBtn.addEventListener('click', () => { const c = ac(); if (c && c.state === 'suspended') c.resume(); startGame(); });
 
   // ---- Setup waves ----
   function spawnWave(n) {
     raccoons = [];
-    const cols = Math.min(4 + n, 9);
-    const rows = Math.min(2 + Math.floor(n / 2), 5);
-    const gapX = 78, gapY = 64;
+    boss = null;
+    const isBoss = (n % 4 === 0);
+    const cols = isBoss ? 5 : Math.min(4 + n, 9);
+    const rows = isBoss ? 2 : Math.min(2 + Math.floor(n / 2), 5);
+    const gapX = 78, gapY = 60;
     const startX = (W - (cols - 1) * gapX) / 2;
-    const startY = 70;
+    const startY = isBoss ? 150 : 70;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         raccoons.push({
@@ -231,14 +305,18 @@
         });
       }
     }
+    if (isBoss) {
+      boss = { x: W/2, y: 60, w: 96, h: 76, hp: 3, maxHp: 3, alive: true,
+               dir: 1, vx: 1.4 + n * 0.12, flash: 0, wob: 0, shootT: 50 };
+    }
     fleetDir = 1;
-    fleetSpeed = 0.5 + n * 0.18;
-    fleetDropPending = false;
+    fleetSpeed = 0.45 + n * 0.16;
   }
 
   function startGame() {
     score = 0; lives = 3; wave = 1;
-    rocks = []; acorns = []; particles = [];
+    rocks = []; acorns = []; particles = []; powerups = []; floats = [];
+    doubleUntil = 0;
     sasquatch.x = W / 2;
     spawnWave(wave);
     state = STATE.PLAY;
@@ -247,9 +325,17 @@
   }
 
   function updateHud() {
+    const now = performance.now();
     scoreEl.textContent = score;
     waveEl.textContent = wave;
-    livesEl.textContent = lives > 0 ? '🌲'.repeat(lives) : '—';
+    livesEl.textContent = lives > 0 ? '🌲'.repeat(Math.min(lives, MAX_LIVES)) : '—';
+    if (now < doubleUntil) {
+      powerEl.textContent = '2× ' + Math.ceil((doubleUntil - now) / 1000) + 's';
+      powerEl.classList.add('active');
+    } else {
+      powerEl.textContent = '—';
+      powerEl.classList.remove('active');
+    }
     bestEl.textContent = best;
   }
 
@@ -260,40 +346,47 @@
     overlay.classList.remove('hidden');
   }
 
-  // ---- Particles ----
+  // ---- Particles & floating text ----
   function burst(x, y, color, count = 12) {
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
       const s = 1 + Math.random() * 4;
-      particles.push({
-        x, y,
-        vx: Math.cos(a) * s,
-        vy: Math.sin(a) * s,
-        life: 1,
-        color
-      });
+      particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color });
     }
+  }
+  function floatText(x, y, text, color) {
+    floats.push({ x, y, text, color, life: 1 });
+  }
+
+  function spawnRock(x) {
+    rocks.push({ x, y: sasquatch.y - sasquatch.h/2, r: 8, vy: -9, spin: 0 });
+  }
+  function spawnPowerup(x, y) {
+    powerups.push({ x, y, vy: 2.1, spin: 0 });
   }
 
   // ---- Update ----
   function update() {
     if (state !== STATE.PLAY) return;
+    const now = performance.now();
 
     // Sasquatch movement
     if (keys.left)  sasquatch.x -= sasquatch.speed;
     if (keys.right) sasquatch.x += sasquatch.speed;
     sasquatch.x = Math.max(sasquatch.w/2, Math.min(W - sasquatch.w/2, sasquatch.x));
+    if (keys.left || keys.right || pointerActive) walkPhase += 0.25;
+    throwT = Math.max(0, throwT - 0.06);
 
     // Throw rocks
-    const now = performance.now();
-    if (keys.fire && now - lastShot > 320) {
+    if (keys.fire && now - lastShot > 300) {
       lastShot = now;
-      rocks.push({ x: sasquatch.x, y: sasquatch.y - sasquatch.h/2, r: 8, vy: -9, spin: 0 });
+      throwT = 1;
+      throwSound();
+      if (now < doubleUntil) { spawnRock(sasquatch.x - 12); spawnRock(sasquatch.x + 12); }
+      else spawnRock(sasquatch.x);
     }
 
-    // Move rocks
     rocks.forEach(rk => { rk.y += rk.vy; rk.spin += 0.3; });
-    rocks = rocks.filter(rk => rk.y > -20);
 
     // Fleet movement
     let hitEdge = false;
@@ -302,13 +395,8 @@
     for (const r of aliveRaccoons) {
       if (r.x + step > W - 28 || r.x + step < 28) { hitEdge = true; break; }
     }
-    if (hitEdge) {
-      fleetDir *= -1;
-      for (const r of raccoons) r.y += 22; // drop down
-    } else {
-      for (const r of raccoons) { r.x += step; }
-    }
-    // wobble
+    if (hitEdge) { fleetDir *= -1; for (const r of raccoons) r.y += 20; }
+    else { for (const r of raccoons) r.x += step; }
     for (const r of raccoons) r.wob += 0.05;
 
     // Raccoons throw acorns
@@ -316,54 +404,110 @@
       const shooter = aliveRaccoons[Math.floor(Math.random() * aliveRaccoons.length)];
       acorns.push({ x: shooter.x, y: shooter.y + shooter.h/2, r: 7, vy: 3 + wave * 0.25, spin: 0 });
     }
-    acorns.forEach(a => { a.y += a.vy; a.spin += 0.2; });
-    acorns = acorns.filter(a => a.y < H + 20);
 
-    // Collisions: rocks vs raccoons
+    // Boss
+    if (boss && boss.alive) {
+      boss.x += boss.vx * boss.dir;
+      if (boss.x > W - boss.w/2 - 10) { boss.dir = -1; boss.y += 12; }
+      if (boss.x < boss.w/2 + 10)     { boss.dir = 1;  boss.y += 12; }
+      boss.wob += 0.05;
+      if (boss.flash > 0) boss.flash -= 0.5;
+      boss.shootT -= 1;
+      if (boss.shootT <= 0) {
+        boss.shootT = 55 + Math.random() * 45;
+        acorns.push({ x: boss.x - 16, y: boss.y + boss.h/2, r: 8, vy: 3.2 + wave * 0.2, spin: 0 });
+        acorns.push({ x: boss.x + 16, y: boss.y + boss.h/2, r: 8, vy: 3.2 + wave * 0.2, spin: 0 });
+      }
+      if (boss.y + boss.h/2 >= sasquatch.y - sasquatch.h/2) { gameOver(); return; }
+    }
+
+    acorns.forEach(a => { a.y += a.vy; a.spin += 0.2; });
+
+    // Rocks vs boss & raccoons
     for (const rk of rocks) {
+      if (rk.y < -20) continue;
+      if (boss && boss.alive &&
+          Math.abs(rk.x - boss.x) < boss.w/2 + rk.r && Math.abs(rk.y - boss.y) < boss.h/2 + rk.r) {
+        rk.y = -100;
+        boss.hp--;
+        boss.flash = 6;
+        bossHitSound();
+        burst(rk.x, rk.y + 80, '#c9ced4', 8);
+        if (boss.hp <= 0) {
+          boss.alive = false;
+          playSquash(true);
+          burst(boss.x, boss.y, '#7a818b', 28);
+          score += 200;
+          spawnPowerup(boss.x, boss.y);
+          floatText(boss.x, boss.y, 'BOSS DOWN! +200', '#ffd23a');
+        }
+        continue;
+      }
       for (const r of raccoons) {
         if (!r.alive) continue;
         if (Math.abs(rk.x - r.x) < r.w/2 + rk.r && Math.abs(rk.y - r.y) < r.h/2 + rk.r) {
           r.alive = false;
-          rk.y = -100; // remove
-          score += 10 * (raccoons[0] ? 1 : 1) + (4 - Math.min(r.row,3)) * 5;
+          rk.y = -100;
+          score += 10 + (4 - Math.min(r.row, 3)) * 5;
+          playSquash(false);
           burst(r.x, r.y, '#9a7b53', 14);
+          if (Math.random() < 0.12) spawnPowerup(r.x, r.y);
           break;
         }
       }
     }
     rocks = rocks.filter(rk => rk.y > -20);
 
-    // Collisions: acorns vs sasquatch
+    // Acorns vs sasquatch
     for (const a of acorns) {
       if (Math.abs(a.x - sasquatch.x) < sasquatch.w/2 + a.r &&
-          Math.abs(a.y - sasquatch.y) < sasquatch.h/2 + a.r) {
+          Math.abs(a.y - (sasquatch.y - 6)) < sasquatch.h/2 + a.r) {
         a.y = H + 100;
+        hurtSound();
         loseLife();
         burst(sasquatch.x, sasquatch.y - 10, '#e87', 16);
       }
     }
     acorns = acorns.filter(a => a.y < H + 20);
 
-    // Raccoon reaches floor?
-    for (const r of raccoons) {
-      if (r.alive && r.y + r.h/2 >= sasquatch.y - sasquatch.h/2) {
-        gameOver();
-        return;
+    // Power-ups fall & get caught
+    powerups.forEach(p => { p.y += p.vy; p.spin += 0.12; });
+    for (const p of powerups) {
+      if (Math.abs(p.x - sasquatch.x) < sasquatch.w/2 + 16 &&
+          Math.abs(p.y - (sasquatch.y - 6)) < sasquatch.h/2 + 16) {
+        p.y = H + 200;
+        doubleUntil = Math.max(now, doubleUntil) + DOUBLE_MS;
+        powerupSound();
+        floatText(sasquatch.x, sasquatch.y - 50, 'DOUBLE ROCKS!', '#7fbf5a');
       }
+    }
+    powerups = powerups.filter(p => p.y < H + 30);
+
+    // Raccoon reaches campsite?
+    for (const r of raccoons) {
+      if (r.alive && r.y + r.h/2 >= sasquatch.y - sasquatch.h/2) { gameOver(); return; }
     }
 
     // Wave cleared?
-    if (raccoons.every(r => !r.alive)) {
+    if (raccoons.every(r => !r.alive) && (!boss || !boss.alive)) {
       wave++;
       score += 50;
       if (wave > 8) { winGame(); return; }
+      if (lives < MAX_LIVES) {
+        lives++;
+        floatText(sasquatch.x, sasquatch.y - 60, '+🌲 EXTRA TREE!', '#7fbf5a');
+        heartSound();
+      } else {
+        floatText(sasquatch.x, sasquatch.y - 60, 'WAVE CLEAR! +50', '#c9a06a');
+      }
       spawnWave(wave);
     }
 
-    // Particles
+    // Particles & floats
     particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 0.025; });
     particles = particles.filter(p => p.life > 0);
+    floats.forEach(fl => { fl.y -= 0.6; fl.life -= 0.012; });
+    floats = floats.filter(fl => fl.life > 0);
 
     updateHud();
   }
@@ -387,47 +531,86 @@
     if (score > best) { best = score; localStorage.setItem('sasquatchBest', best); }
     updateHud();
     showOverlay('🏆 Forest Defended!',
-      `Sasquatch cleared all 8 waves! Final score: ${score}. The campsite is safe... for now.`,
+      `Bigfoot cleared all 8 waves and bopped both boss raccoons! Final score: ${score}. The campsite is safe... for now.`,
       'Play Again');
   }
 
   // ---- Drawing ----
-  function drawSasquatch(x, y, w, h) {
+  function drawSasquatch(x, y) {
+    const f = sasquatch.facing;
+    const bob = Math.sin(walkPhase) * 1.5;
+    const stride = Math.sin(walkPhase) * 6;
+    const fur = '#3a2a1a', furD = '#2a1d10', furL = '#4d3823';
+
+    // ground shadow (unflipped, on the ground)
     ctx.save();
     ctx.translate(x, y);
-    // body
-    ctx.fillStyle = '#5b432c';
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(0, 42, 30, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(x, y + bob);
+    ctx.scale(f, 1);
+
+    // back arm (behind body)
+    ctx.strokeStyle = furD; ctx.lineWidth = 11; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-8, -14); ctx.quadraticCurveTo(-20, 2, -16, 22); ctx.stroke();
+
+    // legs, mid-stride
+    ctx.strokeStyle = fur; ctx.lineWidth = 15; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-4, 6); ctx.lineTo(-10 - stride, 38); ctx.stroke(); // back leg
+    ctx.beginPath(); ctx.moveTo(6, 6);  ctx.lineTo(12 + stride, 38); ctx.stroke(); // front leg
+    // big feet
+    ctx.fillStyle = furD;
+    ctx.beginPath(); ctx.ellipse(-12 - stride, 40, 10, 5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(15 + stride, 40, 11, 5, 0, 0, Math.PI*2); ctx.fill();
+
+    // hulking, forward-leaning torso
+    ctx.fillStyle = fur;
     ctx.beginPath();
-    ctx.ellipse(0, 6, w/2, h/2, 0, 0, Math.PI*2);
-    ctx.fill();
-    // belly
-    ctx.fillStyle = '#7a5c3e';
+    ctx.moveTo(-16, -18);
+    ctx.quadraticCurveTo(-22, 2, -13, 14);
+    ctx.quadraticCurveTo(0, 22, 16, 12);
+    ctx.quadraticCurveTo(23, -2, 16, -18);
+    ctx.quadraticCurveTo(20, -30, 8, -33);
+    ctx.quadraticCurveTo(-8, -35, -16, -18);
+    ctx.closePath(); ctx.fill();
+
+    // sloped head with heavy brow, no neck (classic Bigfoot profile)
     ctx.beginPath();
-    ctx.ellipse(0, 14, w/3, h/3, 0, 0, Math.PI*2);
-    ctx.fill();
-    // head
-    ctx.fillStyle = '#6b4f33';
-    ctx.beginPath();
-    ctx.ellipse(0, -h/2 + 6, w/3.4, h/3.6, 0, 0, Math.PI*2);
-    ctx.fill();
-    // face
-    ctx.fillStyle = '#c9a878';
-    ctx.beginPath();
-    ctx.ellipse(0, -h/2 + 9, w/6, h/7, 0, 0, Math.PI*2);
-    ctx.fill();
-    // eyes
-    ctx.fillStyle = '#1a1208';
-    ctx.beginPath(); ctx.arc(-6, -h/2 + 4, 2.6, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(6, -h/2 + 4, 2.6, 0, Math.PI*2); ctx.fill();
-    // arms holding rock
-    ctx.strokeStyle = '#5b432c';
-    ctx.lineWidth = 8;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-w/2 + 6, -2);
-    ctx.lineTo(0, -h/2 + 2);
-    ctx.lineTo(w/2 - 6, -2);
-    ctx.stroke();
+    ctx.moveTo(2, -26);
+    ctx.quadraticCurveTo(27, -29, 23, -44);   // jaw/brow pushed forward
+    ctx.quadraticCurveTo(17, -55, 2, -51);    // crown peak
+    ctx.quadraticCurveTo(-13, -47, -9, -30);  // sloping back of head
+    ctx.quadraticCurveTo(-5, -24, 2, -26);
+    ctx.closePath(); ctx.fill();
+
+    // lighter muzzle/face
+    ctx.fillStyle = furL;
+    ctx.beginPath(); ctx.ellipse(17, -35, 6.5, 8, 0.25, 0, Math.PI*2); ctx.fill();
+    // dark brow ridge
+    ctx.fillStyle = furD;
+    ctx.beginPath(); ctx.ellipse(13, -45, 9, 4, 0.1, 0, Math.PI*2); ctx.fill();
+    // eye
+    ctx.fillStyle = '#120c06';
+    ctx.beginPath(); ctx.arc(16, -40, 2, 0, Math.PI*2); ctx.fill();
+
+    // front / throwing arm (raises when throwing)
+    const tt = throwT;
+    const sx = 9, sy = -16;
+    const hx = 18 + (24 - 18) * tt;
+    const hy = 20 + (-42 - 20) * tt;
+    const ex = (sx + hx) / 2 + 7;
+    const ey = (sy + hy) / 2;
+    ctx.strokeStyle = fur; ctx.lineWidth = 12;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(ex, ey, hx, hy); ctx.stroke();
+    if (tt > 0.25) { ctx.fillStyle = '#9a9a9a'; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI*2); ctx.fill(); }
+
+    // shaggy fur fringe down the back
+    ctx.strokeStyle = furD; ctx.lineWidth = 2;
+    for (let i = 0; i < 5; i++) { const yy = -16 + i * 8; ctx.beginPath(); ctx.moveTo(-16, yy); ctx.lineTo(-23, yy + 3); ctx.stroke(); }
+
     ctx.restore();
   }
 
@@ -436,30 +619,69 @@
     ctx.save();
     ctx.translate(r.x, r.y + bob);
     const w = r.w, h = r.h;
-    // ears
     ctx.fillStyle = '#7a7d82';
     ctx.beginPath(); ctx.moveTo(-w/3,-h/2+2); ctx.lineTo(-w/5,-h/2-8); ctx.lineTo(-w/9,-h/2+2); ctx.fill();
     ctx.beginPath(); ctx.moveTo(w/3,-h/2+2); ctx.lineTo(w/5,-h/2-8); ctx.lineTo(w/9,-h/2+2); ctx.fill();
-    // head/body
     ctx.fillStyle = '#9098a0';
     ctx.beginPath(); ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
-    // face lighter
     ctx.fillStyle = '#d8dde2';
     ctx.beginPath(); ctx.ellipse(0, 4, w/2.6, h/2.4, 0, 0, Math.PI*2); ctx.fill();
-    // mask
     ctx.fillStyle = '#2c2c30';
     ctx.beginPath(); ctx.ellipse(-7, 0, 7, 6, 0.3, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(7, 0, 7, 6, -0.3, 0, Math.PI*2); ctx.fill();
-    // eyes
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(-7,0,2.4,0,Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(7,0,2.4,0,Math.PI*2); ctx.fill();
     ctx.fillStyle = '#000';
     ctx.beginPath(); ctx.arc(-7,0,1.2,0,Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(7,0,1.2,0,Math.PI*2); ctx.fill();
-    // nose
     ctx.fillStyle = '#1a1a1a';
     ctx.beginPath(); ctx.moveTo(-3,8); ctx.lineTo(3,8); ctx.lineTo(0,12); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBoss(b) {
+    ctx.save();
+    ctx.translate(b.x, b.y + Math.sin(b.wob) * 3);
+    if (b.flash > 0) ctx.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(b.flash * 2.5));
+    const w = b.w, h = b.h;
+    // ears
+    ctx.fillStyle = '#6b7078';
+    ctx.beginPath(); ctx.moveTo(-w/3,-h/2+4); ctx.lineTo(-w/5,-h/2-14); ctx.lineTo(-w/9,-h/2+4); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(w/3,-h/2+4); ctx.lineTo(w/5,-h/2-14); ctx.lineTo(w/9,-h/2+4); ctx.fill();
+    // body
+    ctx.fillStyle = '#7a818b';
+    ctx.beginPath(); ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#c9ced4';
+    ctx.beginPath(); ctx.ellipse(0, 6, w/2.5, h/2.4, 0, 0, Math.PI*2); ctx.fill();
+    // mask
+    ctx.fillStyle = '#1f1f24';
+    ctx.beginPath(); ctx.ellipse(-12, -2, 11, 9, 0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(12, -2, 11, 9, -0.3, 0, Math.PI*2); ctx.fill();
+    // angry glowing eyes
+    ctx.fillStyle = '#ffd23a';
+    ctx.beginPath(); ctx.arc(-12,-2,3.4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(12,-2,3.4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(-12,-1,1.6,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(12,-1,1.6,0,Math.PI*2); ctx.fill();
+    // nose
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.moveTo(-5,12); ctx.lineTo(5,12); ctx.lineTo(0,18); ctx.fill();
+    // crown
+    ctx.fillStyle = '#ffcf33';
+    const cy = -h/2 - 2;
+    ctx.beginPath();
+    ctx.moveTo(-17, cy); ctx.lineTo(-17, cy-12); ctx.lineTo(-8, cy-4);
+    ctx.lineTo(0, cy-15); ctx.lineTo(8, cy-4); ctx.lineTo(17, cy-12);
+    ctx.lineTo(17, cy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(0, cy-9, 2, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // hp bar
+    ctx.fillStyle = '#311'; ctx.fillRect(-w/2, -h/2 - 28, w, 7);
+    ctx.fillStyle = '#e05050'; ctx.fillRect(-w/2, -h/2 - 28, w * (b.hp / b.maxHp), 7);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(-w/2, -h/2 - 28, w, 7);
     ctx.restore();
   }
 
@@ -469,13 +691,8 @@
     ctx.rotate(rk.spin);
     ctx.fillStyle = '#8b8b8b';
     ctx.beginPath();
-    ctx.moveTo(-rk.r, 0);
-    ctx.lineTo(-rk.r*0.4, -rk.r);
-    ctx.lineTo(rk.r*0.7, -rk.r*0.6);
-    ctx.lineTo(rk.r, rk.r*0.3);
-    ctx.lineTo(0, rk.r);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(-rk.r, 0); ctx.lineTo(-rk.r*0.4, -rk.r); ctx.lineTo(rk.r*0.7, -rk.r*0.6);
+    ctx.lineTo(rk.r, rk.r*0.3); ctx.lineTo(0, rk.r); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#a9a9a9';
     ctx.beginPath(); ctx.arc(-1, -1, rk.r*0.35, 0, Math.PI*2); ctx.fill();
     ctx.restore();
@@ -485,23 +702,81 @@
     ctx.save();
     ctx.translate(a.x, a.y);
     ctx.rotate(a.spin * 0.3);
-    // nut
     ctx.fillStyle = '#b5793a';
     ctx.beginPath(); ctx.ellipse(0, 2, a.r, a.r*1.2, 0, 0, Math.PI*2); ctx.fill();
-    // cap
     ctx.fillStyle = '#6b4423';
     ctx.beginPath(); ctx.ellipse(0, -a.r*0.6, a.r*1.1, a.r*0.7, 0, Math.PI, 0); ctx.fill();
     ctx.fillRect(-1, -a.r*1.3, 2, 4);
     ctx.restore();
   }
 
+  function drawPowerup(p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    const pulse = 0.6 + 0.4 * Math.sin(p.spin * 3);
+    ctx.fillStyle = `rgba(127,191,90,${0.3 * pulse})`;
+    ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#23381a';
+    ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#7fbf5a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = '#c9ced4';
+    ctx.beginPath(); ctx.arc(-4, 0, 4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(5, 1, 4, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCampsite() {
+    const gy = GROUND_Y;
+    const t = performance.now() / 120;
+
+    // Tent (left)
+    const tx = 84;
+    ctx.fillStyle = '#3f5d78';
+    ctx.beginPath(); ctx.moveTo(tx, gy); ctx.lineTo(tx + 34, gy - 48); ctx.lineTo(tx + 52, gy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5e86ab';
+    ctx.beginPath(); ctx.moveTo(tx - 48, gy); ctx.lineTo(tx + 34, gy - 48); ctx.lineTo(tx + 22, gy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#21303d';
+    ctx.beginPath(); ctx.moveTo(tx - 6, gy); ctx.lineTo(tx + 8, gy - 32); ctx.lineTo(tx + 8, gy); ctx.closePath(); ctx.fill();
+    // tent pole tip
+    ctx.strokeStyle = '#2a3a48'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(tx + 34, gy - 48); ctx.lineTo(tx + 34, gy - 56); ctx.stroke();
+
+    // Campfire (right)
+    const fx = W - 110;
+    const fl = 0.7 + 0.3 * Math.sin(t * 3);
+    const grd = ctx.createRadialGradient(fx, gy - 10, 2, fx, gy - 10, 46);
+    grd.addColorStop(0, `rgba(255,170,60,${0.40 * fl})`);
+    grd.addColorStop(1, 'rgba(255,140,40,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(fx, gy - 10, 46, 0, Math.PI*2); ctx.fill();
+    // logs
+    ctx.strokeStyle = '#5a3a1e'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(fx - 16, gy - 2); ctx.lineTo(fx + 16, gy - 10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fx - 16, gy - 10); ctx.lineTo(fx + 16, gy - 2); ctx.stroke();
+    // flames
+    function flame(h, w, col) {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(fx - w, gy - 8);
+      ctx.quadraticCurveTo(fx - w * 0.3, gy - 8 - h * 0.6, fx, gy - 8 - h);
+      ctx.quadraticCurveTo(fx + w * 0.3, gy - 8 - h * 0.6, fx + w, gy - 8);
+      ctx.quadraticCurveTo(fx, gy - 2, fx - w, gy - 8);
+      ctx.fill();
+    }
+    flame(30 * fl + 12, 12, '#ff8c1a');
+    flame(20 * fl + 7, 8, '#ffd24a');
+
+    // a log seat between them
+    ctx.strokeStyle = '#5a3a1e'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(W/2 - 30, gy - 4); ctx.lineTo(W/2 + 30, gy - 4); ctx.stroke();
+  }
+
   function drawGround() {
     ctx.fillStyle = '#23180e';
-    ctx.fillRect(0, H - 18, W, 18);
+    ctx.fillRect(0, GROUND_Y, W, 18);
     ctx.fillStyle = '#2e2113';
-    for (let i = 0; i < W; i += 24) {
-      ctx.fillRect(i, H - 18, 12, 4);
-    }
+    for (let i = 0; i < W; i += 24) ctx.fillRect(i, GROUND_Y, 12, 4);
   }
 
   function drawStars() {
@@ -512,7 +787,6 @@
       const s = (i % 3) * 0.6 + 0.4;
       ctx.fillRect(x, y, s, s);
     }
-    // moon
     ctx.fillStyle = 'rgba(230,230,200,0.35)';
     ctx.beginPath(); ctx.arc(W - 80, 70, 34, 0, Math.PI*2); ctx.fill();
   }
@@ -521,22 +795,34 @@
     ctx.clearRect(0, 0, W, H);
     drawStars();
     drawGround();
+    drawCampsite();
 
     for (const r of raccoons) if (r.alive) drawRaccoon(r);
+    if (boss && boss.alive) drawBoss(boss);
+    powerups.forEach(drawPowerup);
     rocks.forEach(drawRock);
     acorns.forEach(drawAcorn);
 
     if (state === STATE.PLAY || state === STATE.OVER || state === STATE.WIN) {
-      drawSasquatch(sasquatch.x, sasquatch.y, sasquatch.w, sasquatch.h);
+      drawSasquatch(sasquatch.x, sasquatch.y);
     }
 
-    // particles
     for (const p of particles) {
       ctx.globalAlpha = Math.max(0, p.life);
       ctx.fillStyle = p.color;
       ctx.fillRect(p.x, p.y, 3, 3);
     }
     ctx.globalAlpha = 1;
+
+    for (const fl of floats) {
+      ctx.globalAlpha = Math.max(0, fl.life);
+      ctx.fillStyle = fl.color;
+      ctx.font = 'bold 18px Trebuchet MS, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(fl.text, fl.x, fl.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
   }
 
   function loop() {
