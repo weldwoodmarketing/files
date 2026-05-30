@@ -77,10 +77,11 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    background: rgba(8,14,10,.82);
+    background: rgba(8,14,10,.80);
     border-radius: 12px;
     gap: 14px;
     padding: 20px;
+    overflow-y: auto;       /* keep content inside the stage, never over the HUD */
   }
   #overlay.hidden { display: none; }
   #overlay h2 { margin: 0; font-size: clamp(22px, 5vw, 40px); color: var(--accent); }
@@ -102,7 +103,21 @@
   }
   button:active { transform: translateY(3px); box-shadow: 0 1px 0 #4f7d36; }
   .hint { font-size: 13px; color: #789; }
-  .big-emoji { font-size: 48px; }
+  .big-emoji { font-size: 44px; line-height: 1; }
+
+  /* Keep everything legible and non-overlapping on phones */
+  @media (max-width: 560px) {
+    #hud { gap: 6px; padding: 6px 10px; }
+    #hud .label { font-size: 9px; letter-spacing: .5px; }
+    #hud .val { font-size: 15px; }
+    #overlay { gap: 9px; padding: 14px; }
+    #overlay h2 { font-size: 22px; }
+    #overlay p { font-size: 13.5px; max-width: 100%; }
+    #overlay .keys { font-size: 12px; }
+    .hint { font-size: 11px; }
+    .big-emoji { font-size: 32px; }
+    button { padding: 10px 22px; font-size: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -120,7 +135,7 @@
     <div id="overlay">
       <div class="big-emoji">🦶🪨🦝</div>
       <h2>Sasquatch Invaders</h2>
-      <p>The raccoons raided the campsite! Help Bigfoot defend the forest across 10 levels by pelting them with rocks before they reach the ground. Every level is guarded by a crowned boss raccoon that gets tougher each time — 10 hits on level 1, 15 on level 2, all the way to 55! Every green power-up adds another rock to your throw — stack them up, and at 5 your rocks turn into lasers. Clear a level to earn an extra tree.</p>
+      <p>The raccoons raided the campsite! Move Bigfoot and pelt them with rocks before they reach the ground. Grab green power-ups to add a rock each time — hit 5 and they turn into lasers. Every level has a crowned boss that gets tougher (10 hits, then 15… up to 55). Clear all 10 levels to win!</p>
       <div class="keys">
         Move: <b>◀ ▶</b> / <b>A D</b> &nbsp;•&nbsp; Throw rock: <b>Space</b><br>
         On mobile: <b>drag to move</b>, <b>tap to throw</b>
@@ -899,17 +914,92 @@
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     for (let i = 0; i < 40; i++) {
       const x = (i * 97) % W;
-      const y = (i * 53) % (H * 0.5);
+      const y = (i * 53) % (H * 0.42);
       const s = (i % 3) * 0.6 + 0.4;
       ctx.fillRect(x, y, s, s);
     }
-    ctx.fillStyle = 'rgba(230,230,200,0.35)';
-    ctx.beginPath(); ctx.arc(W - 80, 70, 34, 0, Math.PI*2); ctx.fill();
+    // glowing moon
+    ctx.save();
+    const mg = ctx.createRadialGradient(W - 110, 78, 6, W - 110, 78, 60);
+    mg.addColorStop(0, 'rgba(235,235,210,0.45)');
+    mg.addColorStop(1, 'rgba(235,235,210,0)');
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(W - 110, 78, 60, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(238,238,214,0.9)';
+    ctx.beginPath(); ctx.arc(W - 110, 78, 30, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // A single mountain range as a jagged silhouette; peaks given as [xFrac, yFrac]
+  function drawRange(peaks, color, snow) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (const p of peaks) ctx.lineTo(p[0] * W, p[1] * H);
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+    if (snow) {
+      ctx.fillStyle = 'rgba(220,228,235,0.55)';
+      for (let i = 1; i < peaks.length - 1; i++) {
+        const px = peaks[i][0] * W, py = peaks[i][1] * H;
+        if (peaks[i][1] < peaks[i-1][1] && peaks[i][1] < peaks[i+1][1]) {
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px - 14, py + 18);
+          ctx.lineTo(px - 4, py + 12);
+          ctx.lineTo(px + 4, py + 18);
+          ctx.lineTo(px + 13, py + 11);
+          ctx.lineTo(px + 20, py + 18);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  function drawMountains() {
+    // far range
+    drawRange([[0,0.46],[0.10,0.34],[0.20,0.44],[0.32,0.30],[0.45,0.43],
+               [0.58,0.33],[0.72,0.45],[0.85,0.36],[1,0.44]], '#1a2a32', false);
+    // near range (taller, snow-capped)
+    drawRange([[0,0.58],[0.14,0.40],[0.27,0.55],[0.40,0.36],[0.52,0.52],
+               [0.66,0.38],[0.80,0.55],[0.92,0.44],[1,0.56]], '#13222a', true);
+  }
+
+  // Layered pine silhouette
+  function pine(x, baseY, h, w, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 1.5, baseY - 3, 3, 4);
+    for (let i = 0; i < 3; i++) {
+      const ly = baseY - 3 - i * (h * 0.30);
+      const lw = w * (1 - i * 0.24);
+      ctx.beginPath();
+      ctx.moveTo(x, ly - h * 0.42);
+      ctx.lineTo(x - lw / 2, ly);
+      ctx.lineTo(x + lw / 2, ly);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawTrees() {
+    const baseY = GROUND_Y + 2;
+    // distant treeline band along the foot of the mountains
+    for (let x = -8; x < W + 20; x += 24) {
+      const h = 26 + ((x * 37) % 7) * 4;
+      pine(x, GROUND_Y - 6, h, 20, '#0d1b13');
+    }
+    // a couple of larger foreground pines framing the edges
+    pine(26, baseY, 96, 46, '#0a160e');
+    pine(W - 30, baseY, 110, 52, '#0a160e');
   }
 
   function render() {
     ctx.clearRect(0, 0, W, H);
     drawStars();
+    drawMountains();
+    drawTrees();
     drawGround();
     drawCampsite();
     for (const c of critters) drawCritter(c);
