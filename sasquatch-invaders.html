@@ -218,7 +218,7 @@
       bctx.fill();
     }
   }
-  function bBigfoot(cx, gy, t) {
+  function bBigfoot(cx, gy, t, rim) {
     const hgt = Math.min(bH * 0.55, 76);
     const w = hgt * 0.52;
     bctx.save();
@@ -230,6 +230,15 @@
     bctx.fillRect(-w * 0.52, -hgt * 0.72, w * 0.16, hgt * 0.5);   // arms
     bctx.fillRect(w * 0.36, -hgt * 0.72, w * 0.16, hgt * 0.5);
     bctx.beginPath(); bctx.ellipse(0, -hgt * 0.84, w * 0.27, hgt * 0.22, 0, 0, Math.PI*2); bctx.fill(); // head
+    // rim light on the side facing the sun/moon (which sits to the right)
+    if (rim) {
+      bctx.strokeStyle = rim;
+      bctx.lineWidth = Math.max(1, hgt * 0.04);
+      bctx.globalAlpha = 0.75;
+      bctx.beginPath(); bctx.ellipse(0, -hgt * 0.5, w * 0.44, hgt * 0.33, 0, -Math.PI/2, Math.PI/2); bctx.stroke();
+      bctx.beginPath(); bctx.ellipse(0, -hgt * 0.84, w * 0.27, hgt * 0.22, 0, -Math.PI/2, Math.PI/2); bctx.stroke();
+      bctx.globalAlpha = 1;
+    }
     const blink = (Math.sin(t / 1500 + 0.5) > 0.92) ? 0.1 : 1;   // occasional blink
     bctx.fillStyle = `rgba(224,170,72,${0.9 * blink})`;
     bctx.beginPath(); bctx.arc(-w * 0.11, -hgt * 0.86, hgt * 0.032, 0, Math.PI*2); bctx.fill();
@@ -262,8 +271,8 @@
     bctx.fillStyle = th.disc; bctx.beginPath(); bctx.arc(cx, cy, cr, 0, Math.PI*2); bctx.fill();
     // drifting clouds (white by day, dusky by night)
     for (const c of bClouds) { c.x += c.spd; if (c.x > 1.25) c.x = -0.25; bCloud(c.x * bW, c.y * bH, c.s, day); }
-    // mountains
-    bctx.fillStyle = '#412e5c';
+    // mountains tinted to the time of day
+    bctx.fillStyle = th.mtn;
     bctx.beginPath();
     bctx.moveTo(0, bH); bctx.lineTo(0, bH * 0.72); bctx.lineTo(bW * 0.20, bH * 0.46);
     bctx.lineTo(bW * 0.40, bH * 0.70); bctx.lineTo(bW * 0.62, bH * 0.42);
@@ -275,8 +284,8 @@
       const h = 14 + ((x * 37) % 6) * 3;
       bPine(x, gy, h, 16, '#1a1228');
     }
-    // Bigfoot among the trees
-    bBigfoot(bW * 0.5, gy, t);
+    // Bigfoot among the trees, rim-lit by the sun/moon
+    bBigfoot(bW * 0.5, gy, t, th.rim);
     // time-of-day label
     const lvl = Math.min(Math.max(wave, 1), 10);
     bctx.textAlign = 'left';
@@ -1035,16 +1044,16 @@
   // One sky theme per level: a full day cycle from early morning (L1) to night (L10).
   // body: 'sun' | 'moon' | 'none'; cy = celestial height (lower = nearer the horizon)
   const SKY_THEMES = [
-    /* L1 early morning */ { sky:[[0,'#1b2450'],[0.45,'#4b4a7e'],[0.72,'#c98a86'],[1,'#f0b97a']], stars:0.45, body:'sun',  disc:'#ffd9a0', glow:'rgba(255,190,130,0.45)', cy:0.30 },
-    /* L2 morning       */ { sky:[[0,'#5a93c8'],[0.55,'#9ec8e6'],[1,'#ffe6b8']],                 stars:0,    body:'sun',  disc:'#fff2c0', glow:'rgba(255,235,160,0.5)',  cy:0.26 },
-    /* L3 late morning  */ { sky:[[0,'#4486cc'],[0.55,'#86bce6'],[1,'#dff0fb']],                 stars:0,    body:'sun',  disc:'#fffbe0', glow:'rgba(255,250,210,0.45)', cy:0.20 },
-    /* L4 midday        */ { sky:[[0,'#3f7fd2'],[0.55,'#6fa9e2'],[1,'#c4e3f6']],                 stars:0,    body:'sun',  disc:'#ffffff', glow:'rgba(255,255,235,0.5)',  cy:0.15 },
-    /* L5 afternoon     */ { sky:[[0,'#4a82c6'],[0.55,'#8bb6d8'],[1,'#f2e4b6']],                 stars:0,    body:'sun',  disc:'#fff6d2', glow:'rgba(255,240,180,0.5)',  cy:0.20 },
-    /* L6 golden hour   */ { sky:[[0,'#3f5690'],[0.45,'#9c6f86'],[0.78,'#e0a35e'],[1,'#ffd884']], stars:0,    body:'sun',  disc:'#ffdf8c', glow:'rgba(255,200,110,0.55)', cy:0.30 },
-    /* L7 sunset        */ { sky:[[0,'#2a2f70'],[0.45,'#7e447e'],[0.72,'#d2604a'],[1,'#ffae52']], stars:0.2,  body:'sun',  disc:'#ff8a4a', glow:'rgba(255,120,70,0.5)',   cy:0.40 },
-    /* L8 dusk          */ { sky:[[0,'#2b1d4e'],[0.5,'#5a3c79'],[0.8,'#b1607e'],[1,'#e6915a']],   stars:0.45, body:'moon', disc:'rgba(240,240,218,0.92)', glow:'rgba(238,238,214,0.4)',  cy:0.18 },
-    /* L9 twilight      */ { sky:[[0,'#121238'],[0.5,'#2a2a60'],[0.8,'#4a3a6e'],[1,'#714c5e']],   stars:0.7,  body:'moon', disc:'rgba(240,240,222,0.95)', glow:'rgba(238,238,214,0.45)', cy:0.16 },
-    /* L10 night        */ { sky:[[0,'#080818'],[0.5,'#10102a'],[1,'#1c1c3a']],                   stars:1,    body:'moon', disc:'rgba(244,244,226,0.98)', glow:'rgba(238,238,214,0.5)',  cy:0.14 },
+    /* L1 early morning */ { sky:[[0,'#1b2450'],[0.45,'#4b4a7e'],[0.72,'#c98a86'],[1,'#f0b97a']], stars:0.45, body:'sun',  disc:'#ffd9a0', glow:'rgba(255,190,130,0.45)', cy:0.30, mtn:'#3a3f66', rim:'#f4c79a' },
+    /* L2 morning       */ { sky:[[0,'#5a93c8'],[0.55,'#9ec8e6'],[1,'#ffe6b8']],                 stars:0,    body:'sun',  disc:'#fff2c0', glow:'rgba(255,235,160,0.5)',  cy:0.26, mtn:'#5b7fa6', rim:'#dfeafc' },
+    /* L3 late morning  */ { sky:[[0,'#4486cc'],[0.55,'#86bce6'],[1,'#dff0fb']],                 stars:0,    body:'sun',  disc:'#fffbe0', glow:'rgba(255,250,210,0.45)', cy:0.20, mtn:'#6a93b8', rim:'#eaf3ff' },
+    /* L4 midday        */ { sky:[[0,'#3f7fd2'],[0.55,'#6fa9e2'],[1,'#c4e3f6']],                 stars:0,    body:'sun',  disc:'#ffffff', glow:'rgba(255,255,235,0.5)',  cy:0.15, mtn:'#6f9ec4', rim:'#ffffff' },
+    /* L5 afternoon     */ { sky:[[0,'#4a82c6'],[0.55,'#8bb6d8'],[1,'#f2e4b6']],                 stars:0,    body:'sun',  disc:'#fff6d2', glow:'rgba(255,240,180,0.5)',  cy:0.20, mtn:'#6d8fb0', rim:'#fdeecb' },
+    /* L6 golden hour   */ { sky:[[0,'#3f5690'],[0.45,'#9c6f86'],[0.78,'#e0a35e'],[1,'#ffd884']], stars:0,    body:'sun',  disc:'#ffdf8c', glow:'rgba(255,200,110,0.55)', cy:0.30, mtn:'#7a5f7e', rim:'#ffba6e' },
+    /* L7 sunset        */ { sky:[[0,'#2a2f70'],[0.45,'#7e447e'],[0.72,'#d2604a'],[1,'#ffae52']], stars:0.2,  body:'sun',  disc:'#ff8a4a', glow:'rgba(255,120,70,0.5)',   cy:0.40, mtn:'#5a3f63', rim:'#ff8a52' },
+    /* L8 dusk          */ { sky:[[0,'#2b1d4e'],[0.5,'#5a3c79'],[0.8,'#b1607e'],[1,'#e6915a']],   stars:0.45, body:'moon', disc:'rgba(240,240,218,0.92)', glow:'rgba(238,238,214,0.4)',  cy:0.18, mtn:'#412e5c', rim:'#f0a36a' },
+    /* L9 twilight      */ { sky:[[0,'#121238'],[0.5,'#2a2a60'],[0.8,'#4a3a6e'],[1,'#714c5e']],   stars:0.7,  body:'moon', disc:'rgba(240,240,222,0.95)', glow:'rgba(238,238,214,0.45)', cy:0.16, mtn:'#2e2a52', rim:'#b9c0e4' },
+    /* L10 night        */ { sky:[[0,'#080818'],[0.5,'#10102a'],[1,'#1c1c3a']],                   stars:1,    body:'moon', disc:'rgba(244,244,226,0.98)', glow:'rgba(238,238,214,0.5)',  cy:0.14, mtn:'#1e2240', rim:'#cfd4ee' },
   ];
   function theme() { return SKY_THEMES[Math.min(Math.max(wave, 1), 10) - 1]; }
   const TIME_NAMES = ['Early Morning', 'Morning', 'Late Morning', 'Midday', 'Afternoon',
@@ -1110,12 +1119,16 @@
   }
 
   function drawMountains() {
-    // far range — hazy, lighter purple (atmospheric depth)
+    const mtn = theme().mtn;
+    // far range — hazed by atmosphere (drawn semi-transparent so the sky tints it)
+    ctx.save();
+    ctx.globalAlpha = 0.5;
     drawRange([[0,0.46],[0.10,0.34],[0.20,0.44],[0.32,0.30],[0.45,0.43],
-               [0.58,0.33],[0.72,0.45],[0.85,0.36],[1,0.44]], '#6e4f80', false);
-    // near range — darker purple, taller, snow-capped
+               [0.58,0.33],[0.72,0.45],[0.85,0.36],[1,0.44]], mtn, false);
+    ctx.restore();
+    // near range — solid, taller, snow-capped
     drawRange([[0,0.58],[0.14,0.40],[0.27,0.55],[0.40,0.36],[0.52,0.52],
-               [0.66,0.38],[0.80,0.55],[0.92,0.44],[1,0.56]], '#412e5c', true);
+               [0.66,0.38],[0.80,0.55],[0.92,0.44],[1,0.56]], mtn, true);
   }
 
   // Layered pine silhouette
