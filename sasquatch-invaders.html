@@ -16,7 +16,7 @@
   html, body {
     margin: 0;
     padding: 0;
-    background: radial-gradient(circle at 50% 15%, #3a2a55, #140e1f 75%);
+    background: radial-gradient(circle at 50% 20%, #1a2b20, #0c1410 70%);
     color: var(--text);
     font-family: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
     height: 100%;
@@ -71,7 +71,7 @@
   canvas {
     width: 100%;
     height: 100%;
-    background: linear-gradient(#2b1d4e, #5a3c79 35%, #b1607e 62%, #e6915a 80%, #7a4a3a);
+    background: linear-gradient(#15251a, #0e1a13 60%, #1c150d);
     border: 2px solid #294233;
     border-radius: 12px;
     box-shadow: 0 12px 40px rgba(0,0,0,.5), inset 0 0 60px rgba(0,0,0,.4);
@@ -930,9 +930,9 @@
   }
 
   function drawGround() {
-    ctx.fillStyle = '#241726';
+    ctx.fillStyle = '#241a12';
     ctx.fillRect(0, GROUND_Y, W, 18);
-    ctx.fillStyle = '#342236';
+    ctx.fillStyle = '#34281a';
     for (let i = 0; i < W; i += 24) ctx.fillRect(i, GROUND_Y, 12, 4);
   }
 
@@ -1020,35 +1020,50 @@
     ctx.beginPath(); ctx.moveTo(-3, -1); ctx.lineTo(-3 + legs, 0); ctx.moveTo(3, -1); ctx.lineTo(3 - legs, 0); ctx.stroke();
   }
 
+  // One sky theme per level: a full day cycle from early morning (L1) to night (L10).
+  // body: 'sun' | 'moon' | 'none'; cy = celestial height (lower = nearer the horizon)
+  const SKY_THEMES = [
+    /* L1 early morning */ { sky:[[0,'#1b2450'],[0.45,'#4b4a7e'],[0.72,'#c98a86'],[1,'#f0b97a']], stars:0.45, body:'sun',  disc:'#ffd9a0', glow:'rgba(255,190,130,0.45)', cy:0.30 },
+    /* L2 morning       */ { sky:[[0,'#5a93c8'],[0.55,'#9ec8e6'],[1,'#ffe6b8']],                 stars:0,    body:'sun',  disc:'#fff2c0', glow:'rgba(255,235,160,0.5)',  cy:0.26 },
+    /* L3 late morning  */ { sky:[[0,'#4486cc'],[0.55,'#86bce6'],[1,'#dff0fb']],                 stars:0,    body:'sun',  disc:'#fffbe0', glow:'rgba(255,250,210,0.45)', cy:0.20 },
+    /* L4 midday        */ { sky:[[0,'#3f7fd2'],[0.55,'#6fa9e2'],[1,'#c4e3f6']],                 stars:0,    body:'sun',  disc:'#ffffff', glow:'rgba(255,255,235,0.5)',  cy:0.15 },
+    /* L5 afternoon     */ { sky:[[0,'#4a82c6'],[0.55,'#8bb6d8'],[1,'#f2e4b6']],                 stars:0,    body:'sun',  disc:'#fff6d2', glow:'rgba(255,240,180,0.5)',  cy:0.20 },
+    /* L6 golden hour   */ { sky:[[0,'#3f5690'],[0.45,'#9c6f86'],[0.78,'#e0a35e'],[1,'#ffd884']], stars:0,    body:'sun',  disc:'#ffdf8c', glow:'rgba(255,200,110,0.55)', cy:0.30 },
+    /* L7 sunset        */ { sky:[[0,'#2a2f70'],[0.45,'#7e447e'],[0.72,'#d2604a'],[1,'#ffae52']], stars:0.2,  body:'sun',  disc:'#ff8a4a', glow:'rgba(255,120,70,0.5)',   cy:0.40 },
+    /* L8 dusk          */ { sky:[[0,'#2b1d4e'],[0.5,'#5a3c79'],[0.8,'#b1607e'],[1,'#e6915a']],   stars:0.45, body:'moon', disc:'rgba(240,240,218,0.92)', glow:'rgba(238,238,214,0.4)',  cy:0.18 },
+    /* L9 twilight      */ { sky:[[0,'#121238'],[0.5,'#2a2a60'],[0.8,'#4a3a6e'],[1,'#714c5e']],   stars:0.7,  body:'moon', disc:'rgba(240,240,222,0.95)', glow:'rgba(238,238,214,0.45)', cy:0.16 },
+    /* L10 night        */ { sky:[[0,'#080818'],[0.5,'#10102a'],[1,'#1c1c3a']],                   stars:1,    body:'moon', disc:'rgba(244,244,226,0.98)', glow:'rgba(238,238,214,0.5)',  cy:0.14 },
+  ];
+  function theme() { return SKY_THEMES[Math.min(Math.max(wave, 1), 10) - 1]; }
+
   function drawSky() {
+    const th = theme();
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0,    '#2b1d4e'); // deep indigo, top of dusk
-    g.addColorStop(0.34, '#5a3c79'); // purple
-    g.addColorStop(0.60, '#b1607e'); // mauve near the horizon
-    g.addColorStop(0.76, '#e6915a'); // warm orange sunset glow
-    g.addColorStop(1,    '#7a4a3a'); // fades into the warm ground
+    for (const s of th.sky) g.addColorStop(s[0], s[1]);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
   }
 
-  function drawStars() {
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    for (let i = 0; i < 40; i++) {
-      const x = (i * 97) % W;
-      const y = (i * 53) % (H * 0.42);
-      const s = (i % 3) * 0.6 + 0.4;
-      ctx.fillRect(x, y, s, s);
+  function drawCelestial() {
+    const th = theme();
+    if (th.stars > 0) {
+      for (let i = 0; i < 40; i++) {
+        const x = (i * 97) % W, y = (i * 53) % (H * 0.42);
+        const s = (i % 3) * 0.6 + 0.4;
+        ctx.fillStyle = `rgba(255,255,255,${0.5 * th.stars})`;
+        ctx.fillRect(x, y, s, s);
+      }
     }
-    // glowing moon
-    ctx.save();
-    const mg = ctx.createRadialGradient(W - 110, 78, 6, W - 110, 78, 60);
-    mg.addColorStop(0, 'rgba(235,235,210,0.45)');
-    mg.addColorStop(1, 'rgba(235,235,210,0)');
-    ctx.fillStyle = mg;
-    ctx.beginPath(); ctx.arc(W - 110, 78, 60, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(238,238,214,0.9)';
-    ctx.beginPath(); ctx.arc(W - 110, 78, 30, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
+    if (th.body !== 'none') {
+      const cx = W - 110, cy = H * th.cy, cr = th.body === 'sun' ? 34 : 30;
+      const gr = ctx.createRadialGradient(cx, cy, 4, cx, cy, cr * 2.4);
+      gr.addColorStop(0, th.glow);
+      gr.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath(); ctx.arc(cx, cy, cr * 2.4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = th.disc;
+      ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI*2); ctx.fill();
+    }
   }
 
   // A single mountain range as a jagged silhouette; peaks given as [xFrac, yFrac]
@@ -1119,7 +1134,7 @@
   function render() {
     ctx.clearRect(0, 0, W, H);
     drawSky();
-    drawStars();
+    drawCelestial();
     drawMountains();
     drawTrees();
     drawGround();
