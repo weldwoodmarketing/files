@@ -83,6 +83,23 @@
     display: block;
     touch-action: none;
   }
+  #pauseBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+    background: rgba(8,14,10,.55);
+    color: var(--text);
+    border: 1px solid #294233;
+    border-radius: 8px;
+    box-shadow: none;
+    z-index: 2;
+  }
+  #pauseBtn:active { transform: none; box-shadow: none; }
   #overlay {
     position: absolute;
     inset: 0;
@@ -148,6 +165,7 @@
   <div id="timeofday" aria-live="polite">Level 1 · Early Morning</div>
   <div id="stage">
     <canvas id="game" width="800" height="600"></canvas>
+    <button id="pauseBtn" aria-label="Pause">⏸</button>
     <div id="overlay">
       <div class="big-emoji">🦶🪨🦝</div>
       <h2>Campsite Invaders</h2>
@@ -392,7 +410,7 @@
   }
 
   // ---- Game state ----
-  const STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3, STORY: 4 };
+  const STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3, STORY: 4, PAUSED: 5 };
   let state = STATE.MENU;
 
   const TOTAL_LEVELS = 50;
@@ -528,7 +546,7 @@
         hp, maxHp: hp, alive: true,
         dir: i % 2 ? -1 : 1,
         vx: 1.0 + lt * 0.1,
-        flash: 0, wob: Math.random() * Math.PI * 2,
+        flash: 0, hits: 0, wob: Math.random() * Math.PI * 2,
         shootT: 50 + i * 25
       });
     }
@@ -654,8 +672,12 @@
 
     // Raccoons throw acorns (rate ramps within each tier, lightly across tiers)
     const lt = ((wave - 1) % 10) + 1;
-    // Power-up drop rate: modest in tier 1, WAY higher from level 11 on (ammo resets each tier)
-    const dropChance = wave <= 10 ? 0.12 : Math.min(0.7, 0.45 + tierOf(wave) * 0.06);
+    // Power-up drop rate: modest in tier 1, WAY higher from level 11 on (ammo resets each tier),
+    // and a massive restock in the first two levels of every new tier (11-12, 21-22, 31-32, 41-42).
+    let dropChance;
+    if (wave <= 10) dropChance = 0.12;
+    else if (lt <= 2) dropChance = 0.9;
+    else dropChance = Math.min(0.7, 0.45 + tierOf(wave) * 0.06);
     if (aliveRaccoons.length && Math.random() < 0.012 + lt * 0.004 + tierOf(wave) * 0.003) {
       const shooter = aliveRaccoons[Math.floor(Math.random() * aliveRaccoons.length)];
       acorns.push({ x: shooter.x, y: shooter.y + shooter.h/2, r: 7, vy: 3 + lt * 0.22, spin: 0 });
@@ -690,6 +712,7 @@
           rk.y = -100; hit = true;
           boss.hp -= rk.powered ? 2 : 1;   // powered ammo hits harder
           boss.flash = 6;
+          boss.hits = (boss.hits || 0) + 1;
           bossHitSound();
           burst(rk.x, boss.y, '#c9ced4', 8);
           if (boss.hp <= 0) {
@@ -700,6 +723,10 @@
             score += reward;
             spawnPowerup(boss.x, boss.y);
             floatText(boss.x, boss.y, 'BOSS DOWN! +' + reward, '#ffd23a');
+          } else if (boss.hits % 10 === 0) {
+            // every 10 hits a boss coughs up a power-up
+            spawnPowerup(boss.x, boss.y + boss.h/2);
+            floatText(boss.x, boss.y, 'POWER-UP!', '#7fbf5a');
           }
           break;
         }
@@ -1339,7 +1366,7 @@
     rocks.forEach(drawProjectile);
     acorns.forEach(drawAcorn);
 
-    if (state === STATE.PLAY || state === STATE.OVER || state === STATE.WIN || state === STATE.STORY) {
+    if (state !== STATE.MENU) {
       drawSasquatch(sasquatch.x, sasquatch.y);
     }
 
