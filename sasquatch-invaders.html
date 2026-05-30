@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sasquatch Invaders — Rock Throw Rampage</title>
+<title>Campsite Invaders — Rock Throw Rampage</title>
 <style>
   :root {
     --bg: #0c1410;
@@ -39,6 +39,11 @@
     border-radius: 12px;
     border: 1px solid #2a2440;
     box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  #title {
+    display: block;
+    width: min(92vw, 760px);
+    height: clamp(56px, 11vh, 92px);
   }
   h1 {
     margin: 0;
@@ -132,7 +137,7 @@
 <body>
 <div id="wrap">
   <div id="banner-wrap"><canvas id="banner"></canvas></div>
-  <h1>🦶 Sasquatch <span>Invaders</span> 🪨</h1>
+  <canvas id="title"></canvas>
   <div id="hud">
     <div><div class="label">Score</div><div class="val" id="score">0</div></div>
     <div><div class="label">Level</div><div class="val" id="wave">1</div></div>
@@ -144,7 +149,7 @@
     <canvas id="game" width="800" height="600"></canvas>
     <div id="overlay">
       <div class="big-emoji">🦶🪨🦝</div>
-      <h2>Sasquatch Invaders</h2>
+      <h2>Campsite Invaders</h2>
       <p>The raccoons raided the campsite! Move Bigfoot and pelt them with rocks before they reach the ground. Grab green power-ups to add a rock each time — hit 5 and they turn into lasers. Every level has a crowned boss that gets tougher (10 hits, then 15… up to 55). Clear all 10 levels to win!</p>
       <div class="keys">
         Move: <b>◀ ▶</b> / <b>A D</b> &nbsp;•&nbsp; Throw rock: <b>Space</b><br>
@@ -218,31 +223,52 @@
       bctx.fill();
     }
   }
+  // Classic mid-stride Bigfoot silhouette (the Patterson pose), facing right.
+  // Outline points are in a 0..0 baseline space: x roughly -34..46, y -100 (crown) .. 0 (feet).
+  const BF_OUTLINE = [
+    [10,-100],[20,-98],[26,-92],[24,-84],          // crown, brow, jaw, neck
+    [33,-66],[36,-48],[31,-35],                     // chest, belly, front hip
+    [35,-20],[46,-4],[40,3],[24,1],[21,-17],        // front thigh, foot, sole, instep, inner shin
+    [9,-31],                                         // crotch
+    [-2,-16],[-28,1],[-34,-2],[-21,-13],            // back thigh, trailing foot, heel, calf
+    [-15,-25],[-24,-44],[-27,-62],[-22,-82],        // buttock, lower back, mid back, shoulder hump
+    [-6,-95]                                          // back of head
+  ];
   function bBigfoot(cx, gy, t, rim) {
-    const hgt = Math.min(bH * 0.55, 76);
-    const w = hgt * 0.52;
+    const S = Math.min(bH * 0.62, 86) / 100;
     bctx.save();
-    bctx.translate(cx + Math.sin(t / 900) * 1.5, gy);
+    bctx.translate(cx + Math.sin(t / 900) * 1.2, gy);
+    bctx.scale(S, S);
+    bctx.lineJoin = 'round'; bctx.lineCap = 'round';
+    // body silhouette
     bctx.fillStyle = '#0d0916';
-    bctx.fillRect(-w * 0.30, -hgt * 0.34, w * 0.22, hgt * 0.34);  // back leg
-    bctx.fillRect(w * 0.08, -hgt * 0.34, w * 0.22, hgt * 0.34);   // front leg
-    bctx.beginPath(); bctx.ellipse(0, -hgt * 0.5, w * 0.44, hgt * 0.33, 0, 0, Math.PI*2); bctx.fill(); // body
-    bctx.fillRect(-w * 0.52, -hgt * 0.72, w * 0.16, hgt * 0.5);   // arms
-    bctx.fillRect(w * 0.36, -hgt * 0.72, w * 0.16, hgt * 0.5);
-    bctx.beginPath(); bctx.ellipse(0, -hgt * 0.84, w * 0.27, hgt * 0.22, 0, 0, Math.PI*2); bctx.fill(); // head
-    // rim light on the side facing the sun/moon (which sits to the right)
+    bctx.beginPath();
+    bctx.moveTo(BF_OUTLINE[0][0], BF_OUTLINE[0][1]);
+    for (let i = 1; i < BF_OUTLINE.length; i++) bctx.lineTo(BF_OUTLINE[i][0], BF_OUTLINE[i][1]);
+    bctx.closePath(); bctx.fill();
+    // near arm swinging in front
+    const sw = Math.sin(t / 900) * 4;
+    bctx.strokeStyle = '#0d0916'; bctx.lineWidth = 12;
+    bctx.beginPath();
+    bctx.moveTo(19, -80);
+    bctx.quadraticCurveTo(33, -58, 27 + sw, -33);
+    bctx.stroke();
+    bctx.beginPath(); bctx.arc(27 + sw, -31, 6.5, 0, Math.PI*2); bctx.fill(); // hand
+    // rim light along the lit (right/front) edge
     if (rim) {
-      bctx.strokeStyle = rim;
-      bctx.lineWidth = Math.max(1, hgt * 0.04);
-      bctx.globalAlpha = 0.75;
-      bctx.beginPath(); bctx.ellipse(0, -hgt * 0.5, w * 0.44, hgt * 0.33, 0, -Math.PI/2, Math.PI/2); bctx.stroke();
-      bctx.beginPath(); bctx.ellipse(0, -hgt * 0.84, w * 0.27, hgt * 0.22, 0, -Math.PI/2, Math.PI/2); bctx.stroke();
+      bctx.strokeStyle = rim; bctx.lineWidth = 2.6; bctx.globalAlpha = 0.8;
+      bctx.beginPath();
+      bctx.moveTo(10, -100);
+      bctx.lineTo(20, -98); bctx.lineTo(26, -92); bctx.lineTo(24, -84);
+      bctx.lineTo(33, -66); bctx.lineTo(36, -48); bctx.lineTo(31, -35);
+      bctx.lineTo(35, -20); bctx.lineTo(46, -4);
+      bctx.stroke();
       bctx.globalAlpha = 1;
     }
-    const blink = (Math.sin(t / 1500 + 0.5) > 0.92) ? 0.1 : 1;   // occasional blink
+    // glowing eye near the face
+    const blink = (Math.sin(t / 1500 + 0.5) > 0.92) ? 0.1 : 1;
     bctx.fillStyle = `rgba(224,170,72,${0.9 * blink})`;
-    bctx.beginPath(); bctx.arc(-w * 0.11, -hgt * 0.86, hgt * 0.032, 0, Math.PI*2); bctx.fill();
-    bctx.beginPath(); bctx.arc(w * 0.11, -hgt * 0.86, hgt * 0.032, 0, Math.PI*2); bctx.fill();
+    bctx.beginPath(); bctx.arc(20, -90, 2.4, 0, Math.PI*2); bctx.fill();
     bctx.restore();
   }
   function drawBanner(t) {
@@ -296,6 +322,70 @@
     bctx.fillText('Level ' + lvl + ' · ' + timeName(), 12, Math.max(18, bH * 0.17));
     bctx.shadowBlur = 0;
   }
+
+  // ---- Stick-letter game title: "CAMPSITE INVADERS" drawn from twigs ----
+  const titleCanvas = document.getElementById('title');
+  const tctx = titleCanvas.getContext('2d');
+  // Each glyph is a list of [x1,y1,x2,y2] strokes in a 0..1 cell (x: left→right, y: top→bottom)
+  const STICK_FONT = {
+    'A': [[0,1,0.5,0],[0.5,0,1,1],[0.22,0.58,0.78,0.58]],
+    'C': [[1,0,0.18,0],[0.18,0,0,0.28],[0,0.28,0,0.72],[0,0.72,0.18,1],[0.18,1,1,1]],
+    'M': [[0,1,0,0],[0,0,0.5,0.62],[0.5,0.62,1,0],[1,0,1,1]],
+    'P': [[0,1,0,0],[0,0,0.8,0],[0.8,0,1,0.26],[1,0.26,0.8,0.52],[0.8,0.52,0,0.52]],
+    'S': [[1,0,0.1,0],[0.1,0,0,0.5],[0,0.5,1,0.5],[1,0.5,0.9,1],[0.9,1,0,1]],
+    'I': [[0.5,0,0.5,1],[0.18,0,0.82,0],[0.18,1,0.82,1]],
+    'T': [[0,0,1,0],[0.5,0,0.5,1]],
+    'E': [[0,0,0,1],[0,0,1,0],[0,0.5,0.78,0.5],[0,1,1,1]],
+    'N': [[0,1,0,0],[0,0,1,1],[1,1,1,0]],
+    'V': [[0,0,0.5,1],[0.5,1,1,0]],
+    'D': [[0,0,0,1],[0,0,0.66,0],[0.66,0,1,0.3],[1,0.3,1,0.7],[1,0.7,0.66,1],[0.66,1,0,1]],
+    'R': [[0,1,0,0],[0,0,0.8,0],[0.8,0,1,0.26],[1,0.26,0.8,0.52],[0.8,0.52,0,0.52],[0.36,0.52,1,1]],
+    ' ': []
+  };
+  function drawStick(x1, y1, x2, y2, wd) {
+    tctx.lineCap = 'round';
+    tctx.strokeStyle = '#2e1c0d'; tctx.lineWidth = wd + 2.5;            // bark outline
+    tctx.beginPath(); tctx.moveTo(x1, y1); tctx.lineTo(x2, y2); tctx.stroke();
+    const g = tctx.createLinearGradient(x1, y1, x2, y2);
+    g.addColorStop(0, '#7a5126'); g.addColorStop(0.5, '#9c6b34'); g.addColorStop(1, '#6e4a23');
+    tctx.strokeStyle = g; tctx.lineWidth = wd;                          // wood body
+    tctx.beginPath(); tctx.moveTo(x1, y1); tctx.lineTo(x2, y2); tctx.stroke();
+    tctx.strokeStyle = 'rgba(206,166,108,0.5)'; tctx.lineWidth = Math.max(1, wd * 0.26); // grain highlight
+    tctx.beginPath(); tctx.moveTo(x1, y1); tctx.lineTo(x2, y2); tctx.stroke();
+    const len = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.floor(len / 16)); // knots
+    tctx.fillStyle = 'rgba(58,36,16,0.55)';
+    for (let i = 1; i <= n; i++) {
+      const f = i / (n + 1);
+      tctx.beginPath(); tctx.arc(x1 + (x2 - x1) * f, y1 + (y2 - y1) * f, wd * 0.17, 0, Math.PI*2); tctx.fill();
+    }
+  }
+  function drawTitle() {
+    const r = titleCanvas.getBoundingClientRect();
+    if (r.width === 0) return;
+    const dpr = window.devicePixelRatio || 1;
+    titleCanvas.width = Math.round(r.width * dpr);
+    titleCanvas.height = Math.round(r.height * dpr);
+    tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cw = r.width, ch = r.height;
+    tctx.clearRect(0, 0, cw, ch);
+    const text = 'CAMPSITE INVADERS';
+    const cellH = ch * 0.66, cellW = cellH * 0.62, gap = cellH * 0.24, spaceW = cellH * 0.45;
+    let total = 0;
+    for (const c of text) total += (c === ' ' ? spaceW : cellW) + gap;
+    total -= gap;
+    const scale = Math.min(1, (cw - 16) / total);
+    const cW = cellW * scale, cH = cellH * scale, gp = gap * scale, spW = spaceW * scale;
+    const stick = Math.max(3, cH * 0.15);
+    let x = (cw - total * scale) / 2;
+    const y = (ch - cH) / 2;
+    for (const c of text) {
+      if (c === ' ') { x += spW + gp; continue; }
+      const segs = STICK_FONT[c];
+      if (segs) for (const s of segs) drawStick(x + s[0] * cW, y + s[1] * cH, x + s[2] * cW, y + s[3] * cH, stick);
+      x += cW + gp;
+    }
+  }
+  window.addEventListener('resize', drawTitle);
 
   const MAX_LIVES = 6;
   const DOUBLE_MS = 12000;
@@ -1197,13 +1287,16 @@
     ctx.textAlign = 'left';
   }
 
+  let titleDrawn = false;
   function loop() {
     update();
     updateCritters();
     render();
     drawBanner(performance.now());
+    if (!titleDrawn && titleCanvas.getBoundingClientRect().width > 0) { drawTitle(); titleDrawn = true; }
     requestAnimationFrame(loop);
   }
+  drawTitle();
   loop();
 })();
 </script>
