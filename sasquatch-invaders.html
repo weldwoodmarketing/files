@@ -654,6 +654,8 @@
 
     // Raccoons throw acorns (rate ramps within each tier, lightly across tiers)
     const lt = ((wave - 1) % 10) + 1;
+    // Power-up drop rate: modest in tier 1, WAY higher from level 11 on (ammo resets each tier)
+    const dropChance = wave <= 10 ? 0.12 : Math.min(0.7, 0.45 + tierOf(wave) * 0.06);
     if (aliveRaccoons.length && Math.random() < 0.012 + lt * 0.004 + tierOf(wave) * 0.003) {
       const shooter = aliveRaccoons[Math.floor(Math.random() * aliveRaccoons.length)];
       acorns.push({ x: shooter.x, y: shooter.y + shooter.h/2, r: 7, vy: 3 + lt * 0.22, spin: 0 });
@@ -711,7 +713,7 @@
           score += 10 + (4 - Math.min(r.row, 3)) * 5;
           playSquash(false);
           burst(r.x, r.y, '#9a7b53', 14);
-          if (Math.random() < 0.12) spawnPowerup(r.x, r.y);
+          if (Math.random() < dropChance) spawnPowerup(r.x, r.y);
           break;
         }
       }
