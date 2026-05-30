@@ -16,7 +16,7 @@
   html, body {
     margin: 0;
     padding: 0;
-    background: radial-gradient(circle at 50% 20%, #1a2b20, #0c1410 70%);
+    background: radial-gradient(circle at 50% 15%, #3a2a55, #140e1f 75%);
     color: var(--text);
     font-family: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
     height: 100%;
@@ -62,7 +62,7 @@
   canvas {
     width: 100%;
     height: 100%;
-    background: linear-gradient(#15251a, #0e1a13 60%, #1c150d);
+    background: linear-gradient(#2b1d4e, #5a3c79 35%, #b1607e 62%, #e6915a 80%, #7a4a3a);
     border: 2px solid #294233;
     border-radius: 12px;
     box-shadow: 0 12px 40px rgba(0,0,0,.5), inset 0 0 60px rgba(0,0,0,.4);
@@ -820,9 +820,9 @@
   }
 
   function drawGround() {
-    ctx.fillStyle = '#23180e';
+    ctx.fillStyle = '#241726';
     ctx.fillRect(0, GROUND_Y, W, 18);
-    ctx.fillStyle = '#2e2113';
+    ctx.fillStyle = '#342236';
     for (let i = 0; i < W; i += 24) ctx.fillRect(i, GROUND_Y, 12, 4);
   }
 
@@ -910,6 +910,17 @@
     ctx.beginPath(); ctx.moveTo(-3, -1); ctx.lineTo(-3 + legs, 0); ctx.moveTo(3, -1); ctx.lineTo(3 - legs, 0); ctx.stroke();
   }
 
+  function drawSky() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0,    '#2b1d4e'); // deep indigo, top of dusk
+    g.addColorStop(0.34, '#5a3c79'); // purple
+    g.addColorStop(0.60, '#b1607e'); // mauve near the horizon
+    g.addColorStop(0.76, '#e6915a'); // warm orange sunset glow
+    g.addColorStop(1,    '#7a4a3a'); // fades into the warm ground
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
   function drawStars() {
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     for (let i = 0; i < 40; i++) {
@@ -940,7 +951,7 @@
     ctx.closePath();
     ctx.fill();
     if (snow) {
-      ctx.fillStyle = 'rgba(220,228,235,0.55)';
+      ctx.fillStyle = 'rgba(255,228,212,0.6)';
       for (let i = 1; i < peaks.length - 1; i++) {
         const px = peaks[i][0] * W, py = peaks[i][1] * H;
         if (peaks[i][1] < peaks[i-1][1] && peaks[i][1] < peaks[i+1][1]) {
@@ -959,12 +970,12 @@
   }
 
   function drawMountains() {
-    // far range
+    // far range — hazy, lighter purple (atmospheric depth)
     drawRange([[0,0.46],[0.10,0.34],[0.20,0.44],[0.32,0.30],[0.45,0.43],
-               [0.58,0.33],[0.72,0.45],[0.85,0.36],[1,0.44]], '#1a2a32', false);
-    // near range (taller, snow-capped)
+               [0.58,0.33],[0.72,0.45],[0.85,0.36],[1,0.44]], '#6e4f80', false);
+    // near range — darker purple, taller, snow-capped
     drawRange([[0,0.58],[0.14,0.40],[0.27,0.55],[0.40,0.36],[0.52,0.52],
-               [0.66,0.38],[0.80,0.55],[0.92,0.44],[1,0.56]], '#13222a', true);
+               [0.66,0.38],[0.80,0.55],[0.92,0.44],[1,0.56]], '#412e5c', true);
   }
 
   // Layered pine silhouette
@@ -988,15 +999,16 @@
     // distant treeline band along the foot of the mountains
     for (let x = -8; x < W + 20; x += 24) {
       const h = 26 + ((x * 37) % 7) * 4;
-      pine(x, GROUND_Y - 6, h, 20, '#0d1b13');
+      pine(x, GROUND_Y - 6, h, 20, '#2a1d3a');
     }
     // a couple of larger foreground pines framing the edges
-    pine(26, baseY, 96, 46, '#0a160e');
-    pine(W - 30, baseY, 110, 52, '#0a160e');
+    pine(26, baseY, 96, 46, '#180f24');
+    pine(W - 30, baseY, 110, 52, '#180f24');
   }
 
   function render() {
     ctx.clearRect(0, 0, W, H);
+    drawSky();
     drawStars();
     drawMountains();
     drawTrees();
