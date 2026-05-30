@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sasquatch Invaders — Rock Throw Rampage</title>
+<style>
+  :root {
+    --bg: #0c1410;
+    --panel: #15211a;
+    --accent: #7fbf5a;
+    --accent2: #c9a06a;
+    --text: #e8f0e4;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(circle at 50% 20%, #1a2b20, #0c1410 70%);
+    color: var(--text);
+    font-family: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+  #wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 12px;
+    padding: 12px;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(20px, 4vw, 34px);
+    letter-spacing: 1px;
+    color: var(--accent);
+    text-shadow: 0 2px 0 #000, 0 0 18px rgba(127,191,90,.35);
+  }
+  h1 span { color: var(--accent2); }
+  #hud {
+    display: flex;
+    gap: 24px;
+    font-size: 16px;
+    font-weight: bold;
+    width: min(92vw, 760px);
+    justify-content: space-between;
+    background: var(--panel);
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1px solid #294233;
+  }
+  #hud .label { color: #8aa; font-weight: normal; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  #hud .val { color: var(--text); font-size: 20px; }
+  #stage {
+    position: relative;
+    width: min(92vw, 760px);
+    aspect-ratio: 4 / 3;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(#15251a, #0e1a13 60%, #1c150d);
+    border: 2px solid #294233;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5), inset 0 0 60px rgba(0,0,0,.4);
+    display: block;
+    touch-action: none;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: rgba(8,14,10,.82);
+    border-radius: 12px;
+    gap: 14px;
+    padding: 20px;
+  }
+  #overlay.hidden { display: none; }
+  #overlay h2 { margin: 0; font-size: clamp(22px, 5vw, 40px); color: var(--accent); }
+  #overlay p { margin: 0; max-width: 420px; line-height: 1.5; color: #cdd; }
+  #overlay .keys { font-size: 14px; color: #9ab; }
+  #overlay .keys b { color: var(--accent2); }
+  button {
+    background: var(--accent);
+    color: #08120a;
+    border: none;
+    padding: 12px 28px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 0 #4f7d36;
+    transition: transform .05s, box-shadow .05s;
+  }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #4f7d36; }
+  .hint { font-size: 13px; color: #789; }
+  .big-emoji { font-size: 48px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>🦍 Sasquatch <span>Invaders</span> 🪨</h1>
+  <div id="hud">
+    <div><div class="label">Score</div><div class="val" id="score">0</div></div>
+    <div><div class="label">Wave</div><div class="val" id="wave">1</div></div>
+    <div><div class="label">Lives</div><div class="val" id="lives">🌲🌲🌲</div></div>
+    <div><div class="label">Best</div><div class="val" id="best">0</div></div>
+  </div>
+  <div id="stage">
+    <canvas id="game" width="800" height="600"></canvas>
+    <div id="overlay">
+      <div class="big-emoji">🦍🪨🦝</div>
+      <h2>Sasquatch Invaders</h2>
+      <p>The raccoons raided the campsite! Help Sasquatch defend the forest by pelting them with rocks before they reach the ground.</p>
+      <div class="keys">
+        Move: <b>◀ ▶</b> / <b>A D</b> &nbsp;•&nbsp; Throw rock: <b>Space</b><br>
+        On mobile: <b>drag to move</b>, <b>tap to throw</b>
+      </div>
+      <button id="startBtn">Start Throwing</button>
+      <div class="hint">Don't let a raccoon touch the forest floor — and watch out for the acorns they chuck back!</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const scoreEl = document.getElementById('score');
+  const waveEl  = document.getElementById('wave');
+  const livesEl = document.getElementById('lives');
+  const bestEl  = document.getElementById('best');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+
+  let best = +(localStorage.getItem('sasquatchBest') || 0);
+  bestEl.textContent = best;
+
+  // ---- Game state ----
+  const STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3 };
+  let state = STATE.MENU;
+
+  const sasquatch = { x: W/2, y: H - 56, w: 64, h: 72, speed: 6 };
+  let rocks = [];      // sasquatch's projectiles (going up)
+  let acorns = [];     // raccoon projectiles (going down)
+  let raccoons = [];
+  let particles = [];
+
+  let score = 0;
+  let lives = 3;
+  let wave = 1;
+
+  // raccoon fleet movement
+  let fleetDir = 1;          // 1 = right, -1 = left
+  let fleetSpeed = 0.6;      // horizontal px per frame (scaled by wave)
+  let fleetDropPending = false;
+
+  const keys = { left: false, right: false, fire: false };
+  let lastShot = 0;
+
+  // ---- Input ----
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+    if (e.code === 'Space') { keys.fire = true; e.preventDefault(); }
+    if (e.code === 'Enter' && state !== STATE.PLAY) startGame();
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+    if (e.code === 'Space') keys.fire = false;
+  });
+
+  // Touch / mouse
+  let pointerActive = false;
+  function pointerPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+    return (cx - r.left) / r.width * W;
+  }
+  function onDown(e) {
+    if (state !== STATE.PLAY) return;
+    pointerActive = true;
+    sasquatch.x = pointerPos(e);
+    keys.fire = true;
+    e.preventDefault();
+  }
+  function onMove(e) {
+    if (!pointerActive) return;
+    sasquatch.x = pointerPos(e);
+    e.preventDefault();
+  }
+  function onUp() { pointerActive = false; keys.fire = false; }
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive: false });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onUp);
+
+  startBtn.addEventListener('click', startGame);
+
+  // ---- Setup waves ----
+  function spawnWave(n) {
+    raccoons = [];
+    const cols = Math.min(4 + n, 9);
+    const rows = Math.min(2 + Math.floor(n / 2), 5);
+    const gapX = 78, gapY = 64;
+    const startX = (W - (cols - 1) * gapX) / 2;
+    const startY = 70;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        raccoons.push({
+          x: startX + c * gapX,
+          y: startY + r * gapY,
+          w: 46, h: 40,
+          alive: true,
+          wob: Math.random() * Math.PI * 2,
+          row: r
+        });
+      }
+    }
+    fleetDir = 1;
+    fleetSpeed = 0.5 + n * 0.18;
+    fleetDropPending = false;
+  }
+
+  function startGame() {
+    score = 0; lives = 3; wave = 1;
+    rocks = []; acorns = []; particles = [];
+    sasquatch.x = W / 2;
+    spawnWave(wave);
+    state = STATE.PLAY;
+    overlay.classList.add('hidden');
+    updateHud();
+  }
+
+  function updateHud() {
+    scoreEl.textContent = score;
+    waveEl.textContent = wave;
+    livesEl.textContent = lives > 0 ? '🌲'.repeat(lives) : '—';
+    bestEl.textContent = best;
+  }
+
+  function showOverlay(title, msg, btn) {
+    overlay.querySelector('h2').textContent = title;
+    overlay.querySelector('p').textContent = msg;
+    startBtn.textContent = btn;
+    overlay.classList.remove('hidden');
+  }
+
+  // ---- Particles ----
+  function burst(x, y, color, count = 12) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 1 + Math.random() * 4;
+      particles.push({
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        life: 1,
+        color
+      });
+    }
+  }
+
+  // ---- Update ----
+  function update() {
+    if (state !== STATE.PLAY) return;
+
+    // Sasquatch movement
+    if (keys.left)  sasquatch.x -= sasquatch.speed;
+    if (keys.right) sasquatch.x += sasquatch.speed;
+    sasquatch.x = Math.max(sasquatch.w/2, Math.min(W - sasquatch.w/2, sasquatch.x));
+
+    // Throw rocks
+    const now = performance.now();
+    if (keys.fire && now - lastShot > 320) {
+      lastShot = now;
+      rocks.push({ x: sasquatch.x, y: sasquatch.y - sasquatch.h/2, r: 8, vy: -9, spin: 0 });
+    }
+
+    // Move rocks
+    rocks.forEach(rk => { rk.y += rk.vy; rk.spin += 0.3; });
+    rocks = rocks.filter(rk => rk.y > -20);
+
+    // Fleet movement
+    let hitEdge = false;
+    const aliveRaccoons = raccoons.filter(r => r.alive);
+    const step = fleetSpeed * fleetDir;
+    for (const r of aliveRaccoons) {
+      if (r.x + step > W - 28 || r.x + step < 28) { hitEdge = true; break; }
+    }
+    if (hitEdge) {
+      fleetDir *= -1;
+      for (const r of raccoons) r.y += 22; // drop down
+    } else {
+      for (const r of raccoons) { r.x += step; }
+    }
+    // wobble
+    for (const r of raccoons) r.wob += 0.05;
+
+    // Raccoons throw acorns
+    if (aliveRaccoons.length && Math.random() < 0.012 + wave * 0.004) {
+      const shooter = aliveRaccoons[Math.floor(Math.random() * aliveRaccoons.length)];
+      acorns.push({ x: shooter.x, y: shooter.y + shooter.h/2, r: 7, vy: 3 + wave * 0.25, spin: 0 });
+    }
+    acorns.forEach(a => { a.y += a.vy; a.spin += 0.2; });
+    acorns = acorns.filter(a => a.y < H + 20);
+
+    // Collisions: rocks vs raccoons
+    for (const rk of rocks) {
+      for (const r of raccoons) {
+        if (!r.alive) continue;
+        if (Math.abs(rk.x - r.x) < r.w/2 + rk.r && Math.abs(rk.y - r.y) < r.h/2 + rk.r) {
+          r.alive = false;
+          rk.y = -100; // remove
+          score += 10 * (raccoons[0] ? 1 : 1) + (4 - Math.min(r.row,3)) * 5;
+          burst(r.x, r.y, '#9a7b53', 14);
+          break;
+        }
+      }
+    }
+    rocks = rocks.filter(rk => rk.y > -20);
+
+    // Collisions: acorns vs sasquatch
+    for (const a of acorns) {
+      if (Math.abs(a.x - sasquatch.x) < sasquatch.w/2 + a.r &&
+          Math.abs(a.y - sasquatch.y) < sasquatch.h/2 + a.r) {
+        a.y = H + 100;
+        loseLife();
+        burst(sasquatch.x, sasquatch.y - 10, '#e87', 16);
+      }
+    }
+    acorns = acorns.filter(a => a.y < H + 20);
+
+    // Raccoon reaches floor?
+    for (const r of raccoons) {
+      if (r.alive && r.y + r.h/2 >= sasquatch.y - sasquatch.h/2) {
+        gameOver();
+        return;
+      }
+    }
+
+    // Wave cleared?
+    if (raccoons.every(r => !r.alive)) {
+      wave++;
+      score += 50;
+      if (wave > 8) { winGame(); return; }
+      spawnWave(wave);
+    }
+
+    // Particles
+    particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 0.025; });
+    particles = particles.filter(p => p.life > 0);
+
+    updateHud();
+  }
+
+  function loseLife() {
+    lives--;
+    if (lives <= 0) gameOver();
+  }
+
+  function gameOver() {
+    state = STATE.OVER;
+    if (score > best) { best = score; localStorage.setItem('sasquatchBest', best); }
+    updateHud();
+    showOverlay('🦝 The Raccoons Won...',
+      `They overran the camp on wave ${wave}. Final score: ${score}. Sasquatch needs a rematch!`,
+      'Throw Again');
+  }
+
+  function winGame() {
+    state = STATE.WIN;
+    if (score > best) { best = score; localStorage.setItem('sasquatchBest', best); }
+    updateHud();
+    showOverlay('🏆 Forest Defended!',
+      `Sasquatch cleared all 8 waves! Final score: ${score}. The campsite is safe... for now.`,
+      'Play Again');
+  }
+
+  // ---- Drawing ----
+  function drawSasquatch(x, y, w, h) {
+    ctx.save();
+    ctx.translate(x, y);
+    // body
+    ctx.fillStyle = '#5b432c';
+    ctx.beginPath();
+    ctx.ellipse(0, 6, w/2, h/2, 0, 0, Math.PI*2);
+    ctx.fill();
+    // belly
+    ctx.fillStyle = '#7a5c3e';
+    ctx.beginPath();
+    ctx.ellipse(0, 14, w/3, h/3, 0, 0, Math.PI*2);
+    ctx.fill();
+    // head
+    ctx.fillStyle = '#6b4f33';
+    ctx.beginPath();
+    ctx.ellipse(0, -h/2 + 6, w/3.4, h/3.6, 0, 0, Math.PI*2);
+    ctx.fill();
+    // face
+    ctx.fillStyle = '#c9a878';
+    ctx.beginPath();
+    ctx.ellipse(0, -h/2 + 9, w/6, h/7, 0, 0, Math.PI*2);
+    ctx.fill();
+    // eyes
+    ctx.fillStyle = '#1a1208';
+    ctx.beginPath(); ctx.arc(-6, -h/2 + 4, 2.6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(6, -h/2 + 4, 2.6, 0, Math.PI*2); ctx.fill();
+    // arms holding rock
+    ctx.strokeStyle = '#5b432c';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-w/2 + 6, -2);
+    ctx.lineTo(0, -h/2 + 2);
+    ctx.lineTo(w/2 - 6, -2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRaccoon(r) {
+    const bob = Math.sin(r.wob) * 3;
+    ctx.save();
+    ctx.translate(r.x, r.y + bob);
+    const w = r.w, h = r.h;
+    // ears
+    ctx.fillStyle = '#7a7d82';
+    ctx.beginPath(); ctx.moveTo(-w/3,-h/2+2); ctx.lineTo(-w/5,-h/2-8); ctx.lineTo(-w/9,-h/2+2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(w/3,-h/2+2); ctx.lineTo(w/5,-h/2-8); ctx.lineTo(w/9,-h/2+2); ctx.fill();
+    // head/body
+    ctx.fillStyle = '#9098a0';
+    ctx.beginPath(); ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+    // face lighter
+    ctx.fillStyle = '#d8dde2';
+    ctx.beginPath(); ctx.ellipse(0, 4, w/2.6, h/2.4, 0, 0, Math.PI*2); ctx.fill();
+    // mask
+    ctx.fillStyle = '#2c2c30';
+    ctx.beginPath(); ctx.ellipse(-7, 0, 7, 6, 0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(7, 0, 7, 6, -0.3, 0, Math.PI*2); ctx.fill();
+    // eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-7,0,2.4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(7,0,2.4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(-7,0,1.2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(7,0,1.2,0,Math.PI*2); ctx.fill();
+    // nose
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.moveTo(-3,8); ctx.lineTo(3,8); ctx.lineTo(0,12); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawRock(rk) {
+    ctx.save();
+    ctx.translate(rk.x, rk.y);
+    ctx.rotate(rk.spin);
+    ctx.fillStyle = '#8b8b8b';
+    ctx.beginPath();
+    ctx.moveTo(-rk.r, 0);
+    ctx.lineTo(-rk.r*0.4, -rk.r);
+    ctx.lineTo(rk.r*0.7, -rk.r*0.6);
+    ctx.lineTo(rk.r, rk.r*0.3);
+    ctx.lineTo(0, rk.r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#a9a9a9';
+    ctx.beginPath(); ctx.arc(-1, -1, rk.r*0.35, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawAcorn(a) {
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.spin * 0.3);
+    // nut
+    ctx.fillStyle = '#b5793a';
+    ctx.beginPath(); ctx.ellipse(0, 2, a.r, a.r*1.2, 0, 0, Math.PI*2); ctx.fill();
+    // cap
+    ctx.fillStyle = '#6b4423';
+    ctx.beginPath(); ctx.ellipse(0, -a.r*0.6, a.r*1.1, a.r*0.7, 0, Math.PI, 0); ctx.fill();
+    ctx.fillRect(-1, -a.r*1.3, 2, 4);
+    ctx.restore();
+  }
+
+  function drawGround() {
+    ctx.fillStyle = '#23180e';
+    ctx.fillRect(0, H - 18, W, 18);
+    ctx.fillStyle = '#2e2113';
+    for (let i = 0; i < W; i += 24) {
+      ctx.fillRect(i, H - 18, 12, 4);
+    }
+  }
+
+  function drawStars() {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let i = 0; i < 40; i++) {
+      const x = (i * 97) % W;
+      const y = (i * 53) % (H * 0.5);
+      const s = (i % 3) * 0.6 + 0.4;
+      ctx.fillRect(x, y, s, s);
+    }
+    // moon
+    ctx.fillStyle = 'rgba(230,230,200,0.35)';
+    ctx.beginPath(); ctx.arc(W - 80, 70, 34, 0, Math.PI*2); ctx.fill();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    drawStars();
+    drawGround();
+
+    for (const r of raccoons) if (r.alive) drawRaccoon(r);
+    rocks.forEach(drawRock);
+    acorns.forEach(drawAcorn);
+
+    if (state === STATE.PLAY || state === STATE.OVER || state === STATE.WIN) {
+      drawSasquatch(sasquatch.x, sasquatch.y, sasquatch.w, sasquatch.h);
+    }
+
+    // particles
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, 3, 3);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function loop() {
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+</body>
+</html>
