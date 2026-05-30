@@ -467,7 +467,12 @@
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') { keys.left = true; sasquatch.facing = -1; }
     if (e.code === 'ArrowRight' || e.code === 'KeyD') { keys.right = true; sasquatch.facing = 1; }
     if (e.code === 'Space') { keys.fire = true; e.preventDefault(); }
-    if (e.code === 'Enter') { if (state === STATE.STORY) continueStory(); else if (state !== STATE.PLAY) startGame(); }
+    if (e.code === 'Enter') {
+      if (state === STATE.STORY) continueStory();
+      else if (state === STATE.PAUSED) resumeFromPause();
+      else if (state !== STATE.PLAY) startGame();
+    }
+    if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
   });
   window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
@@ -508,7 +513,13 @@
 
   startBtn.addEventListener('click', () => {
     const c = ac(); if (c && c.state === 'suspended') c.resume();
-    if (state === STATE.STORY) continueStory(); else startGame();
+    if (state === STATE.STORY) continueStory();
+    else if (state === STATE.PAUSED) resumeFromPause();
+    else startGame();
+  });
+  document.getElementById('pauseBtn').addEventListener('click', () => {
+    const c = ac(); if (c && c.state === 'suspended') c.resume();
+    togglePause();
   });
 
   // ---- Setup waves ----
@@ -582,6 +593,28 @@
     overlay.classList.add('hidden');
     spawnWave(wave);
     startMusic('game');                // quiet gameplay loop resumes
+    updateHud();
+  }
+
+  // Pause / resume (P, Esc, or the ⏸ button). Freezes timers so nothing ticks while paused.
+  let pauseStart = 0;
+  function togglePause() {
+    if (state === STATE.PLAY) {
+      state = STATE.PAUSED;
+      pauseStart = performance.now();
+      stopMusic();
+      showOverlay('⏸ Paused', 'The raccoons are holding position… Resume when ready.', 'Resume');
+    } else if (state === STATE.PAUSED) {
+      resumeFromPause();
+    }
+  }
+  function resumeFromPause() {
+    const dt = performance.now() - pauseStart;   // don't penalise the power-up timer / fire cooldown
+    powerUntil += dt;
+    lastShot += dt;
+    state = STATE.PLAY;
+    overlay.classList.add('hidden');
+    startMusic('game');
     updateHud();
   }
 
