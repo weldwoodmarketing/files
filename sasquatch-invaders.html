@@ -335,10 +335,30 @@
   function hurtSound()    { tone(300,0.25,'sawtooth',0.2,80); }
   function bossHitSound() { tone(150,0.12,'square',0.25,70); }
 
-  // ---- 8-bit background music (plays during the story breaks between tiers) ----
-  const MUSIC_LEAD = [523,659,784,659, 698,659,587,494, 523,659,784,880, 784,659,587,523];
-  const MUSIC_BASS = [131,0,0,0,     175,0,0,0,         196,0,0,0,         131,0,0,0];
-  let musicTimer = null, musicStep = 0;
+  // ---- 8-bit background music ----
+  // A quiet loop during play, plus a distinct tune for each tier's story break.
+  const TRACKS = {
+    game:   { stepMs: 260, leadType: 'triangle', bassType: 'sine',     leadVol: 0.05, bassVol: 0.07,
+              lead: [392,0,523,0, 494,0,392,0, 440,0,587,0, 523,0,440,0],
+              bass: [196,0,0,0,   165,0,0,0,   220,0,0,0,   196,0,0,0] },
+    // → Levels 11–20: rockets & fireworks — heroic, upbeat (C major)
+    break1: { stepMs: 168, leadType: 'square', bassType: 'triangle', leadVol: 0.12, bassVol: 0.16,
+              lead: [523,659,784,659, 698,659,587,494, 523,659,784,880, 784,659,587,523],
+              bass: [131,0,0,0,       175,0,0,0,       196,0,0,0,       131,0,0,0] },
+    // → Levels 21–30: outhouse wars — goofy, bouncy (F major, staccato)
+    break2: { stepMs: 148, leadType: 'square', bassType: 'square',   leadVol: 0.11, bassVol: 0.13,
+              lead: [349,0,440,0, 523,440,349,0, 392,0,494,0, 587,494,392,0],
+              bass: [175,0,175,0, 233,0,233,0,   262,0,262,0, 175,0,175,0] },
+    // → Levels 31–40: cosmic raccoons — spacey, mysterious (A minor, slower)
+    break3: { stepMs: 196, leadType: 'triangle', bassType: 'sine',   leadVol: 0.12, bassVol: 0.16,
+              lead: [440,523,659,523, 587,0,494,0, 440,523,659,880, 784,659,523,0],
+              bass: [110,0,0,0,       147,0,0,0,   131,0,0,0,       110,0,0,0] },
+    // → Levels 41–50: the final stand — epic, tense (E minor, dramatic)
+    break4: { stepMs: 162, leadType: 'square', bassType: 'sawtooth', leadVol: 0.12, bassVol: 0.14,
+              lead: [330,392,494,392, 440,523,440,392, 330,392,494,587, 523,494,392,330],
+              bass: [165,0,165,0,     175,0,175,0,     196,0,196,0,     165,0,165,0] },
+  };
+  let musicTimer = null, musicStep = 0, musicTrack = null;
   function playNote(freq, dur, type, vol) {
     const c = ac(); if (!c || !freq) return;
     const t = c.currentTime;
@@ -351,20 +371,24 @@
     o.connect(g); g.connect(c.destination);
     o.start(t); o.stop(t + dur + 0.02);
   }
-  function startMusic() {
+  function startMusic(name) {
     const c = ac(); if (!c) return;
     if (c.state === 'suspended') c.resume();
-    if (musicTimer) return;
-    musicStep = 0;
+    const tk = TRACKS[name]; if (!tk) return;
+    if (musicTimer && musicTrack === name) return;   // already playing this track
+    stopMusic();
+    musicTrack = name; musicStep = 0;
+    const leadDur = tk.stepMs / 1000 * 0.9, bassDur = tk.stepMs / 1000 * 1.2;
     musicTimer = setInterval(() => {
-      const i = musicStep % MUSIC_LEAD.length;
-      playNote(MUSIC_LEAD[i], 0.16, 'square', 0.12);
-      if (MUSIC_BASS[i]) playNote(MUSIC_BASS[i], 0.22, 'triangle', 0.16);
+      const i = musicStep % tk.lead.length;
+      playNote(tk.lead[i], leadDur, tk.leadType, tk.leadVol);
+      if (tk.bass[i]) playNote(tk.bass[i], bassDur, tk.bassType, tk.bassVol);
       musicStep++;
-    }, 180);
+    }, tk.stepMs);
   }
   function stopMusic() {
     if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+    musicTrack = null;
   }
 
   // ---- Game state ----
@@ -521,6 +545,7 @@
     spawnWave(wave);
     state = STATE.PLAY;
     overlay.classList.add('hidden');
+    startMusic('game');                // quiet gameplay loop
     updateHud();
   }
 
@@ -530,15 +555,15 @@
     const s = STORIES[tierOf(level)];
     updateHud();
     showOverlay(s.title, s.text, 'Continue ▶');
-    startMusic();   // 8-bit music plays during the break
+    startMusic('break' + tierOf(level));   // each tier's break has its own tune
   }
   function continueStory() {
-    stopMusic();
     rocks = []; acorns = []; particles = []; powerups = [];
     powerStacks = 0; powerUntil = 0;   // ammo resets each new set of 10 levels (lives are kept)
     state = STATE.PLAY;
     overlay.classList.add('hidden');
     spawnWave(wave);
+    startMusic('game');                // quiet gameplay loop resumes
     updateHud();
   }
 
