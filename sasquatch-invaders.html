@@ -335,6 +335,38 @@
   function hurtSound()    { tone(300,0.25,'sawtooth',0.2,80); }
   function bossHitSound() { tone(150,0.12,'square',0.25,70); }
 
+  // ---- 8-bit background music (plays during the story breaks between tiers) ----
+  const MUSIC_LEAD = [523,659,784,659, 698,659,587,494, 523,659,784,880, 784,659,587,523];
+  const MUSIC_BASS = [131,0,0,0,     175,0,0,0,         196,0,0,0,         131,0,0,0];
+  let musicTimer = null, musicStep = 0;
+  function playNote(freq, dur, type, vol) {
+    const c = ac(); if (!c || !freq) return;
+    const t = c.currentTime;
+    const o = c.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function startMusic() {
+    const c = ac(); if (!c) return;
+    if (c.state === 'suspended') c.resume();
+    if (musicTimer) return;
+    musicStep = 0;
+    musicTimer = setInterval(() => {
+      const i = musicStep % MUSIC_LEAD.length;
+      playNote(MUSIC_LEAD[i], 0.16, 'square', 0.12);
+      if (MUSIC_BASS[i]) playNote(MUSIC_BASS[i], 0.22, 'triangle', 0.16);
+      musicStep++;
+    }, 180);
+  }
+  function stopMusic() {
+    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  }
+
   // ---- Game state ----
   const STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3, STORY: 4 };
   let state = STATE.MENU;
@@ -481,6 +513,7 @@
   }
 
   function startGame() {
+    stopMusic();
     score = 0; lives = 3; wave = 1;
     rocks = []; acorns = []; particles = []; powerups = []; floats = [];
     powerStacks = 0; powerUntil = 0;
@@ -497,9 +530,12 @@
     const s = STORIES[tierOf(level)];
     updateHud();
     showOverlay(s.title, s.text, 'Continue ▶');
+    startMusic();   // 8-bit music plays during the break
   }
   function continueStory() {
-    rocks = []; acorns = []; particles = [];
+    stopMusic();
+    rocks = []; acorns = []; particles = []; powerups = [];
+    powerStacks = 0; powerUntil = 0;   // ammo resets each new set of 10 levels (lives are kept)
     state = STATE.PLAY;
     overlay.classList.add('hidden');
     spawnWave(wave);
@@ -728,6 +764,7 @@
   }
 
   function gameOver() {
+    stopMusic();
     state = STATE.OVER;
     if (score > best) { best = score; localStorage.setItem('sasquatchBest', best); }
     updateHud();
@@ -737,6 +774,7 @@
   }
 
   function winGame() {
+    stopMusic();
     state = STATE.WIN;
     if (score > best) { best = score; localStorage.setItem('sasquatchBest', best); }
     updateHud();
