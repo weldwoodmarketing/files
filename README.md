@@ -1,6 +1,6 @@
 # 🦶 Campsite Invaders 🪨🦝
 
-A Space Invaders–style browser game where **Sasquatch defends the campsite by throwing rocks at invading raccoons**. The raccoons march across the screen, drop closer each turn, and chuck acorns back at you — clear all **10 levels** to win.
+A Space Invaders–style browser game where **Sasquatch defends the campsite from invading raccoons**. The raccoons march across the screen, drop closer each turn, and chuck acorns back at you — fight through all **50 levels** to win.
 
 ## ▶️ Play now
 
@@ -18,12 +18,13 @@ A Space Invaders–style browser game where **Sasquatch defends the campsite by 
 
 ## 🌲 How to play
 
-- You're **Sasquatch** at the bottom of the screen — hurl rocks upward at the raccoons.
-- Clear every raccoon (and the level's boss) to advance. There are **10 levels**, each set at a different time of day — early morning through to night.
-- **Power-ups:** grab a green power-up to add another rock to every throw — stack them with no limit, and at **5** your rocks become **lasers**. The effect is timed and shown in the HUD.
-- **Boss raccoon:** every level is guarded by a crowned boss that gets tougher each time — **10 hits on level 1, 15 on level 2, up to 55 on level 10**.
+- You're **Sasquatch** at the bottom of the screen — hurl your ammo upward at the raccoons.
+- Clear every raccoon (and the level's bosses) to advance. There are **50 levels** across **5 tiers** of 10, and a short **story** plays between each tier. Each tier cycles through a day — early morning to night.
+- **Evolving ammo** — your weapon changes every 10 levels: **rocks → rockets → poop → evil raccoon heads → axes** (with wilder powered forms: **lasers, flaming bananas, bombs, UFOs, dragons**).
+- **Power-ups:** grab a green power-up to add another projectile to every throw — stack them with no limit, and at **5** your ammo goes **SUPER** (the powered form, which hits bosses harder). The effect is timed and shown in the HUD.
+- **Stacking bosses:** every level has a crowned boss that gets tougher each level, and **one extra boss is added every tier** — up to **5 bosses at once** in levels 41–50.
 - **Extra tree:** clear a level to earn a bonus life (🌲), up to 6.
-- **Lose a life** if an acorn hits you. **Game over** if any raccoon reaches the campsite.
+- **Lose a life** if an acorn hits you. **Game over** if any raccoon or boss reaches the campsite.
 - Your **high score** is saved in your browser.
 
 ## 🛠️ Tech
