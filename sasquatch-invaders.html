@@ -141,7 +141,16 @@
     #hud { gap: 6px; padding: 6px 10px; }
     #hud .label { font-size: 9px; letter-spacing: .5px; }
     #hud .val { font-size: 15px; }
-    #overlay { gap: 9px; padding: 14px; }
+    /* Let the menu/story panel grow to fit its content instead of being cropped to the
+       4:3 stage — so the top emoji and bottom hint are never cut off on phones. */
+    #overlay {
+      inset: 0 0 auto 0;
+      height: auto;
+      min-height: 100%;
+      justify-content: flex-start;
+      gap: 9px;
+      padding: 16px 14px;
+    }
     #overlay h2 { font-size: 22px; }
     #overlay p { font-size: 13.5px; max-width: 100%; }
     #overlay .keys { font-size: 12px; }
