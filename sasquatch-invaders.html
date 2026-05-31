@@ -139,6 +139,14 @@
   /* Keep everything legible and non-overlapping on phones */
   @media (max-width: 560px) {
     #hud { gap: 6px; padding: 6px 10px; }
+    /* Taller play area on phones — matches the 800×840 mobile canvas, capped so it always fits */
+    #stage {
+      width: auto;
+      max-width: min(92vw, 760px);
+      height: auto;
+      max-height: 66vh;
+      aspect-ratio: 800 / 840;
+    }
     #hud .label { font-size: 9px; letter-spacing: .5px; }
     #hud .val { font-size: 15px; }
     /* Let the menu/story panel grow to fit its content instead of being cropped to the
@@ -195,6 +203,8 @@
 
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
+  // Taller play area on phones (keep the 800-wide layout so raccoon formations still fit).
+  if (window.matchMedia('(max-width: 560px)').matches) canvas.height = 840;
   const W = canvas.width, H = canvas.height;
   const GROUND_Y = H - 18;
 
