@@ -466,6 +466,7 @@
   let rocks = [];      // sasquatch's projectiles (going up)
   let acorns = [];     // raccoon projectiles (going down)
   let meteors = [];    // night-only falling meteors
+  let hawks = [];      // level 71+ hawks that drop acorns or power-shot power-ups
   let raccoons = [];
   let bosses = [];
   let powerups = [];
@@ -478,6 +479,7 @@
   let powerStacks = 0;   // extra rocks gained from stacked power-ups (unlimited)
   let powerUntil = 0;    // when the current power-up stack expires
   let invincibleUntil = 0; // invincibility from beating a boss
+  let strongUntil = 0;     // "power shot" — way stronger ammo (from hawks, level 71+)
   let walkPhase = 0;
   let throwT = 0;
 
@@ -605,8 +607,8 @@
   function startGame() {
     stopMusic();
     score = 0; lives = 3; wave = 1;
-    rocks = []; acorns = []; meteors = []; particles = []; powerups = []; floats = [];
-    powerStacks = 0; powerUntil = 0; invincibleUntil = 0;
+    rocks = []; acorns = []; meteors = []; hawks = []; particles = []; powerups = []; floats = [];
+    powerStacks = 0; powerUntil = 0; invincibleUntil = 0; strongUntil = 0;
     sasquatch.x = W / 2;
     spawnWave(wave);
     state = STATE.PLAY;
@@ -624,8 +626,8 @@
     startMusic('break' + tierOf(level));   // each tier's break has its own tune
   }
   function continueStory() {
-    rocks = []; acorns = []; meteors = []; particles = []; powerups = [];
-    powerStacks = 0; powerUntil = 0; invincibleUntil = 0;   // ammo resets each new set of 10 levels (lives are kept)
+    rocks = []; acorns = []; meteors = []; hawks = []; particles = []; powerups = [];
+    powerStacks = 0; powerUntil = 0; invincibleUntil = 0; strongUntil = 0;   // ammo resets each new set of 10 levels (lives are kept)
     state = STATE.PLAY;
     overlay.classList.add('hidden');
     spawnWave(wave);
@@ -650,6 +652,7 @@
     powerUntil += dt;
     lastShot += dt;
     if (invincibleUntil > 0) invincibleUntil += dt;
+    if (strongUntil > 0) strongUntil += dt;
     state = STATE.PLAY;
     overlay.classList.add('hidden');
     startMusic('game');
@@ -771,6 +774,22 @@
       meteors.push({ x: 24 + Math.random() * (W - 48), y: -24, vy: 4.5 + Math.random() * 2.5, r: 11, spin: 0 });
     }
 
+    // Hawks (level 71+) glide across the sky and randomly drop an acorn or a "power shot" power-up.
+    if (wave > 70 && hawks.length < 2 && Math.random() < 0.006) {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      hawks.push({ x: dir === 1 ? -36 : W + 36, y: 80 + Math.random() * 130, dir,
+                   vx: 1.6 + Math.random() * 1.2, dropT: 50 + Math.random() * 60, flap: 0 });
+    }
+    for (const hk of hawks) {
+      hk.x += hk.dir * hk.vx; hk.flap += 0.3; hk.dropT -= 1;
+      if (hk.dropT <= 0 && hk.x > 10 && hk.x < W - 10) {
+        hk.dropT = 60 + Math.random() * 90;
+        if (Math.random() < 0.5) acorns.push({ x: hk.x, y: hk.y + 8, r: 7, vy: 3.5, spin: 0 });
+        else spawnPowerup(hk.x, hk.y + 8, 'strong');
+      }
+    }
+    hawks = hawks.filter(hk => hk.x > -50 && hk.x < W + 50);
+
     // Bosses (one extra per tier) — patrol, descend at the walls, and lob acorns (not at night)
     const aliveBosses = bosses.filter(b => b.alive);
     for (const boss of aliveBosses) {
@@ -815,6 +834,8 @@
     meteors = meteors.filter(m => !m.gone && m.y < H + 24);
 
     // Rocks vs bosses & raccoons
+    const strong = now < strongUntil;                   // "power shot" makes ammo way stronger
+    const hitThreshold = wave > 50 ? 17 : 10;           // hits needed before a boss drops a power-up
     for (const rk of rocks) {
       if (rk.y < -20) continue;
       let hit = false;
@@ -822,15 +843,15 @@
         if (!boss.alive) continue;
         if (Math.abs(rk.x - boss.x) < boss.w/2 + rk.r && Math.abs(rk.y - boss.y) < boss.h/2 + rk.r) {
           rk.y = -100; hit = true;
-          boss.hp -= rk.powered ? 2 : 1;   // powered ammo hits harder
+          boss.hp -= (rk.powered ? 2 : 1) * (strong ? 4 : 1);   // powered + power-shot hit harder
           boss.flash = 6;
           boss.hits = (boss.hits || 0) + 1;
           bossHitSound();
           burst(rk.x, boss.y, '#c9ced4', 8);
           if (boss.hp <= 0) {
             defeatBoss(boss);
-          } else if (boss.hits % 10 === 0) {
-            // every 10 hits a boss coughs up an extra-rock power-up
+          } else if (boss.hits % hitThreshold === 0) {
+            // every 10 hits (17 after level 50) a boss coughs up an extra-rock power-up
             spawnPowerup(boss.x, boss.y + boss.h/2, 'ammo');
             floatText(boss.x, boss.y, 'POWER-UP!', '#7fbf5a');
           }
@@ -870,6 +891,10 @@
           invincibleUntil = now + 7000;   // 7 seconds of invincibility from beating a boss
           heartSound();
           floatText(sasquatch.x, sasquatch.y - 50, '★ INVINCIBLE 7s! ★', '#ffd23a');
+        } else if (p.type === 'strong') {
+          strongUntil = now + 10000;      // 10 seconds of way-stronger ammo (hawk drop)
+          powerupSound();
+          floatText(sasquatch.x, sasquatch.y - 50, '💥 POWER SHOT! 💥', '#ff7af0');
         } else {
           powerStacks++;
           powerUntil = now + DOUBLE_MS;   // keep the timer; each pickup refreshes it
@@ -895,12 +920,15 @@
 
     // Level cleared?
     if (raccoons.every(r => !r.alive) && bosses.every(b => !b.alive)) {
+      const clearedLevel = wave;
       wave++;
       score += 50;
       if (wave > TOTAL_LEVELS) { winGame(); return; }
+      // After level 40 you earn TWO trees per level cleared (instead of one)
+      const treeGain = clearedLevel > 40 ? 2 : 1;
       if (lives < MAX_LIVES) {
-        lives++;
-        floatText(sasquatch.x, sasquatch.y - 60, '+🌲 EXTRA TREE!', '#7fbf5a');
+        lives = Math.min(MAX_LIVES, lives + treeGain);
+        floatText(sasquatch.x, sasquatch.y - 60, (treeGain === 2 ? '+🌲🌲 TWO TREES!' : '+🌲 EXTRA TREE!'), '#7fbf5a');
         heartSound();
       } else {
         floatText(sasquatch.x, sasquatch.y - 60, 'LEVEL CLEAR! +50', '#c9a06a');
@@ -1074,6 +1102,7 @@
   function drawProjectile(rk) {
     ctx.save();
     ctx.translate(rk.x, rk.y);
+    if (performance.now() < strongUntil) { ctx.shadowColor = '#ff7af0'; ctx.shadowBlur = 10; }  // power-shot glow
     switch (rk.ammo) {
       case 'laser': {
         ctx.globalCompositeOperation = 'lighter';
@@ -1325,6 +1354,28 @@
     ctx.fillStyle = '#5b4636'; ctx.beginPath(); ctx.arc(0, 0, m.r, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#3a2c20'; ctx.beginPath(); ctx.arc(2, 2, m.r * 0.4, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#ffce5a'; ctx.beginPath(); ctx.arc(-2, -2, m.r * 0.3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawHawk(hk) {
+    ctx.save();
+    ctx.translate(hk.x, hk.y);
+    ctx.scale(hk.dir, 1);
+    const flap = Math.sin(hk.flap) * 6;
+    ctx.fillStyle = '#5a4632';
+    // body
+    ctx.beginPath(); ctx.ellipse(0, 0, 9, 4, 0, 0, Math.PI*2); ctx.fill();
+    // head + beak
+    ctx.beginPath(); ctx.arc(8, -1, 3.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#e0a64a'; ctx.beginPath(); ctx.moveTo(11, -1); ctx.lineTo(15, 0); ctx.lineTo(11, 1.5); ctx.fill();
+    // wings (flapping)
+    ctx.fillStyle = '#6b5440';
+    ctx.beginPath(); ctx.moveTo(-2, 0); ctx.quadraticCurveTo(-10, -flap - 2, -18, flap * 0.5); ctx.quadraticCurveTo(-9, -2, -2, -2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(2, 0); ctx.quadraticCurveTo(8, -flap - 2, 14, flap * 0.5); ctx.quadraticCurveTo(7, -2, 2, -2); ctx.fill();
+    // eye
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(8.5, -1.5, 0.9, 0, Math.PI*2); ctx.fill();
+    // tail
+    ctx.fillStyle = '#5a4632'; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-14, -2); ctx.lineTo(-14, 2); ctx.fill();
     ctx.restore();
   }
 
@@ -1599,6 +1650,7 @@
     rocks.forEach(drawProjectile);
     acorns.forEach(drawAcorn);
     meteors.forEach(drawMeteor);
+    hawks.forEach(drawHawk);
 
     if (state !== STATE.MENU) {
       // invincibility aura
