@@ -136,15 +136,12 @@
   .hint { font-size: 13px; color: #789; }
   .big-emoji { font-size: 44px; line-height: 1; }
   #ver {
-    position: fixed;
-    bottom: 4px;
-    right: 6px;
+    text-align: center;
     font-family: monospace;
-    font-size: 11px;
+    font-size: 12px;
     color: #7fbf5a;
-    opacity: 0.55;
-    z-index: 10;
-    pointer-events: none;
+    opacity: 0.7;
+    margin-top: -2px;
   }
 
   /* Keep everything legible and non-overlapping on phones */
@@ -181,9 +178,9 @@
 </style>
 </head>
 <body>
-<div id="ver">v4</div>
 <div id="wrap">
   <canvas id="title"></canvas>
+  <div id="ver">build v5</div>
   <div id="hud">
     <div><div class="label">Score</div><div class="val" id="score">0</div></div>
     <div><div class="label">Level</div><div class="val" id="wave">1</div></div>
