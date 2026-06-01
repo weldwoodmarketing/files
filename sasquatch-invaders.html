@@ -696,8 +696,8 @@
     floats.push({ x, y, text, color, life: 1 });
   }
 
-  function spawnRock(x, ammo, powered) {
-    rocks.push({ x, y: sasquatch.y - sasquatch.h/2, r: powered ? 10 : 9, vy: powered ? -14 : -9, spin: 0, ammo, powered: !!powered });
+  function spawnRock(x, ammo, powered, row) {
+    rocks.push({ x, y: sasquatch.y - sasquatch.h/2 - (row || 0) * 16, r: powered ? 10 : 9, vy: powered ? -14 : -9, spin: 0, ammo, powered: !!powered });
   }
   function spawnPowerup(x, y, type) {
     powerups.push({ x, y, vy: 2.1, spin: 0, type: type || 'ammo' });
@@ -742,9 +742,14 @@
       const powered = powerStacks >= 5;
       const ammo = ammoFor(wave, powered);
       powered ? laserSound() : throwSound();
-      const spacing = 14;
-      const start = -(count - 1) / 2 * spacing;
-      for (let i = 0; i < count; i++) spawnRock(sasquatch.x + start + i * spacing, ammo, powered);
+      // Fan out up to 10 across; extra ammo stacks in additional rows above instead of widening.
+      const spacing = 14, perRow = 10;
+      const rows = Math.ceil(count / perRow);
+      for (let r = 0; r < rows; r++) {
+        const inRow = Math.min(perRow, count - r * perRow);
+        const startX = -(inRow - 1) / 2 * spacing;
+        for (let c = 0; c < inRow; c++) spawnRock(sasquatch.x + startX + c * spacing, ammo, powered, r);
+      }
     }
 
     rocks.forEach(rk => { rk.y += rk.vy; rk.spin += 0.3; });
@@ -818,7 +823,7 @@
       }
       for (const boss of bosses) {                      // big strike on a boss, then burns up
         if (boss.alive && Math.abs(m.x - boss.x) < boss.w/2 + m.r && Math.abs(m.y - boss.y) < boss.h/2 + m.r) {
-          boss.hp -= 15; boss.flash = 6; bossHitSound();
+          boss.hp -= 15; boss.flash = 6;
           burst(m.x, m.y, '#ffb347', 14);
           if (boss.hp <= 0) defeatBoss(boss);
           m.gone = true; break;
@@ -846,7 +851,6 @@
           boss.hp -= (rk.powered ? 2 : 1) * (strong ? 4 : 1);   // powered + power-shot hit harder
           boss.flash = 6;
           boss.hits = (boss.hits || 0) + 1;
-          bossHitSound();
           burst(rk.x, boss.y, '#c9ced4', 8);
           if (boss.hp <= 0) {
             defeatBoss(boss);
