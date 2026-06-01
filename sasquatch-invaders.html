@@ -186,7 +186,7 @@
     <div id="overlay">
       <div class="big-emoji">🦶🪨🦝</div>
       <h2>Campsite Invaders</h2>
-      <p>The raccoons raided the campsite! Move Bigfoot and pelt them before they reach the ground. Grab green power-ups to add a projectile each time — hit 5 and they go SUPER. Your ammo evolves every 10 levels: rocks → rockets → poop → raccoon heads → axes (and their wilder powered forms). Each tier adds another boss and a new chapter of the story. Survive all 50 levels to save Squatchkind!</p>
+      <p>The raccoons raided the campsite! Move Bigfoot and pelt them before they reach the ground. A couple of raccoons drop green power-ups — grab them to add a projectile each time, and at 5 your ammo goes SUPER. Your ammo evolves every 10 levels (rocks, rockets, poop, dinosaurs, whales, angels… and wilder!), each tier adds another boss and a new story chapter, and at night meteors rain down. Beat a boss for a 7-second invincibility star. Survive all 100 levels to save Squatchkind!</p>
       <div class="keys">
         Move: <b>◀ ▶</b> / <b>A D</b> &nbsp;•&nbsp; Throw rock: <b>Space</b><br>
         On mobile: <b>drag to move</b>, <b>tap to throw</b>
@@ -432,29 +432,40 @@
   const STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3, STORY: 4, PAUSED: 5 };
   let state = STATE.MENU;
 
-  const TOTAL_LEVELS = 50;
+  const TOTAL_LEVELS = 100;
   // Ammo evolves every 10 levels: [normal throw, powered (5+ stacks) throw]
-  const AMMO_NORMAL = ['rock', 'rocket', 'poop', 'raccoonhead', 'axe'];
-  const AMMO_POWER  = ['laser', 'banana', 'bomb', 'ufo', 'dragon'];
-  function tierOf(level) { return Math.min(Math.floor((level - 1) / 10), 4); }
+  const AMMO_NORMAL = ['rock','rocket','poop','raccoonhead','axe','pillow','dog','rainbow','whale','angel'];
+  const AMMO_POWER  = ['laser','banana','bomb','ufo','dragon','dino','cat','sadcloud','cheeseburger','crayon'];
+  function tierOf(level) { return Math.min(Math.floor((level - 1) / 10), 9); }
   function ammoFor(level, powered) { return (powered ? AMMO_POWER : AMMO_NORMAL)[tierOf(level)]; }
 
-  // Story beats shown when crossing into a new tier (levels 11/21/31/41). Index = tier of upcoming level.
+  // Story beats shown when crossing into a new tier. Index = tier of upcoming level.
   const STORIES = [
     null, // tier 0 intro lives on the start screen
     { title: '🎆 The Raccoons Regroup',
-      text: 'Dawn breaks over a smoking campsite. The raccoons retreat into the pines… then return dragging crates of stolen fireworks! Bigfoot kicks open an old ranger shed and arms up — ROCKETS and FLAMING BANANAS. TWO crowned bosses now lead the raid. The fight pushes deeper into the woods. (Levels 11–20)' },
+      text: 'Dawn breaks over a smoking campsite. The raccoons retreat into the pines… then return dragging crates of stolen fireworks! Bigfoot arms up — ROCKETS and FLAMING BANANAS. TWO crowned bosses now lead the raid. (Levels 11–20)' },
     { title: '💩 The Outhouse Wars',
-      text: 'The raccoons have seized the campground outhouse — and weaponized it. Things are about to get gross. Bigfoot answers with what nature provides: POOP and BOMBS. THREE bosses command the horde now. Hold the line! (Levels 21–30)' },
+      text: 'The raccoons have seized the campground outhouse — and weaponized it. Bigfoot answers with what nature provides: POOP and BOMBS. THREE bosses command the horde now. (Levels 21–30)' },
     { title: '🛸 Cosmic Raccoons',
-      text: 'Strange lights hum over the ridge. These aren\'t ordinary trash pandas anymore — they\'ve gone cosmic. Bigfoot hurls EVIL RACCOON HEADS and commandeers crashed UFOs. FOUR bosses descend from the night sky. (Levels 31–40)' },
-    { title: '🐉 The Final Stand',
-      text: 'The Raccoon King summons beasts of legend for one last siege. Bigfoot grabs the only things big enough to answer — AXES and DRAGONS. FIVE bosses guard the final ten levels. Defend the campsite… for all of Squatchkind! (Levels 41–50)' },
+      text: 'Strange lights hum over the ridge. These trash pandas have gone cosmic. Bigfoot hurls EVIL RACCOON HEADS and commandeers crashed UFOs. FOUR bosses descend from the night sky. (Levels 31–40)' },
+    { title: '🐉 The Beasts of Legend',
+      text: 'The Raccoon King summons monsters for a great siege. Bigfoot grabs the only things big enough — AXES and DRAGONS. FIVE bosses guard the way. (Levels 41–50)' },
+    { title: '🦕 A Rip in Time',
+      text: 'A tear in time yawns open and DINOSAURS stampede out! Too weary to fight bare-handed, Bigfoot grabs the comfiest weapons around — FLAMING PILLOWS — and rides DINOSAURS into the fray. SIX bosses block the path. (Levels 51–60)' },
+    { title: '🐶 Cats & Dogs',
+      text: 'The dinosaurs scatter at a sound every camper knows — barking. The forest\'s stray DOGS and CATS pile into the brawl, and Bigfoot flings them (gently!) at the raccoons. SEVEN bosses now. (Levels 61–70)' },
+    { title: '🌈 A Storm of Feelings',
+      text: 'A storm of pure emotion rolls in. Bigfoot weaponizes the weather itself — dazzling RAINBOWS and gloomy SAD CLOUDS rain down on the raccoons. EIGHT bosses guard the storm. (Levels 71–80)' },
+    { title: '🐋 Reality Gets Weird',
+      text: 'Things stop making sense. Bigfoot is now somehow hurling WHALES and CHEESEBURGERS. The raccoons are as confused as you are. NINE bosses stand in the way. (Levels 81–90)' },
+    { title: '👼 The Final Ascent',
+      text: 'The summit. The Raccoon Emperor waits upon the throne. Bigfoot throws everything left — literal ANGELS and humble CRAYONS — in one glorious last push. TEN bosses guard the throne. Save Squatchkind, once and for all! (Levels 91–100)' },
   ];
 
   const sasquatch = { x: W/2, y: GROUND_Y - 40, w: 56, h: 80, speed: 6, facing: 1 };
   let rocks = [];      // sasquatch's projectiles (going up)
   let acorns = [];     // raccoon projectiles (going down)
+  let meteors = [];    // night-only falling meteors
   let raccoons = [];
   let bosses = [];
   let powerups = [];
@@ -466,6 +477,7 @@
   let wave = 1;
   let powerStacks = 0;   // extra rocks gained from stacked power-ups (unlimited)
   let powerUntil = 0;    // when the current power-up stack expires
+  let invincibleUntil = 0; // invincibility from beating a boss
   let walkPhase = 0;
   let throwT = 0;
 
@@ -564,9 +576,15 @@
         });
       }
     }
-    // One extra boss is added every 10 levels (tier 0 → 1 boss, tier 4 → 5 bosses).
+    // Only a couple of raccoons carry an extra-rock power-up.
+    const carriers = Math.min(2, raccoons.length);
+    for (let k = 0; k < carriers; k++) {
+      const pick = raccoons[Math.floor(Math.random() * raccoons.length)];
+      pick.hasPowerup = true;
+    }
+    // One extra boss is added every 10 levels (tier 0 → 1 boss, tier 9 → 10 bosses).
     const bossCount = tier + 1;
-    const hp = 10 + (n - 1) * 5;          // L1:10, L2:15 … scales up across all 50 levels
+    const hp = 10 + (n - 1) * 5;          // L1:10, L2:15 … scales up across all 100 levels
     const bw = Math.max(60, 96 - (bossCount - 1) * 7);
     for (let i = 0; i < bossCount; i++) {
       bosses.push({
@@ -587,8 +605,8 @@
   function startGame() {
     stopMusic();
     score = 0; lives = 3; wave = 1;
-    rocks = []; acorns = []; particles = []; powerups = []; floats = [];
-    powerStacks = 0; powerUntil = 0;
+    rocks = []; acorns = []; meteors = []; particles = []; powerups = []; floats = [];
+    powerStacks = 0; powerUntil = 0; invincibleUntil = 0;
     sasquatch.x = W / 2;
     spawnWave(wave);
     state = STATE.PLAY;
@@ -606,8 +624,8 @@
     startMusic('break' + tierOf(level));   // each tier's break has its own tune
   }
   function continueStory() {
-    rocks = []; acorns = []; particles = []; powerups = [];
-    powerStacks = 0; powerUntil = 0;   // ammo resets each new set of 10 levels (lives are kept)
+    rocks = []; acorns = []; meteors = []; particles = []; powerups = [];
+    powerStacks = 0; powerUntil = 0; invincibleUntil = 0;   // ammo resets each new set of 10 levels (lives are kept)
     state = STATE.PLAY;
     overlay.classList.add('hidden');
     spawnWave(wave);
@@ -631,6 +649,7 @@
     const dt = performance.now() - pauseStart;   // don't penalise the power-up timer / fire cooldown
     powerUntil += dt;
     lastShot += dt;
+    if (invincibleUntil > 0) invincibleUntil += dt;
     state = STATE.PLAY;
     overlay.classList.add('hidden');
     startMusic('game');
@@ -677,8 +696,24 @@
   function spawnRock(x, ammo, powered) {
     rocks.push({ x, y: sasquatch.y - sasquatch.h/2, r: powered ? 10 : 9, vy: powered ? -14 : -9, spin: 0, ammo, powered: !!powered });
   }
-  function spawnPowerup(x, y) {
-    powerups.push({ x, y, vy: 2.1, spin: 0 });
+  function spawnPowerup(x, y, type) {
+    powerups.push({ x, y, vy: 2.1, spin: 0, type: type || 'ammo' });
+  }
+  function killRaccoon(r) {
+    r.alive = false;
+    score += 10 + (4 - Math.min(r.row, 3)) * 5;
+    playSquash(false);
+    burst(r.x, r.y, '#9a7b53', 14);
+    if (r.hasPowerup) spawnPowerup(r.x, r.y, 'ammo');
+  }
+  function defeatBoss(boss) {
+    boss.alive = false;
+    playSquash(true);
+    burst(boss.x, boss.y, '#7a818b', 28);
+    const reward = 100 + wave * 25;
+    score += reward;
+    spawnPowerup(boss.x, boss.y, 'invince');   // beating a boss drops a 7-second invincibility star
+    floatText(boss.x, boss.y, 'BOSS DOWN! +' + reward, '#ffd23a');
   }
 
   // ---- Update ----
@@ -722,20 +757,21 @@
     else { for (const r of raccoons) r.x += step; }
     for (const r of raccoons) r.wob += 0.05;
 
-    // Raccoons throw acorns (rate ramps within each tier, lightly across tiers)
     const lt = ((wave - 1) % 10) + 1;
-    // Power-up drop rate: modest in tier 1, WAY higher from level 11 on (ammo resets each tier),
-    // and a massive restock in the first two levels of every new tier (11-12, 21-22, 31-32, 41-42).
-    let dropChance;
-    if (wave <= 10) dropChance = 0.12;
-    else if (lt <= 2) dropChance = 0.9;
-    else dropChance = Math.min(0.7, 0.45 + tierOf(wave) * 0.06);
-    if (aliveRaccoons.length && Math.random() < 0.012 + lt * 0.004 + tierOf(wave) * 0.003) {
+    const night = lt === 10;   // the 10th level of every tier is "Night"
+
+    // By day the raccoons throw acorns; at NIGHT no acorns — meteors rain instead.
+    if (!night && aliveRaccoons.length && Math.random() < 0.012 + lt * 0.004 + tierOf(wave) * 0.003) {
       const shooter = aliveRaccoons[Math.floor(Math.random() * aliveRaccoons.length)];
       acorns.push({ x: shooter.x, y: shooter.y + shooter.h/2, r: 7, vy: 3 + lt * 0.22, spin: 0 });
     }
+    // Night meteors: fall from the sky, kill any raccoon they pass through, wound bosses,
+    // and cost Bigfoot a life if one lands on him (unless invincible).
+    if (night && Math.random() < 0.05) {
+      meteors.push({ x: 24 + Math.random() * (W - 48), y: -24, vy: 4.5 + Math.random() * 2.5, r: 11, spin: 0 });
+    }
 
-    // Bosses (one extra per tier) — patrol, descend at the walls, and lob acorns
+    // Bosses (one extra per tier) — patrol, descend at the walls, and lob acorns (not at night)
     const aliveBosses = bosses.filter(b => b.alive);
     for (const boss of aliveBosses) {
       boss.x += boss.vx * boss.dir;
@@ -744,7 +780,7 @@
       boss.wob += 0.05;
       if (boss.flash > 0) boss.flash -= 0.5;
       boss.shootT -= 1;
-      if (boss.shootT <= 0) {
+      if (!night && boss.shootT <= 0) {
         boss.shootT = (60 + Math.random() * 40) * (0.6 + bosses.length * 0.4); // throttle when many bosses
         acorns.push({ x: boss.x - 16, y: boss.y + boss.h/2, r: 8, vy: 3.2 + lt * 0.18, spin: 0 });
         acorns.push({ x: boss.x + 16, y: boss.y + boss.h/2, r: 8, vy: 3.2 + lt * 0.18, spin: 0 });
@@ -753,6 +789,30 @@
     }
 
     acorns.forEach(a => { a.y += a.vy; a.spin += 0.2; });
+
+    // Meteors fall and destroy what they touch
+    for (const m of meteors) {
+      m.y += m.vy; m.spin += 0.4;
+      if (m.gone) continue;
+      for (const r of raccoons) {                       // pierces through raccoons, killing each
+        if (r.alive && Math.abs(m.x - r.x) < r.w/2 + m.r && Math.abs(m.y - r.y) < r.h/2 + m.r) killRaccoon(r);
+      }
+      for (const boss of bosses) {                      // big strike on a boss, then burns up
+        if (boss.alive && Math.abs(m.x - boss.x) < boss.w/2 + m.r && Math.abs(m.y - boss.y) < boss.h/2 + m.r) {
+          boss.hp -= 15; boss.flash = 6; bossHitSound();
+          burst(m.x, m.y, '#ffb347', 14);
+          if (boss.hp <= 0) defeatBoss(boss);
+          m.gone = true; break;
+        }
+      }
+      if (!m.gone && Math.abs(m.x - sasquatch.x) < sasquatch.w/2 + m.r &&
+          Math.abs(m.y - (sasquatch.y - 6)) < sasquatch.h/2 + m.r) {
+        m.gone = true;
+        if (now < invincibleUntil) { burst(sasquatch.x, sasquatch.y - 10, '#ffd23a', 12); }
+        else { hurtSound(); loseLife(); burst(sasquatch.x, sasquatch.y - 10, '#ffb347', 18); }
+      }
+    }
+    meteors = meteors.filter(m => !m.gone && m.y < H + 24);
 
     // Rocks vs bosses & raccoons
     for (const rk of rocks) {
@@ -768,16 +828,10 @@
           bossHitSound();
           burst(rk.x, boss.y, '#c9ced4', 8);
           if (boss.hp <= 0) {
-            boss.alive = false;
-            playSquash(true);
-            burst(boss.x, boss.y, '#7a818b', 28);
-            const reward = 100 + wave * 25;
-            score += reward;
-            spawnPowerup(boss.x, boss.y);
-            floatText(boss.x, boss.y, 'BOSS DOWN! +' + reward, '#ffd23a');
+            defeatBoss(boss);
           } else if (boss.hits % 10 === 0) {
-            // every 10 hits a boss coughs up a power-up
-            spawnPowerup(boss.x, boss.y + boss.h/2);
+            // every 10 hits a boss coughs up an extra-rock power-up
+            spawnPowerup(boss.x, boss.y + boss.h/2, 'ammo');
             floatText(boss.x, boss.y, 'POWER-UP!', '#7fbf5a');
           }
           break;
@@ -787,26 +841,21 @@
       for (const r of raccoons) {
         if (!r.alive) continue;
         if (Math.abs(rk.x - r.x) < r.w/2 + rk.r && Math.abs(rk.y - r.y) < r.h/2 + rk.r) {
-          r.alive = false;
           rk.y = -100;
-          score += 10 + (4 - Math.min(r.row, 3)) * 5;
-          playSquash(false);
-          burst(r.x, r.y, '#9a7b53', 14);
-          if (Math.random() < dropChance) spawnPowerup(r.x, r.y);
+          killRaccoon(r);
           break;
         }
       }
     }
     rocks = rocks.filter(rk => rk.y > -20);
 
-    // Acorns vs sasquatch
+    // Acorns vs sasquatch (no effect while invincible)
     for (const a of acorns) {
       if (Math.abs(a.x - sasquatch.x) < sasquatch.w/2 + a.r &&
           Math.abs(a.y - (sasquatch.y - 6)) < sasquatch.h/2 + a.r) {
         a.y = H + 100;
-        hurtSound();
-        loseLife();
-        burst(sasquatch.x, sasquatch.y - 10, '#e87', 16);
+        if (now < invincibleUntil) { burst(sasquatch.x, sasquatch.y - 10, '#ffd23a', 10); }
+        else { hurtSound(); loseLife(); burst(sasquatch.x, sasquatch.y - 10, '#e87', 16); }
       }
     }
     acorns = acorns.filter(a => a.y < H + 20);
@@ -817,17 +866,23 @@
       if (Math.abs(p.x - sasquatch.x) < sasquatch.w/2 + 16 &&
           Math.abs(p.y - (sasquatch.y - 6)) < sasquatch.h/2 + 16) {
         p.y = H + 200;
-        powerStacks++;
-        powerUntil = now + DOUBLE_MS;   // keep the timer; each pickup refreshes it
-        powerupSound();
-        const poweredName = AMMO_POWER[tierOf(wave)].toUpperCase();
-        const normalName = AMMO_NORMAL[tierOf(wave)].toUpperCase();
-        if (powerStacks === 5) {
-          floatText(sasquatch.x, sasquatch.y - 50, '⚡ ' + poweredName + ' MODE! ⚡', '#8dff9f');
-        } else if (powerStacks > 5) {
-          floatText(sasquatch.x, sasquatch.y - 50, (1 + powerStacks) + '× ' + poweredName + '!', '#8dff9f');
+        if (p.type === 'invince') {
+          invincibleUntil = now + 7000;   // 7 seconds of invincibility from beating a boss
+          heartSound();
+          floatText(sasquatch.x, sasquatch.y - 50, '★ INVINCIBLE 7s! ★', '#ffd23a');
         } else {
-          floatText(sasquatch.x, sasquatch.y - 50, (1 + powerStacks) + '× ' + normalName + '!', '#7fbf5a');
+          powerStacks++;
+          powerUntil = now + DOUBLE_MS;   // keep the timer; each pickup refreshes it
+          powerupSound();
+          const poweredName = AMMO_POWER[tierOf(wave)].toUpperCase();
+          const normalName = AMMO_NORMAL[tierOf(wave)].toUpperCase();
+          if (powerStacks === 5) {
+            floatText(sasquatch.x, sasquatch.y - 50, '⚡ ' + poweredName + ' MODE! ⚡', '#8dff9f');
+          } else if (powerStacks > 5) {
+            floatText(sasquatch.x, sasquatch.y - 50, (1 + powerStacks) + '× ' + poweredName + '!', '#8dff9f');
+          } else {
+            floatText(sasquatch.x, sasquatch.y - 50, (1 + powerStacks) + '× ' + normalName + '!', '#7fbf5a');
+          }
         }
       }
     }
@@ -885,7 +940,7 @@
     if (score > best) { best = score; localStorage.setItem('sasquatchBest', best); }
     updateHud();
     showOverlay('🏆 Squatchkind Saved!',
-      `Bigfoot fought through all 50 levels — rocks, rockets, poop, raccoon heads, axes and dragons — and toppled all five final bosses! Final score: ${score}. The campsite is safe... for now.`,
+      `Bigfoot fought through all 100 levels — rocks to dragons to whales to angels — and toppled all ten final bosses! Final score: ${score}. Squatchkind is saved... for now.`,
       'Play Again');
   }
 
@@ -1106,6 +1161,90 @@
         ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-3, -2, 0.8, 0, Math.PI*2); ctx.arc(3, -2, 0.8, 0, Math.PI*2); ctx.fill();
         break;
       }
+      case 'pillow': { // flaming pillow
+        ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.arc(0, 8, 6 + Math.random() * 2, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(0, 8, 3, 0, Math.PI*2); ctx.fill();
+        ctx.rotate(rk.spin * 0.1);
+        ctx.fillStyle = '#e8e2f0'; roundRect(-9, -6, 18, 12, 4); ctx.fill();
+        ctx.strokeStyle = '#b9b2cc'; ctx.lineWidth = 1; roundRect(-9, -6, 18, 12, 4); ctx.stroke();
+        ctx.fillStyle = '#c9c2dc'; ctx.beginPath(); ctx.arc(-9, 0, 1.6, 0, Math.PI*2); ctx.arc(9, 0, 1.6, 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'dino': { // green dinosaur
+        ctx.fillStyle = '#4caf50'; ctx.beginPath(); ctx.ellipse(-1, 2, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(6, 0); ctx.quadraticCurveTo(13, -2, 10, -10); ctx.quadraticCurveTo(6, -6, 4, -3); ctx.fill(); // neck/head up
+        ctx.fillStyle = '#3a8a40';
+        for (let i = -6; i <= 4; i += 4) { ctx.beginPath(); ctx.moveTo(i, -4); ctx.lineTo(i + 2, -9); ctx.lineTo(i + 4, -4); ctx.fill(); } // back plates
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(9, -8, 1.4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(9, -8, 0.7, 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'dog': { // dog face
+        ctx.fillStyle = '#b5793a'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#8a5a28'; // ears
+        ctx.beginPath(); ctx.ellipse(-8, -2, 3, 6, 0.3, 0, Math.PI*2); ctx.ellipse(8, -2, 3, 6, -0.3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#f0d8b0'; ctx.beginPath(); ctx.ellipse(0, 4, 4, 3, 0, 0, Math.PI*2); ctx.fill(); // muzzle
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, 3, 1.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-3, -2, 1.2, 0, Math.PI*2); ctx.arc(3, -2, 1.2, 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'cat': { // cat face
+        ctx.fillStyle = '#9aa0a8'; ctx.beginPath(); ctx.arc(0, 1, 8, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-8, -3); ctx.lineTo(-9, -11); ctx.lineTo(-3, -5); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(8, -3); ctx.lineTo(9, -11); ctx.lineTo(3, -5); ctx.fill();
+        ctx.fillStyle = '#6dd36d'; ctx.beginPath(); ctx.arc(-3, 0, 1.6, 0, Math.PI*2); ctx.arc(3, 0, 1.6, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-3, 0, 0.7, 0, Math.PI*2); ctx.arc(3, 0, 0.7, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff8aa0'; ctx.beginPath(); ctx.moveTo(-1.5, 4); ctx.lineTo(1.5, 4); ctx.lineTo(0, 6); ctx.fill();
+        break;
+      }
+      case 'rainbow': { // arcing rainbow
+        const cols = ['#ff4d4d', '#ffa64d', '#ffe04d', '#4dd24d', '#4d8aff', '#a64dff'];
+        ctx.lineWidth = 2.2;
+        for (let i = 0; i < cols.length; i++) { ctx.strokeStyle = cols[i]; ctx.beginPath(); ctx.arc(0, 6, 5 + i * 2.2, Math.PI, 0); ctx.stroke(); }
+        break;
+      }
+      case 'sadcloud': { // gloomy raincloud
+        ctx.fillStyle = '#8a93a8'; ctx.beginPath();
+        ctx.arc(-5, 0, 5, 0, Math.PI*2); ctx.arc(4, -1, 6, 0, Math.PI*2); ctx.arc(0, 3, 6, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#5f6b80'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(-3, 1, 1.4, 0, Math.PI, true); ctx.arc(3, 1, 1.4, 0, Math.PI, true); ctx.stroke(); // sad eyes
+        ctx.fillStyle = '#6fb7ff';
+        for (let i = -4; i <= 6; i += 5) { ctx.beginPath(); ctx.moveTo(i, 8); ctx.lineTo(i - 1.5, 13); ctx.lineTo(i + 1.5, 13); ctx.fill(); }
+        break;
+      }
+      case 'whale': { // little blue whale
+        ctx.fillStyle = '#4d8ad0'; ctx.beginPath(); ctx.ellipse(0, 1, 10, 6, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-15, -4); ctx.lineTo(-15, 5); ctx.fill(); // tail
+        ctx.fillStyle = '#bfe0f5'; ctx.beginPath(); ctx.ellipse(2, 3, 7, 3, 0, 0, Math.PI*2); ctx.fill(); // belly
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7, -1, 1.3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(7, -1, 0.7, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#bfe0f5'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(3, -6); ctx.lineTo(3, -11); ctx.stroke(); // spout
+        break;
+      }
+      case 'cheeseburger': {
+        ctx.fillStyle = '#e8b864'; ctx.beginPath(); ctx.ellipse(0, -5, 9, 4, 0, Math.PI, 0); ctx.fill(); // top bun
+        ctx.fillStyle = '#ffd24a'; roundRect(-9, -3, 18, 3, 1); ctx.fill();   // cheese
+        ctx.fillStyle = '#7a4a24'; roundRect(-9, 0, 18, 4, 2); ctx.fill();    // patty
+        ctx.fillStyle = '#5fb35f'; ctx.fillRect(-9, 3, 18, 1.5);              // lettuce
+        ctx.fillStyle = '#d99a4a'; ctx.beginPath(); ctx.ellipse(0, 7, 9, 4, 0, 0, Math.PI); ctx.fill(); // bottom bun
+        ctx.fillStyle = '#fff'; for (let i = -6; i <= 6; i += 3) { ctx.beginPath(); ctx.arc(i, -6, 0.6, 0, Math.PI*2); ctx.fill(); } // sesame
+        break;
+      }
+      case 'angel': {
+        ctx.fillStyle = 'rgba(255,255,180,0.5)'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill(); // glow
+        ctx.fillStyle = '#fff'; ctx.beginPath();   // wings
+        ctx.ellipse(-7, 1, 5, 3, -0.4, 0, Math.PI*2); ctx.ellipse(7, 1, 5, 3, 0.4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffe0b0'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI*2); ctx.fill(); // head/body
+        ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(0, -7, 3.5, 1.5, 0, 0, Math.PI*2); ctx.stroke(); // halo
+        break;
+      }
+      case 'crayon': {
+        ctx.rotate(rk.spin * 0.1);
+        ctx.fillStyle = '#e0524d'; roundRect(-3.5, -4, 7, 14, 2); ctx.fill(); // body
+        ctx.fillStyle = '#f4d03f'; ctx.fillRect(-3.5, -1, 7, 3);              // label band
+        ctx.fillStyle = '#d6433e'; ctx.beginPath(); ctx.moveTo(-3.5, -4); ctx.lineTo(0, -11); ctx.lineTo(3.5, -4); ctx.fill(); // tip
+        break;
+      }
       default: { // rock
         ctx.rotate(rk.spin);
         ctx.fillStyle = '#8b8b8b';
@@ -1117,6 +1256,16 @@
       }
     }
     ctx.restore();
+  }
+  // small rounded-rect helper for projectile shapes
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
   }
 
   function drawAcorn(a) {
@@ -1135,15 +1284,47 @@
     ctx.save();
     ctx.translate(p.x, p.y);
     const pulse = 0.6 + 0.4 * Math.sin(p.spin * 3);
-    ctx.fillStyle = `rgba(127,191,90,${0.3 * pulse})`;
-    ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#23381a';
-    ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#7fbf5a'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.stroke();
-    ctx.fillStyle = '#c9ced4';
-    ctx.beginPath(); ctx.arc(-4, 0, 4, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(5, 1, 4, 0, Math.PI*2); ctx.fill();
+    if (p.type === 'invince') {
+      // golden invincibility star
+      ctx.fillStyle = `rgba(255,210,60,${0.35 * pulse})`;
+      ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI*2); ctx.fill();
+      ctx.rotate(p.spin * 0.5);
+      ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#a8761a'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const ang = -Math.PI / 2 + i * Math.PI / 5;
+        const rad = i % 2 ? 5 : 12;
+        ctx[i ? 'lineTo' : 'moveTo'](Math.cos(ang) * rad, Math.sin(ang) * rad);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      // green extra-rock power-up
+      ctx.fillStyle = `rgba(127,191,90,${0.3 * pulse})`;
+      ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#23381a';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#7fbf5a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = '#c9ced4';
+      ctx.beginPath(); ctx.arc(-4, 0, 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(5, 1, 4, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawMeteor(m) {
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    // fiery tail trailing upward
+    const grd = ctx.createLinearGradient(0, -26, 0, 0);
+    grd.addColorStop(0, 'rgba(255,140,40,0)');
+    grd.addColorStop(1, 'rgba(255,170,60,0.7)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(0, -26); ctx.lineTo(4, -2); ctx.closePath(); ctx.fill();
+    // rock
+    ctx.fillStyle = '#5b4636'; ctx.beginPath(); ctx.arc(0, 0, m.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#3a2c20'; ctx.beginPath(); ctx.arc(2, 2, m.r * 0.4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffce5a'; ctx.beginPath(); ctx.arc(-2, -2, m.r * 0.3, 0, Math.PI*2); ctx.fill();
     ctx.restore();
   }
 
@@ -1417,8 +1598,20 @@
     powerups.forEach(drawPowerup);
     rocks.forEach(drawProjectile);
     acorns.forEach(drawAcorn);
+    meteors.forEach(drawMeteor);
 
     if (state !== STATE.MENU) {
+      // invincibility aura
+      if (performance.now() < invincibleUntil) {
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 90);
+        ctx.save();
+        ctx.strokeStyle = `rgba(255,210,60,${0.5 + 0.4 * pulse})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(sasquatch.x, sasquatch.y, sasquatch.h * 0.62, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.restore();
+      }
       drawSasquatch(sasquatch.x, sasquatch.y);
     }
 
