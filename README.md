@@ -4,9 +4,9 @@ A Space Invaders–style browser game where **Sasquatch defends the campsite fro
 
 ## ▶️ Play now
 
-**[👉 Click here to play Campsite Invaders](https://weldwoodmarketing.github.io/files/)**
+**[👉 Play at ghostyandbones.com](https://ghostyandbones.com/)**
 
-> If the link isn't live yet, enable GitHub Pages: **Settings → Pages → Deploy from a branch → `main` / `(root)`**. Until then, you can download [`sasquatch-invaders.html`](sasquatch-invaders.html) and open it in any browser.
+> The whole game is a single self-contained file, [`index.html`](index.html) — you can also download it and open it in any browser.
 
 ## 🎮 Controls
 
@@ -32,4 +32,4 @@ A Space Invaders–style browser game where **Sasquatch defends the campsite fro
 
 ## 🛠️ Tech
 
-A single self-contained HTML file — no build step, no dependencies. Rendered with the Canvas API. Just open `sasquatch-invaders.html` in a browser, or play the hosted version above.
+A single self-contained HTML file — no build step, no dependencies. Rendered with the Canvas API. Just open `index.html` in a browser, or play the hosted version above.
