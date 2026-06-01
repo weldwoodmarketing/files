@@ -1,6 +1,6 @@
 # 🦶 Campsite Invaders 🪨🦝
 
-A Space Invaders–style browser game where **Sasquatch defends the campsite from invading raccoons**. The raccoons march across the screen, drop closer each turn, and chuck acorns back at you — fight through all **50 levels** to win.
+A Space Invaders–style browser game where **Sasquatch defends the campsite from invading raccoons**. The raccoons march across the screen, drop closer each turn, and chuck acorns back at you — fight through all **100 levels** to win.
 
 ## ▶️ Play now
 
@@ -19,12 +19,14 @@ A Space Invaders–style browser game where **Sasquatch defends the campsite fro
 ## 🌲 How to play
 
 - You're **Sasquatch** at the bottom of the screen — hurl your ammo upward at the raccoons.
-- Clear every raccoon (and the level's bosses) to advance. There are **50 levels** across **5 tiers** of 10, and a short **story** plays between each tier. Each tier cycles through a day — early morning to night.
-- **Evolving ammo** — your weapon changes every 10 levels: **rocks → rockets → poop → evil raccoon heads → axes** (with wilder powered forms: **lasers, flaming bananas, bombs, UFOs, dragons**).
-- **Power-ups:** grab a green power-up to add another projectile to every throw — stack them with no limit, and at **5** your ammo goes **SUPER** (the powered form, which hits bosses harder). The effect is timed and shown in the HUD.
-- **Stacking bosses:** every level has a crowned boss that gets tougher each level, and **one extra boss is added every tier** — up to **5 bosses at once** in levels 41–50.
+- Clear every raccoon (and the level's bosses) to advance. There are **100 levels** across **10 tiers** of 10, and a short **story** plays between each tier. Each tier cycles through a day — early morning to night.
+- **Evolving ammo** — your weapon changes every 10 levels: rocks → rockets → poop → evil raccoon heads → axes → flaming pillows → dogs → rainbows → whales → angels (each with a wilder powered form: lasers, flaming bananas, bombs, UFOs, dragons, dinosaurs, cats, sad clouds, cheeseburgers, crayons).
+- **Power-ups:** only a couple of raccoons per level carry a green power-up; grab one to add another projectile to every throw — at **5** your ammo goes **SUPER**. A boss also drops one every 10 hits.
+- **Stacking bosses:** every level has a crowned boss that gets tougher each level, and **one extra boss is added every tier** — up to **10 bosses at once** in levels 91–100.
+- **Night meteors:** on every 10th level (night), the raccoons stop throwing acorns and **meteors rain down** instead — they destroy any raccoon they pass through, wound bosses, and cost you a life if one lands on Bigfoot.
+- **Invincibility:** beat a boss and it drops a ⭐ star that makes Bigfoot **invincible for 7 seconds**.
 - **Extra tree:** clear a level to earn a bonus life (🌲), up to 6.
-- **Lose a life** if an acorn hits you. **Game over** if any raccoon or boss reaches the campsite.
+- **Lose a life** if an acorn (or meteor) hits you. **Game over** if any raccoon or boss reaches the campsite.
 - Your **high score** is saved in your browser.
 
 ## 🛠️ Tech
