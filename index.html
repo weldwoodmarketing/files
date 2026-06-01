@@ -135,6 +135,17 @@
   button:active { transform: translateY(3px); box-shadow: 0 1px 0 #4f7d36; }
   .hint { font-size: 13px; color: #789; }
   .big-emoji { font-size: 44px; line-height: 1; }
+  #ver {
+    position: fixed;
+    bottom: 4px;
+    right: 6px;
+    font-family: monospace;
+    font-size: 11px;
+    color: #7fbf5a;
+    opacity: 0.55;
+    z-index: 10;
+    pointer-events: none;
+  }
 
   /* Keep everything legible and non-overlapping on phones */
   @media (max-width: 560px) {
@@ -170,6 +181,7 @@
 </style>
 </head>
 <body>
+<div id="ver">v4</div>
 <div id="wrap">
   <canvas id="title"></canvas>
   <div id="hud">
