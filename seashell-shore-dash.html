@@ -1199,10 +1199,12 @@ function drawGirl() {
   var feet = girl.feetY - girl.bob;
   var run = girl.runPhase;
   var inAir = girl.jumping;
-  var legSwing  = inAir ?  0.55 : Math.sin(run) * 0.6;
-  var legSwing2 = inAir ? -0.45 : Math.sin(run + Math.PI) * 0.6;
-  var armSwing  = inAir ? -1.1  : Math.sin(run + Math.PI) * 0.5;
-  var armSwing2 = inAir ? -1.4  : Math.sin(run) * 0.5;
+  var legSwing  = inAir ?  0.55 : Math.sin(run) * 0.6;            // front leg
+  var legSwing2 = inAir ? -0.45 : Math.sin(run + Math.PI) * 0.6;  // back leg
+  // arms swing opposite their same-side leg for a natural gait;
+  // on a jump the front (right) arm reaches forward, the back arm swings back
+  var armSwing  = inAir ? -1.0  : Math.sin(run) * 0.5;            // back arm  (opposite back leg)
+  var armSwing2 = inAir ?  1.2  : Math.sin(run + Math.PI) * 0.5;  // front arm (opposite front leg)
 
   // palette
   var skin = '#ffdcb8', skinDk = '#f0b98a';
