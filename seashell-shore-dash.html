@@ -438,7 +438,8 @@ function drawShell(g, kind, cx, cy, r) {
 // Game state
 // ---------------------------------------------------------------------------
 var TOTAL_LEVELS = 10;
-var state = 'menu';   // menu | play | levelclear | gameover | win
+var state = 'menu';   // menu | story | play | levelclear | gameover | win
+var storyLevel = 1;   // which level the story card is introducing
 var level = 1;
 var order = [];       // array of 10 kind indices to collect, in order
 var collected = 0;    // how many of the order are done
@@ -490,6 +491,27 @@ function makeDecor(x) {
   var y = up ? (GROUND_Y - 64 - Math.random() * 36)     // up the beach toward the water
              : (GROUND_Y + 42 + Math.random() * 70);    // down in the foreground
   return { x: x, y: y, kind: randKind(), s: 7 + Math.random() * 7, rot: (Math.random() - 0.5) * 0.9 };
+}
+
+// A little story told one snippet at a time, before each level.
+var STORY = [
+  ['Pearl skips onto Sunny Cove at sunrise.', 'A tiny shell whispers: "Help me build the', 'Rainbow Necklace to wake the sleepy sea!"', 'Collect 10 shells — in the right order!'],
+  ['The warm Palm Breeze tickles Pearl’s braids.', 'Two dolphins leap and point down the shore:', '"This way to the next shiny shells!"'],
+  ['At the Blue Lagoon, click-clacking crabs', 'scuttle across the sand. Hop over them', 'and grab only the shells on your list!'],
+  ['A friendly seal shares a cool mango shake.', '"Yum! Now go find more shells, Pearl!"', 'The necklace is starting to sparkle.'],
+  ['By the Coral Reef the sea turtles cheer', 'for every shell Pearl finds. Halfway there —', 'the sleepy sea begins to stir!'],
+  ['Pearl goes Island Hopping, splashing through', 'the bright blue waves from sand to sand,', 'her little bucket filling with treasures.'],
+  ['The sky glows gold for Tiki Time.', 'Drums go boom and the palm trees sway.', 'Just a few more shells to go!'],
+  ['A big gentle Sea Turtle gives Pearl a ride', 'along the shimmering evening shore.', '"You’re almost there — keep going!"'],
+  ['At dusk everyone does the Hula Sway.', 'The waves dance and the seashells glow.', 'The Rainbow Necklace is nearly full!'],
+  ['The Sunset Limbo paints the sky pink.', 'One last beach, one last set of shells...', 'Finish to light up the whole sea!']
+];
+function enterStory(lv) {
+  storyLevel = ((lv - 1) % TOTAL_LEVELS) + 1;
+  level = storyLevel;        // so the scene behind the card uses the level's theme
+  order = []; shells = [];   // no HUD / leftover shells during the story card
+  stopMusic();
+  state = 'story';
 }
 
 function startLevel(lv) {
@@ -1584,6 +1606,25 @@ function drawOverlay() {
       ctx.fillText('Best:  Level ' + Math.min(TOTAL_LEVELS, bestLevel) + '   ·   Score ' + bestScore, DW / 2, DH / 2 + 72);
     }
     drawButton('Play!');
+  } else if (state === 'story') {
+    var pst = drawCenterPanel(700, 372);
+    ctx.textAlign = 'center';
+    // chapter heading
+    ctx.fillStyle = '#2a6f97';
+    ctx.font = 'bold 20px "Comic Sans MS", sans-serif';
+    ctx.fillText('Level ' + storyLevel, DW / 2, pst.y + 48);
+    ctx.fillStyle = '#ff7aa8';
+    ctx.font = 'bold 34px "Comic Sans MS", sans-serif';
+    ctx.fillText(levelName(storyLevel), DW / 2, pst.y + 84);
+    // flanking shells
+    drawShell(ctx, (storyLevel * 2) % KINDS.length, DW / 2 - 150, pst.y + 78, 16);
+    drawShell(ctx, (storyLevel * 5 + 1) % KINDS.length, DW / 2 + 150, pst.y + 78, 16);
+    // story lines
+    ctx.fillStyle = '#3a5a6a';
+    ctx.font = '20px "Comic Sans MS", sans-serif';
+    var lines = STORY[storyLevel - 1];
+    for (var li = 0; li < lines.length; li++) ctx.fillText(lines[li], DW / 2, pst.y + 126 + li * 30);
+    drawButton(storyLevel === 1 ? "Pearl's Adventure!" : 'Start!');
   } else if (state === 'levelclear') {
     var p = drawCenterPanel(520, 360);
     ctx.textAlign = 'center';
@@ -1629,8 +1670,9 @@ function drawOverlay() {
     ctx.strokeText('YOU WIN!', DW / 2, p3.y + 74);
     ctx.fillText('YOU WIN!', DW / 2, p3.y + 74);
     ctx.fillStyle = '#ff7aa8';
-    ctx.font = '23px "Comic Sans MS", sans-serif';
-    ctx.fillText('You collected every shell on the whole shore! 🐚', DW / 2, p3.y + 124);
+    ctx.font = '22px "Comic Sans MS", sans-serif';
+    ctx.fillText('Pearl finished the Rainbow Necklace!', DW / 2, p3.y + 116);
+    ctx.fillText('The whole sea wakes up and throws a party! 🌈', DW / 2, p3.y + 146);
     // final score
     ctx.fillStyle = '#2a6f97';
     ctx.font = 'bold 34px "Comic Sans MS", sans-serif';
@@ -1659,7 +1701,7 @@ function render() {
   drawGirl();
   drawSparkles();
   drawPopups();
-  if (state !== 'menu' && state !== 'win') drawHUD();
+  if (state === 'play' || state === 'levelclear' || state === 'gameover') drawHUD();
   if (state === 'play' && bannerTimer > 0) drawBanner();
   // stumble flash
   if (flashTimer > 0) {
@@ -1676,10 +1718,11 @@ function render() {
 function primaryAction() {
   audio();
   if (state === 'play') { doJump(); }
-  else if (state === 'menu') { startLevel(1); }
-  else if (state === 'levelclear') { startLevel(level + 1); }
-  else if (state === 'gameover') { startLevel(level); }
-  else if (state === 'win') { startLevel(1); }
+  else if (state === 'menu') { enterStory(1); }
+  else if (state === 'story') { startLevel(storyLevel); }
+  else if (state === 'levelclear') { enterStory(level + 1); }
+  else if (state === 'gameover') { startLevel(level); }   // retry skips the story card
+  else if (state === 'win') { state = 'menu'; }
 }
 
 window.addEventListener('keydown', function (e) {
