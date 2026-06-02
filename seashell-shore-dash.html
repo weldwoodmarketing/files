@@ -330,12 +330,22 @@ var decor = [];       // scattered seashells resting on the beach (decor, no gam
 var time = 0;
 var flashTimer = 0;   // red stumble flash
 var cheerTimer = 0;
+var score = 0;        // points this playthrough (+10 per shell, +50 per level)
+var popups = [];      // floating "+10" score text
 var bestLevel = loadBest();
+var bestScore = loadBestScore();
 
 var girl = { feetY: GROUND_Y, vy: 0, jumping: false, runPhase: 0, stumble: 0, bob: 0 };
 
 function loadBest() { try { return parseInt(localStorage.getItem('seashellBest') || '1', 10) || 1; } catch (e) { return 1; } }
 function saveBest(v) { try { localStorage.setItem('seashellBest', String(v)); } catch (e) {} }
+function loadBestScore() { try { return parseInt(localStorage.getItem('seashellBestScore') || '0', 10) || 0; } catch (e) { return 0; } }
+function saveBestScore(v) { try { localStorage.setItem('seashellBestScore', String(v)); } catch (e) {} }
+function addScore(pts, x, y, label) {
+  score += pts;
+  if (score > bestScore) { bestScore = score; saveBestScore(bestScore); }
+  if (label) popups.push({ x: x, y: y, text: label, life: 0.9 });
+}
 
 function levelSpeed(lv) {
   // gentle ramp: ~250 px/s at L1 up to ~470 px/s at L10
@@ -355,12 +365,14 @@ function makeDecor(x) {
 
 function startLevel(lv) {
   level = lv;
+  if (lv === 1) score = 0;   // fresh playthrough resets the score
   order = [];
   for (var i = 0; i < 10; i++) order.push(randKind());
   collected = 0;
   hearts = 3;
   shells = [];
   sparkles = [];
+  popups = [];
   distToSpawn = 420;       // a little breathing room before the first shell
   scroll = 0;
   flashTimer = 0; cheerTimer = 0;
@@ -416,6 +428,12 @@ function update(dt) {
     var p = sparkles[i];
     p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 300 * dt;
     if (p.life <= 0) sparkles.splice(i, 1);
+  }
+  // floating "+10" score popups rise and fade
+  for (var pi = popups.length - 1; pi >= 0; pi--) {
+    var pp = popups[pi];
+    pp.life -= dt; pp.y -= 34 * dt;
+    if (pp.life <= 0) popups.splice(pi, 1);
   }
   if (flashTimer > 0) flashTimer -= dt;
   if (cheerTimer > 0) cheerTimer -= dt;
@@ -474,11 +492,13 @@ function update(dt) {
         sh.handled = true;
         if (sh.kind === order[collected]) {
           collected++;
+          addScore(10, sh.x, GROUND_Y - 56, '+10');
           addSparkles(sh.x, GROUND_Y - 30, KINDS[sh.kind].color);
           sCollect(); cheerTimer = 0.7;
           sh.popped = 0.0001;
           if (collected >= 10) {
-            // level complete!
+            // level complete! bonus points
+            addScore(50, DW / 2, DH / 2 - 40, '+50');
             stopMusic();
             if (level >= TOTAL_LEVELS) {
               sWin();
@@ -894,6 +914,15 @@ function drawHUD() {
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('Level ' + level, 32, 35);
 
+  // score pill (below the level pill) with a little star
+  roundRect(16, 60, 150, 38, 19, 'rgba(255,255,255,0.85)');
+  ctx.fillStyle = '#ffd93d';
+  drawStar(36, 79, 11);
+  ctx.fillStyle = '#2a6f97';
+  ctx.font = 'bold 21px "Comic Sans MS", sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(score), 54, 80);
+
   // hearts (top-right)
   ctx.fillStyle = '#ff4d7d';
   for (var h = 0; h < 3; h++) {
@@ -964,6 +993,21 @@ function drawSparkles() {
     ctx.globalAlpha = Math.max(0, p.life);
     ctx.fillStyle = p.col;
     drawStar(p.x, p.y, p.r * 1.6);
+    ctx.restore();
+  }
+}
+function drawPopups() {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (var i = 0; i < popups.length; i++) {
+    var p = popups[i];
+    var big = p.text.length > 3;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.6));
+    ctx.font = 'bold ' + (big ? 40 : 26) + 'px "Comic Sans MS", sans-serif';
+    ctx.lineWidth = big ? 6 : 4; ctx.strokeStyle = '#2a6f97';
+    ctx.fillStyle = '#ffd93d';
+    ctx.strokeText(p.text, p.x, p.y);
+    ctx.fillText(p.text, p.x, p.y);
     ctx.restore();
   }
 }
@@ -1038,56 +1082,68 @@ function drawOverlay() {
     ctx.font = '22px "Comic Sans MS", sans-serif';
     ctx.fillText('Run into the matching shell to collect it.', DW / 2, DH / 2 + 6);
     ctx.fillText('Tap / Space to JUMP over the others!', DW / 2, DH / 2 + 38);
-    if (bestLevel > 1) {
+    if (bestLevel > 1 || bestScore > 0) {
       ctx.fillStyle = '#ff7aa8';
       ctx.font = 'bold 20px "Comic Sans MS", sans-serif';
-      ctx.fillText('Best: reached Level ' + Math.min(TOTAL_LEVELS, bestLevel), DW / 2, DH / 2 + 72);
+      ctx.fillText('Best:  Level ' + Math.min(TOTAL_LEVELS, bestLevel) + '   ·   Score ' + bestScore, DW / 2, DH / 2 + 72);
     }
     drawButton('Play!');
   } else if (state === 'levelclear') {
-    var p = drawCenterPanel(520, 320);
+    var p = drawCenterPanel(520, 360);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffd93d';
     ctx.font = 'bold 44px "Comic Sans MS", sans-serif';
     ctx.strokeStyle = '#2a6f97'; ctx.lineWidth = 6;
-    ctx.strokeText('Great job!', DW / 2, p.y + 80);
-    ctx.fillText('Great job!', DW / 2, p.y + 80);
+    ctx.strokeText('Great job!', DW / 2, p.y + 70);
+    ctx.fillText('Great job!', DW / 2, p.y + 70);
     // stars
     ctx.fillStyle = '#ffd93d';
-    for (var i = 0; i < 3; i++) { drawStar(DW / 2 - 60 + i * 60, p.y + 140 + Math.sin(time * 4 + i) * 4, 22); }
+    for (var i = 0; i < 3; i++) { drawStar(DW / 2 - 60 + i * 60, p.y + 124 + Math.sin(time * 4 + i) * 4, 22); }
     ctx.fillStyle = '#2a6f97';
     ctx.font = '24px "Comic Sans MS", sans-serif';
-    ctx.fillText('Level ' + level + ' complete!', DW / 2, p.y + 200);
-    ctx.fillText('Next level is a little faster...', DW / 2, p.y + 232);
+    ctx.fillText('Level ' + level + ' complete!', DW / 2, p.y + 178);
+    ctx.font = 'bold 28px "Comic Sans MS", sans-serif';
+    ctx.fillStyle = '#ff7aa8';
+    ctx.fillText('Score:  ' + score, DW / 2, p.y + 218);
+    ctx.fillStyle = '#2a6f97'; ctx.font = '20px "Comic Sans MS", sans-serif';
+    ctx.fillText('Next level is a little faster...', DW / 2, p.y + 252);
     drawButton('Next Level');
   } else if (state === 'gameover') {
-    var p2 = drawCenterPanel(520, 320);
+    var p2 = drawCenterPanel(520, 340);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff7aa8';
     ctx.font = 'bold 42px "Comic Sans MS", sans-serif';
     ctx.strokeStyle = '#2a6f97'; ctx.lineWidth = 6;
-    ctx.strokeText('Oopsie!', DW / 2, p2.y + 90);
-    ctx.fillText('Oopsie!', DW / 2, p2.y + 90);
-    drawShell(ctx, 2, DW / 2, p2.y + 150, 30);
+    ctx.strokeText('Oopsie!', DW / 2, p2.y + 76);
+    ctx.fillText('Oopsie!', DW / 2, p2.y + 76);
+    drawShell(ctx, 2, DW / 2, p2.y + 136, 28);
     ctx.fillStyle = '#2a6f97';
-    ctx.font = '24px "Comic Sans MS", sans-serif';
-    ctx.fillText("Let's try Level " + level + ' again!', DW / 2, p2.y + 210);
+    ctx.font = '23px "Comic Sans MS", sans-serif';
+    ctx.fillText("Let's try Level " + level + ' again!', DW / 2, p2.y + 196);
+    ctx.font = 'bold 26px "Comic Sans MS", sans-serif';
+    ctx.fillStyle = '#ff7aa8';
+    ctx.fillText('Score:  ' + score, DW / 2, p2.y + 234);
     drawButton('Try Again');
   } else if (state === 'win') {
-    var p3 = drawCenterPanel(560, 360);
+    var p3 = drawCenterPanel(560, 380);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffd93d';
     ctx.font = 'bold 46px "Comic Sans MS", sans-serif';
     ctx.strokeStyle = '#2a6f97'; ctx.lineWidth = 7;
-    ctx.strokeText('YOU WIN!', DW / 2, p3.y + 90);
-    ctx.fillText('YOU WIN!', DW / 2, p3.y + 90);
+    ctx.strokeText('YOU WIN!', DW / 2, p3.y + 74);
+    ctx.fillText('YOU WIN!', DW / 2, p3.y + 74);
     ctx.fillStyle = '#ff7aa8';
-    ctx.font = '24px "Comic Sans MS", sans-serif';
-    ctx.fillText('You collected every shell', DW / 2, p3.y + 150);
-    ctx.fillText('on the whole shore! 🐚', DW / 2, p3.y + 184);
+    ctx.font = '23px "Comic Sans MS", sans-serif';
+    ctx.fillText('You collected every shell on the whole shore! 🐚', DW / 2, p3.y + 124);
+    // final score
+    ctx.fillStyle = '#2a6f97';
+    ctx.font = 'bold 34px "Comic Sans MS", sans-serif';
+    ctx.fillText('Final Score:  ' + score, DW / 2, p3.y + 174);
+    ctx.fillStyle = '#ff7aa8'; ctx.font = 'bold 20px "Comic Sans MS", sans-serif';
+    ctx.fillText('Best Score:  ' + bestScore, DW / 2, p3.y + 208);
     // row of all shell kinds
     for (var k = 0; k < KINDS.length; k++) {
-      drawShell(ctx, k, DW / 2 - (KINDS.length - 1) * 22 + k * 44, p3.y + 240, 18);
+      drawShell(ctx, k, DW / 2 - (KINDS.length - 1) * 22 + k * 44, p3.y + 256, 18);
     }
     drawButton('Play Again');
   }
@@ -1104,6 +1160,7 @@ function render() {
   drawShellsOnGround();
   drawGirl();
   drawSparkles();
+  drawPopups();
   if (state !== 'menu' && state !== 'win') drawHUD();
   // stumble flash
   if (flashTimer > 0) {
