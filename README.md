@@ -1,12 +1,23 @@
+# 🎮 Ghosty &amp; Bones Arcade
+
+Two free, self-contained browser games. The homepage at **[ghostyandbones.com](https://ghostyandbones.com/)** is a game picker — choose one and play, no download required.
+
+| Game | Page | About |
+| --- | --- | --- |
+| 🦶 **Campsite Invaders** | [`campsite-invaders.html`](campsite-invaders.html) | Space-Invaders action, 100 levels, ages 8+ |
+| 🐚 **Seashell Shore Dash** | [`seashell-shore-dash.html`](seashell-shore-dash.html) | Beach seashell collecting, 10 levels, ages 4–8 |
+
+The picker lives in [`index.html`](index.html). Each game is its own single self-contained HTML file — you can also download any of them and open it directly in a browser.
+
+---
+
 # 🦶 Campsite Invaders 🪨🦝
 
 A Space Invaders–style browser game where **Sasquatch defends the campsite from invading raccoons**. The raccoons march across the screen, drop closer each turn, and chuck acorns back at you — fight through all **100 levels** to win.
 
 ## ▶️ Play now
 
-**[👉 Play at ghostyandbones.com](https://ghostyandbones.com/)**
-
-> The whole game is a single self-contained file, [`index.html`](index.html) — you can also download it and open it in any browser.
+**[👉 Play at ghostyandbones.com](https://ghostyandbones.com/)** → pick **Campsite Invaders** (direct link: [`campsite-invaders.html`](campsite-invaders.html)).
 
 ## 🎮 Controls
 
@@ -32,7 +43,7 @@ A Space Invaders–style browser game where **Sasquatch defends the campsite fro
 
 ## 🛠️ Tech
 
-A single self-contained HTML file — no build step, no dependencies. Rendered with the Canvas API. Just open `index.html` in a browser, or play the hosted version above.
+A single self-contained HTML file — no build step, no dependencies. Rendered with the Canvas API. Just open `campsite-invaders.html` in a browser, or play the hosted version above.
 
 ---
 
