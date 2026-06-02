@@ -234,6 +234,7 @@ var distToSpawn = 0;
 var scroll = 0;       // world scroll distance (for parallax + ground texture)
 var sparkles = [];
 var bgItems = [];     // decorative ground pebbles/starfish (parallax, no gameplay)
+var decor = [];       // scattered seashells resting on the beach (decor, no gameplay)
 var time = 0;
 var flashTimer = 0;   // red stumble flash
 var cheerTimer = 0;
@@ -250,6 +251,15 @@ function levelSpeed(lv) {
 }
 
 function randKind() { return (Math.random() * KINDS.length) | 0; }
+
+// A small seashell half-buried in the sand — purely decorative so the beach
+// looks strewn with shells. Placed above or below the running line, never on it.
+function makeDecor(x) {
+  var up = Math.random() < 0.5;
+  var y = up ? (GROUND_Y - 64 - Math.random() * 36)     // up the beach toward the water
+             : (GROUND_Y + 42 + Math.random() * 70);    // down in the foreground
+  return { x: x, y: y, kind: randKind(), s: 7 + Math.random() * 7, rot: (Math.random() - 0.5) * 0.9 };
+}
 
 function startLevel(lv) {
   level = lv;
@@ -268,6 +278,9 @@ function startLevel(lv) {
   for (var b = 0; b < 14; b++) {
     bgItems.push({ x: Math.random() * DW, y: GROUND_Y + 14 + Math.random() * 80, s: 2 + Math.random() * 4, t: Math.random() });
   }
+  // scatter a bunch of decorative seashells across the beach
+  decor = [];
+  for (var d2 = 0; d2 < 18; d2++) decor.push(makeDecor(Math.random() * DW));
   state = 'play';
 }
 
@@ -326,6 +339,13 @@ function update(dt) {
     if (it.x < -10) { it.x = DW + Math.random() * 60; it.y = GROUND_Y + 14 + Math.random() * 80; it.s = 2 + Math.random() * 4; }
   }
 
+  // decorative seashells scroll with the beach (right -> left)
+  for (var di = 0; di < decor.length; di++) {
+    var dc = decor[di];
+    dc.x -= speed * dt;
+    if (dc.x < -30) { var nd = makeDecor(DW + 20 + Math.random() * 140); dc.x = nd.x; dc.y = nd.y; dc.kind = nd.kind; dc.s = nd.s; dc.rot = nd.rot; }
+  }
+
   // girl jump integration
   if (girl.jumping) {
     girl.vy += GRAV * dt;
@@ -339,7 +359,8 @@ function update(dt) {
   distToSpawn -= speed * dt;
   if (distToSpawn <= 0) {
     spawnShell();
-    distToSpawn = 220 + speed * 0.45 * (0.9 + Math.random() * 0.5);
+    // gap measured in travel-time so a jump (~0.75s) always lands between shells
+    distToSpawn = speed * (0.92 + Math.random() * 0.5);
   }
 
   // move + collide shells
@@ -487,6 +508,27 @@ function drawCloud(x, y, s) {
   ctx.arc(6, -16, 20, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+}
+
+function drawDecorShells() {
+  for (var i = 0; i < decor.length; i++) {
+    var d = decor[i];
+    // half-buried shell
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.translate(d.x, d.y);
+    ctx.rotate(d.rot);
+    drawShell(ctx, d.kind, 0, 0, d.s);
+    ctx.restore();
+    // little sand mound over the base so it reads as resting in the sand
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = '#f1d090';
+    ctx.beginPath();
+    ctx.ellipse(d.x, d.y + d.s * 0.55, d.s * 1.15, d.s * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawShellsOnGround() {
@@ -698,6 +740,7 @@ function drawHeart(x, y, s) {
 // HUD — the order of 10 shells across the top
 // ---------------------------------------------------------------------------
 function drawHUD() {
+  if (order.length < 10) return;   // nothing to show until a level has started
   // level pill (top-left)
   roundRect(16, 14, 150, 40, 20, 'rgba(255,255,255,0.85)');
   ctx.fillStyle = '#2a6f97';
@@ -911,10 +954,11 @@ function render() {
   ctx.save();
   ctx.scale(scale * dpr, scale * dpr);
   drawBackground();
+  drawDecorShells();
   drawShellsOnGround();
   drawGirl();
   drawSparkles();
-  drawHUD();
+  if (state !== 'menu' && state !== 'win') drawHUD();
   // stumble flash
   if (flashTimer > 0) {
     ctx.fillStyle = 'rgba(255,80,80,' + (flashTimer * 0.6) + ')';
