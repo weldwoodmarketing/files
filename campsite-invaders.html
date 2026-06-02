@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campsite Invaders — Rock Throw Rampage</title>
+<style>
+  :root {
+    --bg: #0c1410;
+    --panel: #15211a;
+    --accent: #7fbf5a;
+    --accent2: #c9a06a;
+    --text: #e8f0e4;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(circle at 50% 20%, #1a2b20, #0c1410 70%);
+    color: var(--text);
+    font-family: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+  #wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    gap: 10px;
+    padding: 10px 12px 12px;
+  }
+  #title {
+    display: block;
+    width: min(92vw, 760px);
+    height: clamp(56px, 10vh, 92px);
+  }
+  #timeofday {
+    width: min(92vw, 760px);
+    text-align: center;
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    color: var(--accent);
+    text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(20px, 4vw, 34px);
+    letter-spacing: 1px;
+    color: var(--accent);
+    text-shadow: 0 2px 0 #000, 0 0 18px rgba(127,191,90,.35);
+  }
+  h1 span { color: var(--accent2); }
+  #hud {
+    display: flex;
+    gap: 18px;
+    font-size: 16px;
+    font-weight: bold;
+    width: min(92vw, 760px);
+    justify-content: space-between;
+    background: var(--panel);
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1px solid #294233;
+  }
+  #hud .label { color: #8aa; font-weight: normal; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  #hud .val { color: var(--text); font-size: 20px; }
+  #hud #power.active { color: var(--accent); }
+  #stage {
+    position: relative;
+    width: min(92vw, 760px);
+    aspect-ratio: 4 / 3;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(#15251a, #0e1a13 60%, #1c150d);
+    border: 2px solid #294233;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5), inset 0 0 60px rgba(0,0,0,.4);
+    display: block;
+    touch-action: none;
+  }
+  #pauseBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+    background: rgba(8,14,10,.55);
+    color: var(--text);
+    border: 1px solid #294233;
+    border-radius: 8px;
+    box-shadow: none;
+    z-index: 2;
+  }
+  #pauseBtn:active { transform: none; box-shadow: none; }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: rgba(8,14,10,.80);
+    border-radius: 12px;
+    gap: 14px;
+    padding: 20px;
+    overflow-y: auto;       /* keep content inside the stage, never over the HUD */
+  }
+  #overlay.hidden { display: none; }
+  #overlay h2 { margin: 0; font-size: clamp(22px, 5vw, 40px); color: var(--accent); }
+  #overlay p { margin: 0; max-width: 440px; line-height: 1.5; color: #cdd; }
+  #overlay .keys { font-size: 14px; color: #9ab; }
+  #overlay .keys b { color: var(--accent2); }
+  button {
+    background: var(--accent);
+    color: #08120a;
+    border: none;
+    padding: 12px 28px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 0 #4f7d36;
+    transition: transform .05s, box-shadow .05s;
+  }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #4f7d36; }
+  .hint { font-size: 13px; color: #789; }
+  .big-emoji { font-size: 44px; line-height: 1; }
+  #ver {
+    text-align: center;
+    font-family: monospace;
+    font-size: 12px;
+    color: #7fbf5a;
+    opacity: 0.7;
+    margin-top: -2px;
+  }
+
+  /* Keep everything legible and non-overlapping on phones */
+  @media (max-width: 560px) {
+    #hud { gap: 6px; padding: 6px 10px; }
+    /* Taller play area on phones — matches the 800×840 mobile canvas, capped so it always fits */
+    #stage {
+      width: auto;
+      max-width: min(92vw, 760px);
+      height: auto;
+      max-height: 66vh;
+      aspect-ratio: 800 / 840;
+    }
+    #hud .label { font-size: 9px; letter-spacing: .5px; }
+    #hud .val { font-size: 15px; }
+    /* Let the menu/story panel grow to fit its content instead of being cropped to the
+       4:3 stage — so the top emoji and bottom hint are never cut off on phones. */
+    #overlay {
+      inset: 0 0 auto 0;
+      height: auto;
+      min-height: 100%;
+      justify-content: flex-start;
+      gap: 9px;
+      padding: 16px 14px;
+    }
+    #overlay h2 { font-size: 22px; }
+    #overlay p { font-size: 13.5px; max-width: 100%; }
+    #overlay .keys { font-size: 12px; }
+    #timeofday { font-size: 13px; }
+    .hint { font-size: 11px; }
+    .big-emoji { font-size: 32px; }
+    button { padding: 10px 22px; font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="title"></canvas>
+  <div id="ver">build v5</div>
+  <div id="hud">
+    <div><div class="label">Score</div><div class="val" id="score">0</div></div>
+    <div><div class="label">Level</div><div class="val" id="wave">1</div></div>
+    <div><div class="label">Lives</div><div class="val" id="lives">🌲🌲🌲</div></div>
+    <div><div class="label">Power</div><div class="val" id="power">—</div></div>
+    <div><div class="label">Best</div><div class="val" id="best">0</div></div>
+  </div>
+  <div id="timeofday" aria-live="polite">Level 1 · Early Morning</div>
+  <div id="stage">
+    <canvas id="game" width="800" height="600"></canvas>
+    <button id="pauseBtn" aria-label="Pause">⏸</button>
+    <div id="overlay">
+      <div class="big-emoji">🦶🪨🦝</div>
+      <h2>Campsite Invaders</h2>
+      <p>The raccoons raided the campsite! Move Bigfoot and pelt them before they reach the ground. A couple of raccoons drop green power-ups — grab them to add a projectile each time, and at 5 your ammo goes SUPER. Your ammo evolves every 10 levels (rocks, rockets, poop, dinosaurs, whales, angels… and wilder!), each tier adds another boss and a new story chapter, and at night meteors rain down. Beat a boss for a 7-second invincibility star. Survive all 100 levels to save Squatchkind!</p>
+      <div class="keys">
+        Move: <b>◀ ▶</b> / <b>A D</b> &nbsp;•&nbsp; Throw rock: <b>Space</b><br>
+        On mobile: <b>drag to move</b>, <b>tap to throw</b>
+      </div>
+      <button id="startBtn">Start Throwing</button>
+      <div class="hint">Don't let a raccoon touch the campsite — and dodge the acorns they chuck back!</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  // Taller play area on phones (keep the 800-wide layout so raccoon formations still fit).
+  if (window.matchMedia('(max-width: 560px)').matches) canvas.height = 840;
+  const W = canvas.width, H = canvas.height;
+  const GROUND_Y = H - 18;
+
+  const scoreEl = document.getElementById('score');
+  const waveEl  = document.getElementById('wave');
+  const livesEl = document.getElementById('lives');
+  const powerEl = document.getElementById('power');
+  const bestEl  = document.getElementById('best');
+  const timeEl  = document.getElementById('timeofday');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+
+  let best = +(localStorage.getItem('sasquatchBest') || 0);
+  bestEl.textContent = best;
+
+  // Classic mid-stride Bigfoot silhouette (the Patterson pose), facing right.
+  // Outline points: x roughly -34..46, y -100 (crown) .. 0 (feet). Used by the playable Sasquatch.
+  const BF_OUTLINE = [
+    [10,-100],[20,-98],[26,-92],[24,-84],          // crown, brow, jaw, neck
+    [33,-66],[36,-48],[31,-35],                     // chest, belly, front hip
+    [35,-20],[46,-4],[40,3],[24,1],[21,-17],        // front thigh, foot, sole, instep, inner shin
+    [9,-31],                                         // crotch
+    [-2,-16],[-28,1],[-34,-2],[-21,-13],            // back thigh, trailing foot, heel, calf
+    [-15,-25],[-24,-44],[-27,-62],[-22,-82],        // buttock, lower back, mid back, shoulder hump
+    [-6,-95]                                          // back of head
+  ];
+
+  // ---- Stick-letter game title: "CAMPSITE INVADERS" drawn from twigs ----
+  const titleCanvas = document.getElementById('title');
+  const tctx = titleCanvas.getContext('2d');
+  // Each glyph is a list of [x1,y1,x2,y2] strokes in a 0..1 cell (x: left→right, y: top→bottom)
+  const STICK_FONT = {
+    'A': [[0,1,0.5,0],[0.5,0,1,1],[0.22,0.58,0.78,0.58]],
+    'C': [[1,0,0.18,0],[0.18,0,0,0.28],[0,0.28,0,0.72],[0,0.72,0.18,1],[0.18,1,1,1]],
+    'M': [[0,1,0,0],[0,0,0.5,0.62],[0.5,0.62,1,0],[1,0,1,1]],
+    'P': [[0,1,0,0],[0,0,0.8,0],[0.8,0,1,0.26],[1,0.26,0.8,0.52],[0.8,0.52,0,0.52]],
+    'S': [[1,0,0.1,0],[0.1,0,0,0.5],[0,0.5,1,0.5],[1,0.5,0.9,1],[0.9,1,0,1]],
+    'I': [[0.5,0,0.5,1],[0.18,0,0.82,0],[0.18,1,0.82,1]],
+    'T': [[0,0,1,0],[0.5,0,0.5,1]],
+    'E': [[0,0,0,1],[0,0,1,0],[0,0.5,0.78,0.5],[0,1,1,1]],
+    'N': [[0,1,0,0],[0,0,1,1],[1,1,1,0]],
+    'V': [[0,0,0.5,1],[0.5,1,1,0]],
+    'D': [[0,0,0,1],[0,0,0.66,0],[0.66,0,1,0.3],[1,0.3,1,0.7],[1,0.7,0.66,1],[0.66,1,0,1]],
+    'R': [[0,1,0,0],[0,0,0.8,0],[0.8,0,1,0.26],[1,0.26,0.8,0.52],[0.8,0.52,0,0.52],[0.36,0.52,1,1]],
+    ' ': []
+  };
+  function hash2(a, b) { const h = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return h - Math.floor(h); }
+  function drawStick(x1, y1, x2, y2, wd) {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;                       // perpendicular
+    const bend = (hash2(x1 + x2, y1 + y2) - 0.5) * Math.min(len * 0.16, wd * 1.6); // gentle bow
+    const mx = (x1 + x2) / 2 + nx * bend, my = (y1 + y2) / 2 + ny * bend;
+    const curve = (col, w) => {
+      tctx.strokeStyle = col; tctx.lineWidth = w; tctx.lineCap = 'round';
+      tctx.beginPath(); tctx.moveTo(x1, y1); tctx.quadraticCurveTo(mx, my, x2, y2); tctx.stroke();
+    };
+    curve('#2e1c0d', wd + 2.5);                                // bark outline
+    const g = tctx.createLinearGradient(x1, y1, x2, y2);
+    g.addColorStop(0, '#7a5126'); g.addColorStop(0.5, '#9c6b34'); g.addColorStop(1, '#6e4a23');
+    curve(g, wd);                                              // wood body
+    curve('rgba(206,166,108,0.5)', Math.max(1, wd * 0.26));    // grain highlight
+    // knots along the (bowed) length
+    const n = Math.max(1, Math.floor(len / 16));
+    tctx.fillStyle = 'rgba(58,36,16,0.55)';
+    for (let i = 1; i <= n; i++) {
+      const f = i / (n + 1), b = bend * (1 - Math.abs(2 * f - 1));
+      tctx.beginPath(); tctx.arc(x1 + dx * f + nx * b, y1 + dy * f + ny * b, wd * 0.17, 0, Math.PI*2); tctx.fill();
+    }
+    // little branch nubs sprouting off the twig
+    const ang = Math.atan2(dy, dx);
+    const nub = (f, dir, scl) => {
+      const bx = x1 + dx * f, by = y1 + dy * f, a = ang + dir, nl = wd * scl;
+      tctx.strokeStyle = '#5a3a1c'; tctx.lineWidth = Math.max(1.5, wd * 0.45); tctx.lineCap = 'round';
+      tctx.beginPath(); tctx.moveTo(bx, by); tctx.lineTo(bx + Math.cos(a) * nl, by + Math.sin(a) * nl); tctx.stroke();
+    };
+    const r1 = hash2(x1, y2), r2 = hash2(x2, y1);
+    if (r1 > 0.45) nub(0.28, r1 > 0.72 ? 0.9 : -0.9, 1.5);
+    if (r2 > 0.5)  nub(0.72, r2 > 0.75 ? -1.0 : 1.0, 1.3);
+  }
+  function drawTitle() {
+    const r = titleCanvas.getBoundingClientRect();
+    if (r.width === 0) return;
+    const dpr = window.devicePixelRatio || 1;
+    titleCanvas.width = Math.round(r.width * dpr);
+    titleCanvas.height = Math.round(r.height * dpr);
+    tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cw = r.width, ch = r.height;
+    tctx.clearRect(0, 0, cw, ch);
+    const text = 'CAMPSITE INVADERS';
+    const cellH = ch * 0.66, cellW = cellH * 0.62, gap = cellH * 0.24, spaceW = cellH * 0.45;
+    let total = 0;
+    for (const c of text) total += (c === ' ' ? spaceW : cellW) + gap;
+    total -= gap;
+    const scale = Math.min(1, (cw - 16) / total);
+    const cW = cellW * scale, cH = cellH * scale, gp = gap * scale, spW = spaceW * scale;
+    const stick = Math.max(3, cH * 0.15);
+    let x = (cw - total * scale) / 2;
+    const y = (ch - cH) / 2;
+    for (const c of text) {
+      if (c === ' ') { x += spW + gp; continue; }
+      const segs = STICK_FONT[c];
+      if (segs) for (const s of segs) drawStick(x + s[0] * cW, y + s[1] * cH, x + s[2] * cW, y + s[3] * cH, stick);
+      x += cW + gp;
+    }
+  }
+  window.addEventListener('resize', drawTitle);
+
+  const MAX_LIVES = 6;
+  const DOUBLE_MS = 12000;
+
+  // ---- Sound (Web Audio) ----
+  let actx = null;
+  function ac() {
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    return actx;
+  }
+  let noiseBuffer = null;
+  function getNoise() {
+    const c = ac(); if (!c) return null;
+    if (!noiseBuffer) {
+      noiseBuffer = c.createBuffer(1, c.sampleRate * 0.4, c.sampleRate);
+      const d = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    return noiseBuffer;
+  }
+  // The squash/splat — filtered noise sweeping down + a wet pitch drop
+  function playSquash(big) {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    const src = c.createBufferSource(); src.buffer = getNoise();
+    const f = c.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(big ? 1100 : 850, t);
+    f.frequency.exponentialRampToValueAtTime(110, t + (big ? 0.26 : 0.18));
+    const g = c.createGain();
+    g.gain.setValueAtTime(big ? 0.6 : 0.45, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + (big ? 0.3 : 0.22));
+    src.connect(f); f.connect(g); g.connect(c.destination);
+    src.start(t); src.stop(t + 0.32);
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(big ? 360 : 460, t);
+    o.frequency.exponentialRampToValueAtTime(75, t + 0.17);
+    const og = c.createGain();
+    og.gain.setValueAtTime(0.28, t);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.19);
+    o.connect(og); og.connect(c.destination);
+    o.start(t); o.stop(t + 0.2);
+  }
+  function tone(freq, dur, type = 'square', vol = 0.2, slideTo = null) {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    const o = c.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function throwSound()   { tone(680, 0.05, 'triangle', 0.07, 320); }
+  function laserSound()   { tone(920, 0.07, 'sawtooth', 0.10, 1700); }
+  function powerupSound() { tone(440,0.08,'square',0.18); setTimeout(()=>tone(660,0.08,'square',0.18),80); setTimeout(()=>tone(880,0.12,'square',0.18),160); }
+  function heartSound()   { tone(523,0.1,'sine',0.22); setTimeout(()=>tone(784,0.18,'sine',0.22),100); }
+  function hurtSound()    { tone(300,0.25,'sawtooth',0.2,80); }
+  function bossHitSound() { tone(150,0.12,'square',0.25,70); }
+
+  // ---- 8-bit background music ----
+  // A quiet loop during play, plus a distinct tune for each tier's story break.
+  const TRACKS = {
+    game:   { stepMs: 260, leadType: 'triangle', bassType: 'sine',     leadVol: 0.05, bassVol: 0.07,
+              lead: [392,0,523,0, 494,0,392,0, 440,0,587,0, 523,0,440,0],
+              bass: [196,0,0,0,   165,0,0,0,   220,0,0,0,   196,0,0,0] },
+    // → Levels 11–20: rockets & fireworks — heroic, upbeat (C major)
+    break1: { stepMs: 168, leadType: 'square', bassType: 'triangle', leadVol: 0.12, bassVol: 0.16,
+              lead: [523,659,784,659, 698,659,587,494, 523,659,784,880, 784,659,587,523],
+              bass: [131,0,0,0,       175,0,0,0,       196,0,0,0,       131,0,0,0] },
+    // → Levels 21–30: outhouse wars — goofy, bouncy (F major, staccato)
+    break2: { stepMs: 148, leadType: 'square', bassType: 'square',   leadVol: 0.11, bassVol: 0.13,
+              lead: [349,0,440,0, 523,440,349,0, 392,0,494,0, 587,494,392,0],
+              bass: [175,0,175,0, 233,0,233,0,   262,0,262,0, 175,0,175,0] },
+    // → Levels 31–40: cosmic raccoons — spacey, mysterious (A minor, slower)
+    break3: { stepMs: 196, leadType: 'triangle', bassType: 'sine',   leadVol: 0.12, bassVol: 0.16,
+              lead: [440,523,659,523, 587,0,494,0, 440,523,659,880, 784,659,523,0],
+              bass: [110,0,0,0,       147,0,0,0,   131,0,0,0,       110,0,0,0] },
+    // → Levels 41–50: the final stand — epic, tense (E minor, dramatic)
+    break4: { stepMs: 162, leadType: 'square', bassType: 'sawtooth', leadVol: 0.12, bassVol: 0.14,
+              lead: [330,392,494,392, 440,523,440,392, 330,392,494,587, 523,494,392,330],
+              bass: [165,0,165,0,     175,0,175,0,     196,0,196,0,     165,0,165,0] },
+  };
+  let musicTimer = null, musicStep = 0, musicTrack = null;
+  function playNote(freq, dur, type, vol) {
+    const c = ac(); if (!c || !freq) return;
+    const t = c.currentTime;
+    const o = c.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function startMusic(name) {
+    const c = ac(); if (!c) return;
+    if (c.state === 'suspended') c.resume();
+    const tk = TRACKS[name]; if (!tk) return;
+    if (musicTimer && musicTrack === name) return;   // already playing this track
+    stopMusic();
+    musicTrack = name; musicStep = 0;
+    const leadDur = tk.stepMs / 1000 * 0.9, bassDur = tk.stepMs / 1000 * 1.2;
+    musicTimer = setInterval(() => {
+      const i = musicStep % tk.lead.length;
+      playNote(tk.lead[i], leadDur, tk.leadType, tk.leadVol);
+      if (tk.bass[i]) playNote(tk.bass[i], bassDur, tk.bassType, tk.bassVol);
+      musicStep++;
+    }, tk.stepMs);
+  }
+  function stopMusic() {
+    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+    musicTrack = null;
+  }
+
+  // ---- Game state ----
+  const STATE = { MENU: 0, PLAY: 1, OVER: 2, WIN: 3, STORY: 4, PAUSED: 5 };
+  let state = STATE.MENU;
+
+  const TOTAL_LEVELS = 100;
+  // Ammo evolves every 10 levels: [normal throw, powered (5+ stacks) throw]
+  const AMMO_NORMAL = ['rock','rocket','poop','raccoonhead','axe','pillow','dog','rainbow','whale','angel'];
+  const AMMO_POWER  = ['laser','banana','bomb','ufo','dragon','dino','cat','sadcloud','cheeseburger','crayon'];
+  function tierOf(level) { return Math.min(Math.floor((level - 1) / 10), 9); }
+  function ammoFor(level, powered) { return (powered ? AMMO_POWER : AMMO_NORMAL)[tierOf(level)]; }
+
+  // Story beats shown when crossing into a new tier. Index = tier of upcoming level.
+  const STORIES = [
+    null, // tier 0 intro lives on the start screen
+    { title: '🎆 The Raccoons Regroup',
+      text: 'Dawn breaks over a smoking campsite. The raccoons retreat into the pines… then return dragging crates of stolen fireworks! Bigfoot arms up — ROCKETS and FLAMING BANANAS. TWO crowned bosses now lead the raid. (Levels 11–20)' },
+    { title: '💩 The Outhouse Wars',
+      text: 'The raccoons have seized the campground outhouse — and weaponized it. Bigfoot answers with what nature provides: POOP and BOMBS. THREE bosses command the horde now. (Levels 21–30)' },
+    { title: '🛸 Cosmic Raccoons',
+      text: 'Strange lights hum over the ridge. These trash pandas have gone cosmic. Bigfoot hurls EVIL RACCOON HEADS and commandeers crashed UFOs. FOUR bosses descend from the night sky. (Levels 31–40)' },
+    { title: '🐉 The Beasts of Legend',
+      text: 'The Raccoon King summons monsters for a great siege. Bigfoot grabs the only things big enough — AXES and DRAGONS. FIVE bosses guard the way. (Levels 41–50)' },
+    { title: '🦕 A Rip in Time',
+      text: 'A tear in time yawns open and DINOSAURS stampede out! Too weary to fight bare-handed, Bigfoot grabs the comfiest weapons around — FLAMING PILLOWS — and rides DINOSAURS into the fray. SIX bosses block the path. (Levels 51–60)' },
+    { title: '🐶 Cats & Dogs',
+      text: 'The dinosaurs scatter at a sound every camper knows — barking. The forest\'s stray DOGS and CATS pile into the brawl, and Bigfoot flings them (gently!) at the raccoons. SEVEN bosses now. (Levels 61–70)' },
+    { title: '🌈 A Storm of Feelings',
+      text: 'A storm of pure emotion rolls in. Bigfoot weaponizes the weather itself — dazzling RAINBOWS and gloomy SAD CLOUDS rain down on the raccoons. EIGHT bosses guard the storm. (Levels 71–80)' },
+    { title: '🐋 Reality Gets Weird',
+      text: 'Things stop making sense. Bigfoot is now somehow hurling WHALES and CHEESEBURGERS. The raccoons are as confused as you are. NINE bosses stand in the way. (Levels 81–90)' },
+    { title: '👼 The Final Ascent',
+      text: 'The summit. The Raccoon Emperor waits upon the throne. Bigfoot throws everything left — literal ANGELS and humble CRAYONS — in one glorious last push. TEN bosses guard the throne. Save Squatchkind, once and for all! (Levels 91–100)' },
+  ];
+
+  const sasquatch = { x: W/2, y: GROUND_Y - 40, w: 56, h: 80, speed: 6, facing: 1 };
+  let rocks = [];      // sasquatch's projectiles (going up)
+  let acorns = [];     // raccoon projectiles (going down)
+  let meteors = [];    // night-only falling meteors
+  let hawks = [];      // level 71+ hawks that drop acorns or power-shot power-ups
+  let raccoons = [];
+  let bosses = [];
+  let powerups = [];
+  let particles = [];
+  let floats = [];
+
+  let score = 0;
+  let lives = 3;
+  let wave = 1;
+  let powerStacks = 0;   // extra rocks gained from stacked power-ups (unlimited)
+  let powerUntil = 0;    // when the current power-up stack expires
+  let invincibleUntil = 0; // invincibility from beating a boss
+  let strongUntil = 0;     // "power shot" — way stronger ammo (from hawks, level 71+)
+  let walkPhase = 0;
+  let throwT = 0;
+
+  // ---- Woodland critters (ambient) ----
+  const CRITTER_TYPES = ['rabbit', 'fox', 'deer', 'hedgehog'];
+  let critters = [];
+  let critterTimer = 60;
+
+  // raccoon fleet movement
+  let fleetDir = 1;
+  let fleetSpeed = 0.6;
+
+  const keys = { left: false, right: false, fire: false };
+  let lastShot = 0;
+
+  // ---- Input ----
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { keys.left = true; sasquatch.facing = -1; }
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') { keys.right = true; sasquatch.facing = 1; }
+    if (e.code === 'Space') { keys.fire = true; e.preventDefault(); }
+    if (e.code === 'Enter') {
+      if (state === STATE.STORY) continueStory();
+      else if (state === STATE.PAUSED) resumeFromPause();
+      else if (state !== STATE.PLAY) startGame();
+    }
+    if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+    if (e.code === 'Space') keys.fire = false;
+  });
+
+  // Touch / mouse
+  let pointerActive = false;
+  function pointerPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+    return (cx - r.left) / r.width * W;
+  }
+  function onDown(e) {
+    if (state !== STATE.PLAY) return;
+    pointerActive = true;
+    const nx = pointerPos(e);
+    sasquatch.facing = nx >= sasquatch.x ? 1 : -1;
+    sasquatch.x = nx;
+    keys.fire = true;
+    e.preventDefault();
+  }
+  function onMove(e) {
+    if (!pointerActive) return;
+    const nx = pointerPos(e);
+    if (Math.abs(nx - sasquatch.x) > 1) sasquatch.facing = nx > sasquatch.x ? 1 : -1;
+    sasquatch.x = nx;
+    e.preventDefault();
+  }
+  function onUp() { pointerActive = false; keys.fire = false; }
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive: false });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onUp);
+
+  startBtn.addEventListener('click', () => {
+    const c = ac(); if (c && c.state === 'suspended') c.resume();
+    if (state === STATE.STORY) continueStory();
+    else if (state === STATE.PAUSED) resumeFromPause();
+    else startGame();
+  });
+  document.getElementById('pauseBtn').addEventListener('click', () => {
+    const c = ac(); if (c && c.state === 'suspended') c.resume();
+    togglePause();
+  });
+
+  // ---- Setup waves ----
+  function spawnWave(n) {
+    raccoons = [];
+    bosses = [];
+    const lt = ((n - 1) % 10) + 1;        // level within the current tier (1..10)
+    const tier = tierOf(n);               // 0..4
+    const cols = Math.min(4 + Math.floor(lt / 2), 8);
+    const rows = Math.min(2 + Math.floor((lt - 1) / 3), 4);
+    const gapX = 78, gapY = 58;
+    const startX = (W - (cols - 1) * gapX) / 2;
+    const startY = 150;   // leave room for the bosses patrolling up top
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        raccoons.push({
+          x: startX + c * gapX,
+          y: startY + r * gapY,
+          w: 46, h: 40,
+          alive: true,
+          wob: Math.random() * Math.PI * 2,
+          row: r
+        });
+      }
+    }
+    // Only a couple of raccoons carry an extra-rock power-up.
+    const carriers = Math.min(2, raccoons.length);
+    for (let k = 0; k < carriers; k++) {
+      const pick = raccoons[Math.floor(Math.random() * raccoons.length)];
+      pick.hasPowerup = true;
+    }
+    // One extra boss is added every 10 levels (tier 0 → 1 boss, tier 9 → 10 bosses).
+    const bossCount = tier + 1;
+    const hp = 10 + (n - 1) * 5;          // L1:10, L2:15 … scales up across all 100 levels
+    const bw = Math.max(60, 96 - (bossCount - 1) * 7);
+    for (let i = 0; i < bossCount; i++) {
+      bosses.push({
+        x: W * (i + 1) / (bossCount + 1),
+        y: 60,
+        w: bw, h: bw * 0.79,
+        hp, maxHp: hp, alive: true,
+        dir: i % 2 ? -1 : 1,
+        vx: 1.0 + lt * 0.1,
+        flash: 0, hits: 0, wob: Math.random() * Math.PI * 2,
+        shootT: 50 + i * 25
+      });
+    }
+    fleetDir = 1;
+    fleetSpeed = 0.42 + lt * 0.14 + tier * 0.12;
+  }
+
+  function startGame() {
+    stopMusic();
+    score = 0; lives = 3; wave = 1;
+    rocks = []; acorns = []; meteors = []; hawks = []; particles = []; powerups = []; floats = [];
+    powerStacks = 0; powerUntil = 0; invincibleUntil = 0; strongUntil = 0;
+    sasquatch.x = W / 2;
+    spawnWave(wave);
+    state = STATE.PLAY;
+    overlay.classList.add('hidden');
+    startMusic('game');                // quiet gameplay loop
+    updateHud();
+  }
+
+  // Story pause between tiers; resumes into the next level on Continue.
+  function showStory(level) {
+    state = STATE.STORY;
+    const s = STORIES[tierOf(level)];
+    updateHud();
+    showOverlay(s.title, s.text, 'Continue ▶');
+    startMusic('break' + tierOf(level));   // each tier's break has its own tune
+  }
+  function continueStory() {
+    rocks = []; acorns = []; meteors = []; hawks = []; particles = []; powerups = [];
+    powerStacks = 0; powerUntil = 0; invincibleUntil = 0; strongUntil = 0;   // ammo resets each new set of 10 levels (lives are kept)
+    state = STATE.PLAY;
+    overlay.classList.add('hidden');
+    spawnWave(wave);
+    startMusic('game');                // quiet gameplay loop resumes
+    updateHud();
+  }
+
+  // Pause / resume (P, Esc, or the ⏸ button). Freezes timers so nothing ticks while paused.
+  let pauseStart = 0;
+  function togglePause() {
+    if (state === STATE.PLAY) {
+      state = STATE.PAUSED;
+      pauseStart = performance.now();
+      stopMusic();
+      showOverlay('⏸ Paused', 'The raccoons are holding position… Resume when ready.', 'Resume');
+    } else if (state === STATE.PAUSED) {
+      resumeFromPause();
+    }
+  }
+  function resumeFromPause() {
+    const dt = performance.now() - pauseStart;   // don't penalise the power-up timer / fire cooldown
+    powerUntil += dt;
+    lastShot += dt;
+    if (invincibleUntil > 0) invincibleUntil += dt;
+    if (strongUntil > 0) strongUntil += dt;
+    state = STATE.PLAY;
+    overlay.classList.add('hidden');
+    startMusic('game');
+    updateHud();
+  }
+
+  function updateHud() {
+    const now = performance.now();
+    scoreEl.textContent = score;
+    waveEl.textContent = wave;
+    timeEl.textContent = 'Level ' + Math.min(Math.max(wave, 1), TOTAL_LEVELS) + ' · ' + timeName();
+    livesEl.textContent = lives > 0 ? '🌲'.repeat(Math.min(lives, MAX_LIVES)) : '—';
+    if (powerStacks > 0 && now < powerUntil) {
+      const secs = Math.ceil((powerUntil - now) / 1000);
+      const count = 1 + powerStacks;
+      powerEl.textContent = (powerStacks >= 5 ? '⚡' : '') + count + '× ' + secs + 's';
+      powerEl.classList.add('active');
+    } else {
+      powerEl.textContent = '—';
+      powerEl.classList.remove('active');
+    }
+    bestEl.textContent = best;
+  }
+
+  function showOverlay(title, msg, btn) {
+    overlay.querySelector('h2').textContent = title;
+    overlay.querySelector('p').textContent = msg;
+    startBtn.textContent = btn;
+    overlay.classList.remove('hidden');
+  }
+
+  // ---- Particles & floating text ----
+  function burst(x, y, color, count = 12) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 1 + Math.random() * 4;
+      particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color });
+    }
+  }
+  function floatText(x, y, text, color) {
+    floats.push({ x, y, text, color, life: 1 });
+  }
+
+  function spawnRock(x, ammo, powered, row) {
+    rocks.push({ x, y: sasquatch.y - sasquatch.h/2 - (row || 0) * 16, r: powered ? 10 : 9, vy: powered ? -14 : -9, spin: 0, ammo, powered: !!powered });
+  }
+  function spawnPowerup(x, y, type) {
+    powerups.push({ x, y, vy: 2.1, spin: 0, type: type || 'ammo' });
+  }
+  function killRaccoon(r) {
+    r.alive = false;
+    score += 10 + (4 - Math.min(r.row, 3)) * 5;
+    playSquash(false);
+    burst(r.x, r.y, '#9a7b53', 14);
+    if (r.hasPowerup) spawnPowerup(r.x, r.y, 'ammo');
+  }
+  function defeatBoss(boss) {
+    boss.alive = false;
+    playSquash(true);
+    burst(boss.x, boss.y, '#7a818b', 28);
+    const reward = 100 + wave * 25;
+    score += reward;
+    spawnPowerup(boss.x, boss.y, 'invince');   // beating a boss drops a 7-second invincibility star
+    floatText(boss.x, boss.y, 'BOSS DOWN! +' + reward, '#ffd23a');
+  }
+
+  // ---- Update ----
+  function update() {
+    if (state !== STATE.PLAY) return;
+    const now = performance.now();
+
+    // Sasquatch movement
+    if (keys.left)  sasquatch.x -= sasquatch.speed;
+    if (keys.right) sasquatch.x += sasquatch.speed;
+    sasquatch.x = Math.max(sasquatch.w/2, Math.min(W - sasquatch.w/2, sasquatch.x));
+    if (keys.left || keys.right || pointerActive) walkPhase += 0.25;
+    throwT = Math.max(0, throwT - 0.06);
+
+    // Expire the power-up stack when the timer runs out
+    if (powerStacks > 0 && now >= powerUntil) powerStacks = 0;
+
+    // Throw current ammo — 1 + powerStacks projectiles fanned out; powered at 5+ stacks
+    if (keys.fire && now - lastShot > 300) {
+      lastShot = now;
+      throwT = 1;
+      const count = 1 + powerStacks;
+      const powered = powerStacks >= 5;
+      const ammo = ammoFor(wave, powered);
+      powered ? laserSound() : throwSound();
+      // Fan out up to 10 across; extra ammo stacks in additional rows above instead of widening.
+      const spacing = 14, perRow = 10;
+      const rows = Math.ceil(count / perRow);
+      for (let r = 0; r < rows; r++) {
+        const inRow = Math.min(perRow, count - r * perRow);
+        const startX = -(inRow - 1) / 2 * spacing;
+        for (let c = 0; c < inRow; c++) spawnRock(sasquatch.x + startX + c * spacing, ammo, powered, r);
+      }
+    }
+
+    rocks.forEach(rk => { rk.y += rk.vy; rk.spin += 0.3; });
+
+    // Fleet movement
+    let hitEdge = false;
+    const aliveRaccoons = raccoons.filter(r => r.alive);
+    const step = fleetSpeed * fleetDir;
+    for (const r of aliveRaccoons) {
+      if (r.x + step > W - 28 || r.x + step < 28) { hitEdge = true; break; }
+    }
+    if (hitEdge) { fleetDir *= -1; for (const r of raccoons) r.y += 20; }
+    else { for (const r of raccoons) r.x += step; }
+    for (const r of raccoons) r.wob += 0.05;
+
+    const lt = ((wave - 1) % 10) + 1;
+    const night = lt === 10;   // the 10th level of every tier is "Night"
+
+    // By day the raccoons throw acorns; at NIGHT no acorns — meteors rain instead.
+    if (!night && aliveRaccoons.length && Math.random() < 0.012 + lt * 0.004 + tierOf(wave) * 0.003) {
+      const shooter = aliveRaccoons[Math.floor(Math.random() * aliveRaccoons.length)];
+      acorns.push({ x: shooter.x, y: shooter.y + shooter.h/2, r: 7, vy: 3 + lt * 0.22, spin: 0 });
+    }
+    // Night meteors: fall from the sky, kill any raccoon they pass through, wound bosses,
+    // and cost Bigfoot a life if one lands on him (unless invincible).
+    if (night && Math.random() < 0.05) {
+      meteors.push({ x: 24 + Math.random() * (W - 48), y: -24, vy: 4.5 + Math.random() * 2.5, r: 11, spin: 0 });
+    }
+
+    // Hawks (level 71+) glide across the sky and randomly drop an acorn or a "power shot" power-up.
+    if (wave > 70 && hawks.length < 2 && Math.random() < 0.006) {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      hawks.push({ x: dir === 1 ? -36 : W + 36, y: 80 + Math.random() * 130, dir,
+                   vx: 1.6 + Math.random() * 1.2, dropT: 50 + Math.random() * 60, flap: 0 });
+    }
+    for (const hk of hawks) {
+      hk.x += hk.dir * hk.vx; hk.flap += 0.3; hk.dropT -= 1;
+      if (hk.dropT <= 0 && hk.x > 10 && hk.x < W - 10) {
+        hk.dropT = 60 + Math.random() * 90;
+        if (Math.random() < 0.5) acorns.push({ x: hk.x, y: hk.y + 8, r: 7, vy: 3.5, spin: 0 });
+        else spawnPowerup(hk.x, hk.y + 8, 'strong');
+      }
+    }
+    hawks = hawks.filter(hk => hk.x > -50 && hk.x < W + 50);
+
+    // Bosses (one extra per tier) — patrol, descend at the walls, and lob acorns (not at night)
+    const aliveBosses = bosses.filter(b => b.alive);
+    for (const boss of aliveBosses) {
+      boss.x += boss.vx * boss.dir;
+      if (boss.x > W - boss.w/2 - 8) { boss.dir = -1; boss.y += 10; }
+      if (boss.x < boss.w/2 + 8)     { boss.dir = 1;  boss.y += 10; }
+      boss.wob += 0.05;
+      if (boss.flash > 0) boss.flash -= 0.5;
+      boss.shootT -= 1;
+      if (!night && boss.shootT <= 0) {
+        boss.shootT = (60 + Math.random() * 40) * (0.6 + bosses.length * 0.4); // throttle when many bosses
+        acorns.push({ x: boss.x - 16, y: boss.y + boss.h/2, r: 8, vy: 3.2 + lt * 0.18, spin: 0 });
+        acorns.push({ x: boss.x + 16, y: boss.y + boss.h/2, r: 8, vy: 3.2 + lt * 0.18, spin: 0 });
+      }
+      if (boss.y + boss.h/2 >= sasquatch.y - sasquatch.h/2) { gameOver(); return; }
+    }
+
+    acorns.forEach(a => { a.y += a.vy; a.spin += 0.2; });
+
+    // Meteors fall and destroy what they touch
+    for (const m of meteors) {
+      m.y += m.vy; m.spin += 0.4;
+      if (m.gone) continue;
+      for (const r of raccoons) {                       // pierces through raccoons, killing each
+        if (r.alive && Math.abs(m.x - r.x) < r.w/2 + m.r && Math.abs(m.y - r.y) < r.h/2 + m.r) killRaccoon(r);
+      }
+      for (const boss of bosses) {                      // big strike on a boss, then burns up
+        if (boss.alive && Math.abs(m.x - boss.x) < boss.w/2 + m.r && Math.abs(m.y - boss.y) < boss.h/2 + m.r) {
+          boss.hp -= 15; boss.flash = 6;
+          burst(m.x, m.y, '#ffb347', 14);
+          if (boss.hp <= 0) defeatBoss(boss);
+          m.gone = true; break;
+        }
+      }
+      if (!m.gone && Math.abs(m.x - sasquatch.x) < sasquatch.w/2 + m.r &&
+          Math.abs(m.y - (sasquatch.y - 6)) < sasquatch.h/2 + m.r) {
+        m.gone = true;
+        if (now < invincibleUntil) { burst(sasquatch.x, sasquatch.y - 10, '#ffd23a', 12); }
+        else { hurtSound(); loseLife(); burst(sasquatch.x, sasquatch.y - 10, '#ffb347', 18); }
+      }
+    }
+    meteors = meteors.filter(m => !m.gone && m.y < H + 24);
+
+    // Rocks vs bosses & raccoons
+    const strong = now < strongUntil;                   // "power shot" makes ammo way stronger
+    const hitThreshold = wave > 50 ? 17 : 10;           // hits needed before a boss drops a power-up
+    for (const rk of rocks) {
+      if (rk.y < -20) continue;
+      let hit = false;
+      for (const boss of bosses) {
+        if (!boss.alive) continue;
+        if (Math.abs(rk.x - boss.x) < boss.w/2 + rk.r && Math.abs(rk.y - boss.y) < boss.h/2 + rk.r) {
+          rk.y = -100; hit = true;
+          boss.hp -= (rk.powered ? 2 : 1) * (strong ? 4 : 1);   // powered + power-shot hit harder
+          boss.flash = 6;
+          boss.hits = (boss.hits || 0) + 1;
+          burst(rk.x, boss.y, '#c9ced4', 8);
+          if (boss.hp <= 0) {
+            defeatBoss(boss);
+          } else if (boss.hits % hitThreshold === 0) {
+            // every 10 hits (17 after level 50) a boss coughs up an extra-rock power-up
+            spawnPowerup(boss.x, boss.y + boss.h/2, 'ammo');
+            floatText(boss.x, boss.y, 'POWER-UP!', '#7fbf5a');
+          }
+          break;
+        }
+      }
+      if (hit) continue;
+      for (const r of raccoons) {
+        if (!r.alive) continue;
+        if (Math.abs(rk.x - r.x) < r.w/2 + rk.r && Math.abs(rk.y - r.y) < r.h/2 + rk.r) {
+          rk.y = -100;
+          killRaccoon(r);
+          break;
+        }
+      }
+    }
+    rocks = rocks.filter(rk => rk.y > -20);
+
+    // Acorns vs sasquatch (no effect while invincible)
+    for (const a of acorns) {
+      if (Math.abs(a.x - sasquatch.x) < sasquatch.w/2 + a.r &&
+          Math.abs(a.y - (sasquatch.y - 6)) < sasquatch.h/2 + a.r) {
+        a.y = H + 100;
+        if (now < invincibleUntil) { burst(sasquatch.x, sasquatch.y - 10, '#ffd23a', 10); }
+        else { hurtSound(); loseLife(); burst(sasquatch.x, sasquatch.y - 10, '#e87', 16); }
+      }
+    }
+    acorns = acorns.filter(a => a.y < H + 20);
+
+    // Power-ups fall & get caught
+    powerups.forEach(p => { p.y += p.vy; p.spin += 0.12; });
+    for (const p of powerups) {
+      if (Math.abs(p.x - sasquatch.x) < sasquatch.w/2 + 16 &&
+          Math.abs(p.y - (sasquatch.y - 6)) < sasquatch.h/2 + 16) {
+        p.y = H + 200;
+        if (p.type === 'invince') {
+          invincibleUntil = now + 7000;   // 7 seconds of invincibility from beating a boss
+          heartSound();
+          floatText(sasquatch.x, sasquatch.y - 50, '★ INVINCIBLE 7s! ★', '#ffd23a');
+        } else if (p.type === 'strong') {
+          strongUntil = now + 10000;      // 10 seconds of way-stronger ammo (hawk drop)
+          powerupSound();
+          floatText(sasquatch.x, sasquatch.y - 50, '💥 POWER SHOT! 💥', '#ff7af0');
+        } else {
+          powerStacks++;
+          powerUntil = now + DOUBLE_MS;   // keep the timer; each pickup refreshes it
+          powerupSound();
+          const poweredName = AMMO_POWER[tierOf(wave)].toUpperCase();
+          const normalName = AMMO_NORMAL[tierOf(wave)].toUpperCase();
+          if (powerStacks === 5) {
+            floatText(sasquatch.x, sasquatch.y - 50, '⚡ ' + poweredName + ' MODE! ⚡', '#8dff9f');
+          } else if (powerStacks > 5) {
+            floatText(sasquatch.x, sasquatch.y - 50, (1 + powerStacks) + '× ' + poweredName + '!', '#8dff9f');
+          } else {
+            floatText(sasquatch.x, sasquatch.y - 50, (1 + powerStacks) + '× ' + normalName + '!', '#7fbf5a');
+          }
+        }
+      }
+    }
+    powerups = powerups.filter(p => p.y < H + 30);
+
+    // Raccoon reaches campsite?
+    for (const r of raccoons) {
+      if (r.alive && r.y + r.h/2 >= sasquatch.y - sasquatch.h/2) { gameOver(); return; }
+    }
+
+    // Level cleared?
+    if (raccoons.every(r => !r.alive) && bosses.every(b => !b.alive)) {
+      const clearedLevel = wave;
+      wave++;
+      score += 50;
+      if (wave > TOTAL_LEVELS) { winGame(); return; }
+      // After level 40 you earn TWO trees per level cleared (instead of one)
+      const treeGain = clearedLevel > 40 ? 2 : 1;
+      if (lives < MAX_LIVES) {
+        lives = Math.min(MAX_LIVES, lives + treeGain);
+        floatText(sasquatch.x, sasquatch.y - 60, (treeGain === 2 ? '+🌲🌲 TWO TREES!' : '+🌲 EXTRA TREE!'), '#7fbf5a');
+        heartSound();
+      } else {
+        floatText(sasquatch.x, sasquatch.y - 60, 'LEVEL CLEAR! +50', '#c9a06a');
+      }
+      // Pause for a story beat when crossing into a new tier (levels 11/21/31/41)
+      if ((wave - 1) % 10 === 0) { showStory(wave); return; }
+      spawnWave(wave);
+    }
+
+    // Particles & floats
+    particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 0.025; });
+    particles = particles.filter(p => p.life > 0);
+    floats.forEach(fl => { fl.y -= 0.6; fl.life -= 0.012; });
+    floats = floats.filter(fl => fl.life > 0);
+
+    updateHud();
+  }
+
+  function loseLife() {
+    lives--;
+    if (lives <= 0) gameOver();
+  }
+
+  function gameOver() {
+    stopMusic();
+    state = STATE.OVER;
+    if (score > best) { best = score; localStorage.setItem('sasquatchBest', best); }
+    updateHud();
+    showOverlay('🦝 The Raccoons Won...',
+      `They overran the camp on level ${wave}. Final score: ${score}. Sasquatch needs a rematch!`,
+      'Throw Again');
+  }
+
+  function winGame() {
+    stopMusic();
+    state = STATE.WIN;
+    if (score > best) { best = score; localStorage.setItem('sasquatchBest', best); }
+    updateHud();
+    showOverlay('🏆 Squatchkind Saved!',
+      `Bigfoot fought through all 100 levels — rocks to dragons to whales to angels — and toppled all ten final bosses! Final score: ${score}. Squatchkind is saved... for now.`,
+      'Play Again');
+  }
+
+  // ---- Drawing ----
+  // The playable Sasquatch uses the same classic walking silhouette (BF_OUTLINE),
+  // rendered in brown fur, facing the direction of travel, with an animated throwing arm.
+  function drawSasquatch(x, y) {
+    const f = sasquatch.facing;
+    const feetY = y + sasquatch.h / 2;
+    const S = sasquatch.h / 100;
+    const moving = keys.left || keys.right || pointerActive;
+    const bob = moving ? Math.sin(walkPhase) * 1.5 : 0;
+    const fur = '#5b432c', furD = '#3e2d1b', furL = '#7a5c3e';
+
+    // ground shadow
+    ctx.save();
+    ctx.translate(x, feetY);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(0, 2, 30, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(x, feetY + bob);
+    ctx.scale(f * S, S);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+    // body silhouette
+    ctx.fillStyle = fur;
+    ctx.beginPath();
+    ctx.moveTo(BF_OUTLINE[0][0], BF_OUTLINE[0][1]);
+    for (let i = 1; i < BF_OUTLINE.length; i++) ctx.lineTo(BF_OUTLINE[i][0], BF_OUTLINE[i][1]);
+    ctx.closePath(); ctx.fill();
+
+    // shaggy fur fringe down the back
+    ctx.strokeStyle = furD; ctx.lineWidth = 2.5;
+    for (let i = 0; i < 6; i++) { const yy = -28 - i * 10; ctx.beginPath(); ctx.moveTo(-25, yy); ctx.lineTo(-32, yy - 4); ctx.stroke(); }
+
+    // throwing arm — hangs in front, swings up overhead when throwing
+    const tt = throwT;
+    const sx = 19, sy = -80;
+    const hx = 27 + (32 - 27) * tt;
+    const hy = -33 + (-106 - (-33)) * tt;
+    const ex = (sx + hx) / 2 + 9;
+    const ey = (sy + hy) / 2;
+    ctx.strokeStyle = fur; ctx.lineWidth = 13;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(ex, ey, hx, hy); ctx.stroke();
+    if (tt > 0.25) { ctx.fillStyle = '#9a9a9a'; ctx.beginPath(); ctx.arc(hx, hy, 6.5, 0, Math.PI*2); ctx.fill(); }
+    else { ctx.fillStyle = fur; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI*2); ctx.fill(); }
+
+    // lighter muzzle + eye near the face
+    ctx.fillStyle = furL;
+    ctx.beginPath(); ctx.ellipse(21, -88, 6, 7.5, 0.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#120c06';
+    ctx.beginPath(); ctx.arc(20, -91, 2.2, 0, Math.PI*2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawRaccoon(r) {
+    const bob = Math.sin(r.wob) * 3;
+    ctx.save();
+    ctx.translate(r.x, r.y + bob);
+    const w = r.w, h = r.h;
+    ctx.fillStyle = '#7a7d82';
+    ctx.beginPath(); ctx.moveTo(-w/3,-h/2+2); ctx.lineTo(-w/5,-h/2-8); ctx.lineTo(-w/9,-h/2+2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(w/3,-h/2+2); ctx.lineTo(w/5,-h/2-8); ctx.lineTo(w/9,-h/2+2); ctx.fill();
+    ctx.fillStyle = '#9098a0';
+    ctx.beginPath(); ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#d8dde2';
+    ctx.beginPath(); ctx.ellipse(0, 4, w/2.6, h/2.4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#2c2c30';
+    ctx.beginPath(); ctx.ellipse(-7, 0, 7, 6, 0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(7, 0, 7, 6, -0.3, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-7,0,2.4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(7,0,2.4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(-7,0,1.2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(7,0,1.2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.moveTo(-3,8); ctx.lineTo(3,8); ctx.lineTo(0,12); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBoss(b) {
+    ctx.save();
+    ctx.translate(b.x, b.y + Math.sin(b.wob) * 3);
+    ctx.scale(b.w / 96, b.w / 96);   // art is authored at a 96-wide reference size
+    if (b.flash > 0) ctx.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(b.flash * 2.5));
+    const w = 96, h = 76;
+    // ears
+    ctx.fillStyle = '#6b7078';
+    ctx.beginPath(); ctx.moveTo(-w/3,-h/2+4); ctx.lineTo(-w/5,-h/2-14); ctx.lineTo(-w/9,-h/2+4); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(w/3,-h/2+4); ctx.lineTo(w/5,-h/2-14); ctx.lineTo(w/9,-h/2+4); ctx.fill();
+    // body
+    ctx.fillStyle = '#7a818b';
+    ctx.beginPath(); ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#c9ced4';
+    ctx.beginPath(); ctx.ellipse(0, 6, w/2.5, h/2.4, 0, 0, Math.PI*2); ctx.fill();
+    // mask
+    ctx.fillStyle = '#1f1f24';
+    ctx.beginPath(); ctx.ellipse(-12, -2, 11, 9, 0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(12, -2, 11, 9, -0.3, 0, Math.PI*2); ctx.fill();
+    // angry glowing eyes
+    ctx.fillStyle = '#ffd23a';
+    ctx.beginPath(); ctx.arc(-12,-2,3.4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(12,-2,3.4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(-12,-1,1.6,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(12,-1,1.6,0,Math.PI*2); ctx.fill();
+    // nose
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.moveTo(-5,12); ctx.lineTo(5,12); ctx.lineTo(0,18); ctx.fill();
+    // crown
+    ctx.fillStyle = '#ffcf33';
+    const cy = -h/2 - 2;
+    ctx.beginPath();
+    ctx.moveTo(-17, cy); ctx.lineTo(-17, cy-12); ctx.lineTo(-8, cy-4);
+    ctx.lineTo(0, cy-15); ctx.lineTo(8, cy-4); ctx.lineTo(17, cy-12);
+    ctx.lineTo(17, cy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(0, cy-9, 2, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // hp bar
+    ctx.fillStyle = '#311'; ctx.fillRect(-w/2, -h/2 - 28, w, 7);
+    ctx.fillStyle = '#e05050'; ctx.fillRect(-w/2, -h/2 - 28, w * (b.hp / b.maxHp), 7);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(-w/2, -h/2 - 28, w, 7);
+    ctx.restore();
+  }
+
+  function drawProjectile(rk) {
+    ctx.save();
+    ctx.translate(rk.x, rk.y);
+    if (performance.now() < strongUntil) { ctx.shadowColor = '#ff7af0'; ctx.shadowBlur = 10; }  // power-shot glow
+    switch (rk.ammo) {
+      case 'laser': {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = 'rgba(110,255,150,0.28)'; ctx.fillRect(-5, -16, 10, 30);
+        ctx.fillStyle = '#7dff9a'; ctx.fillRect(-2.5, -16, 5, 30);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(-1, -16, 2, 30);
+        break;
+      }
+      case 'rocket': {
+        ctx.fillStyle = '#ffb347'; ctx.beginPath();
+        ctx.moveTo(-3, 8); ctx.lineTo(0, 15 + Math.random() * 5); ctx.lineTo(3, 8); ctx.fill();
+        ctx.fillStyle = '#d83a3a'; ctx.fillRect(-3.5, -6, 7, 14);
+        ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.moveTo(-3.5, -6); ctx.lineTo(0, -15); ctx.lineTo(3.5, -6); ctx.fill();
+        ctx.fillStyle = '#9a2a2a';
+        ctx.beginPath(); ctx.moveTo(-3.5, 5); ctx.lineTo(-7, 10); ctx.lineTo(-3.5, 10); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(3.5, 5); ctx.lineTo(7, 10); ctx.lineTo(3.5, 10); ctx.fill();
+        break;
+      }
+      case 'banana': {
+        ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.arc(0, 9, 6 + Math.random() * 2, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(0, 9, 3, 0, Math.PI*2); ctx.fill();
+        ctx.rotate(0.5);
+        ctx.fillStyle = '#f4d03f'; ctx.lineWidth = 5; ctx.strokeStyle = '#f4d03f'; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(0, 0, 8, Math.PI * 0.15, Math.PI * 0.95); ctx.stroke();
+        ctx.strokeStyle = '#5a3a14'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, 8, Math.PI * 0.9, Math.PI * 0.98); ctx.stroke();
+        break;
+      }
+      case 'poop': {
+        ctx.fillStyle = '#7a4a24';
+        ctx.beginPath(); ctx.ellipse(0, 7, 9, 5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(0, 1, 6.5, 4.5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(0, -4, 4, 3.5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-2, 0, 1.7, 0, Math.PI*2); ctx.arc(2, 0, 1.7, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-2, 0, 0.8, 0, Math.PI*2); ctx.arc(2, 0, 0.8, 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'bomb': {
+        ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(0, 2, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(-2.5, -0.5, 2.5, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#a87a3a'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(3, -5); ctx.quadraticCurveTo(8, -9, 6, -13); ctx.stroke();
+        ctx.fillStyle = Math.random() < 0.5 ? '#ffd24a' : '#ff7a1a';
+        ctx.beginPath(); ctx.arc(6, -13, 2 + Math.random(), 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'raccoonhead': {
+        ctx.rotate(rk.spin * 0.15);
+        ctx.fillStyle = '#6b7078';
+        ctx.beginPath(); ctx.moveTo(-7, -4); ctx.lineTo(-9, -12); ctx.lineTo(-3, -6); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(7, -4); ctx.lineTo(9, -12); ctx.lineTo(3, -6); ctx.fill();
+        ctx.fillStyle = '#9098a0'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#d8dde2'; ctx.beginPath(); ctx.arc(0, 2, 6, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#1f1f24';
+        ctx.beginPath(); ctx.ellipse(-3, -0.5, 3, 2.4, 0.3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(3, -0.5, 3, 2.4, -0.3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff3030';
+        ctx.beginPath(); ctx.arc(-3, -0.5, 1.3, 0, Math.PI*2); ctx.arc(3, -0.5, 1.3, 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'ufo': {
+        ctx.fillStyle = 'rgba(120,255,160,0.25)'; ctx.beginPath(); ctx.ellipse(0, 4, 12, 5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#bfe0f5'; ctx.beginPath(); ctx.arc(0, -2, 5, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = '#9aa3b0'; ctx.beginPath(); ctx.ellipse(0, 0, 11, 4, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffd24a';
+        for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(i * 6, 0, 1.3, 0, Math.PI*2); ctx.fill(); }
+        break;
+      }
+      case 'axe': {
+        ctx.rotate(rk.spin * 0.3);
+        ctx.strokeStyle = '#7a4a24'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(0, 9); ctx.lineTo(0, -6); ctx.stroke();
+        ctx.fillStyle = '#c8ccd2';
+        ctx.beginPath(); ctx.moveTo(0, -11); ctx.quadraticCurveTo(10, -10, 8, -2); ctx.quadraticCurveTo(3, -4, 0, -4); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(0, -11); ctx.quadraticCurveTo(-10, -10, -8, -2); ctx.quadraticCurveTo(-3, -4, 0, -4); ctx.closePath(); ctx.fill();
+        break;
+      }
+      case 'dragon': {
+        ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.ellipse(0, 10, 4, 6, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#3aa05a'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-3, -6); ctx.lineTo(0, -13); ctx.lineTo(4, -6); ctx.fill();
+        ctx.strokeStyle = '#2a7a44'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-4, -7); ctx.lineTo(-7, -12); ctx.moveTo(4, -7); ctx.lineTo(7, -12); ctx.stroke();
+        ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(-3, -2, 1.6, 0, Math.PI*2); ctx.arc(3, -2, 1.6, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-3, -2, 0.8, 0, Math.PI*2); ctx.arc(3, -2, 0.8, 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'pillow': { // flaming pillow
+        ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.arc(0, 8, 6 + Math.random() * 2, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(0, 8, 3, 0, Math.PI*2); ctx.fill();
+        ctx.rotate(rk.spin * 0.1);
+        ctx.fillStyle = '#e8e2f0'; roundRect(-9, -6, 18, 12, 4); ctx.fill();
+        ctx.strokeStyle = '#b9b2cc'; ctx.lineWidth = 1; roundRect(-9, -6, 18, 12, 4); ctx.stroke();
+        ctx.fillStyle = '#c9c2dc'; ctx.beginPath(); ctx.arc(-9, 0, 1.6, 0, Math.PI*2); ctx.arc(9, 0, 1.6, 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'dino': { // green dinosaur
+        ctx.fillStyle = '#4caf50'; ctx.beginPath(); ctx.ellipse(-1, 2, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(6, 0); ctx.quadraticCurveTo(13, -2, 10, -10); ctx.quadraticCurveTo(6, -6, 4, -3); ctx.fill(); // neck/head up
+        ctx.fillStyle = '#3a8a40';
+        for (let i = -6; i <= 4; i += 4) { ctx.beginPath(); ctx.moveTo(i, -4); ctx.lineTo(i + 2, -9); ctx.lineTo(i + 4, -4); ctx.fill(); } // back plates
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(9, -8, 1.4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(9, -8, 0.7, 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'dog': { // dog face
+        ctx.fillStyle = '#b5793a'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#8a5a28'; // ears
+        ctx.beginPath(); ctx.ellipse(-8, -2, 3, 6, 0.3, 0, Math.PI*2); ctx.ellipse(8, -2, 3, 6, -0.3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#f0d8b0'; ctx.beginPath(); ctx.ellipse(0, 4, 4, 3, 0, 0, Math.PI*2); ctx.fill(); // muzzle
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, 3, 1.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-3, -2, 1.2, 0, Math.PI*2); ctx.arc(3, -2, 1.2, 0, Math.PI*2); ctx.fill();
+        break;
+      }
+      case 'cat': { // cat face
+        ctx.fillStyle = '#9aa0a8'; ctx.beginPath(); ctx.arc(0, 1, 8, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-8, -3); ctx.lineTo(-9, -11); ctx.lineTo(-3, -5); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(8, -3); ctx.lineTo(9, -11); ctx.lineTo(3, -5); ctx.fill();
+        ctx.fillStyle = '#6dd36d'; ctx.beginPath(); ctx.arc(-3, 0, 1.6, 0, Math.PI*2); ctx.arc(3, 0, 1.6, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-3, 0, 0.7, 0, Math.PI*2); ctx.arc(3, 0, 0.7, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff8aa0'; ctx.beginPath(); ctx.moveTo(-1.5, 4); ctx.lineTo(1.5, 4); ctx.lineTo(0, 6); ctx.fill();
+        break;
+      }
+      case 'rainbow': { // arcing rainbow
+        const cols = ['#ff4d4d', '#ffa64d', '#ffe04d', '#4dd24d', '#4d8aff', '#a64dff'];
+        ctx.lineWidth = 2.2;
+        for (let i = 0; i < cols.length; i++) { ctx.strokeStyle = cols[i]; ctx.beginPath(); ctx.arc(0, 6, 5 + i * 2.2, Math.PI, 0); ctx.stroke(); }
+        break;
+      }
+      case 'sadcloud': { // gloomy raincloud
+        ctx.fillStyle = '#8a93a8'; ctx.beginPath();
+        ctx.arc(-5, 0, 5, 0, Math.PI*2); ctx.arc(4, -1, 6, 0, Math.PI*2); ctx.arc(0, 3, 6, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#5f6b80'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(-3, 1, 1.4, 0, Math.PI, true); ctx.arc(3, 1, 1.4, 0, Math.PI, true); ctx.stroke(); // sad eyes
+        ctx.fillStyle = '#6fb7ff';
+        for (let i = -4; i <= 6; i += 5) { ctx.beginPath(); ctx.moveTo(i, 8); ctx.lineTo(i - 1.5, 13); ctx.lineTo(i + 1.5, 13); ctx.fill(); }
+        break;
+      }
+      case 'whale': { // little blue whale
+        ctx.fillStyle = '#4d8ad0'; ctx.beginPath(); ctx.ellipse(0, 1, 10, 6, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-15, -4); ctx.lineTo(-15, 5); ctx.fill(); // tail
+        ctx.fillStyle = '#bfe0f5'; ctx.beginPath(); ctx.ellipse(2, 3, 7, 3, 0, 0, Math.PI*2); ctx.fill(); // belly
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7, -1, 1.3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(7, -1, 0.7, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#bfe0f5'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(3, -6); ctx.lineTo(3, -11); ctx.stroke(); // spout
+        break;
+      }
+      case 'cheeseburger': {
+        ctx.fillStyle = '#e8b864'; ctx.beginPath(); ctx.ellipse(0, -5, 9, 4, 0, Math.PI, 0); ctx.fill(); // top bun
+        ctx.fillStyle = '#ffd24a'; roundRect(-9, -3, 18, 3, 1); ctx.fill();   // cheese
+        ctx.fillStyle = '#7a4a24'; roundRect(-9, 0, 18, 4, 2); ctx.fill();    // patty
+        ctx.fillStyle = '#5fb35f'; ctx.fillRect(-9, 3, 18, 1.5);              // lettuce
+        ctx.fillStyle = '#d99a4a'; ctx.beginPath(); ctx.ellipse(0, 7, 9, 4, 0, 0, Math.PI); ctx.fill(); // bottom bun
+        ctx.fillStyle = '#fff'; for (let i = -6; i <= 6; i += 3) { ctx.beginPath(); ctx.arc(i, -6, 0.6, 0, Math.PI*2); ctx.fill(); } // sesame
+        break;
+      }
+      case 'angel': {
+        ctx.fillStyle = 'rgba(255,255,180,0.5)'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill(); // glow
+        ctx.fillStyle = '#fff'; ctx.beginPath();   // wings
+        ctx.ellipse(-7, 1, 5, 3, -0.4, 0, Math.PI*2); ctx.ellipse(7, 1, 5, 3, 0.4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffe0b0'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI*2); ctx.fill(); // head/body
+        ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(0, -7, 3.5, 1.5, 0, 0, Math.PI*2); ctx.stroke(); // halo
+        break;
+      }
+      case 'crayon': {
+        ctx.rotate(rk.spin * 0.1);
+        ctx.fillStyle = '#e0524d'; roundRect(-3.5, -4, 7, 14, 2); ctx.fill(); // body
+        ctx.fillStyle = '#f4d03f'; ctx.fillRect(-3.5, -1, 7, 3);              // label band
+        ctx.fillStyle = '#d6433e'; ctx.beginPath(); ctx.moveTo(-3.5, -4); ctx.lineTo(0, -11); ctx.lineTo(3.5, -4); ctx.fill(); // tip
+        break;
+      }
+      default: { // rock
+        ctx.rotate(rk.spin);
+        ctx.fillStyle = '#8b8b8b';
+        ctx.beginPath();
+        ctx.moveTo(-rk.r, 0); ctx.lineTo(-rk.r*0.4, -rk.r); ctx.lineTo(rk.r*0.7, -rk.r*0.6);
+        ctx.lineTo(rk.r, rk.r*0.3); ctx.lineTo(0, rk.r); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#a9a9a9';
+        ctx.beginPath(); ctx.arc(-1, -1, rk.r*0.35, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  // small rounded-rect helper for projectile shapes
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawAcorn(a) {
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.spin * 0.3);
+    ctx.fillStyle = '#b5793a';
+    ctx.beginPath(); ctx.ellipse(0, 2, a.r, a.r*1.2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#6b4423';
+    ctx.beginPath(); ctx.ellipse(0, -a.r*0.6, a.r*1.1, a.r*0.7, 0, Math.PI, 0); ctx.fill();
+    ctx.fillRect(-1, -a.r*1.3, 2, 4);
+    ctx.restore();
+  }
+
+  function drawPowerup(p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    const pulse = 0.6 + 0.4 * Math.sin(p.spin * 3);
+    if (p.type === 'invince') {
+      // golden invincibility star
+      ctx.fillStyle = `rgba(255,210,60,${0.35 * pulse})`;
+      ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI*2); ctx.fill();
+      ctx.rotate(p.spin * 0.5);
+      ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#a8761a'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const ang = -Math.PI / 2 + i * Math.PI / 5;
+        const rad = i % 2 ? 5 : 12;
+        ctx[i ? 'lineTo' : 'moveTo'](Math.cos(ang) * rad, Math.sin(ang) * rad);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      // green extra-rock power-up
+      ctx.fillStyle = `rgba(127,191,90,${0.3 * pulse})`;
+      ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#23381a';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#7fbf5a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = '#c9ced4';
+      ctx.beginPath(); ctx.arc(-4, 0, 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(5, 1, 4, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawMeteor(m) {
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    // fiery tail trailing upward
+    const grd = ctx.createLinearGradient(0, -26, 0, 0);
+    grd.addColorStop(0, 'rgba(255,140,40,0)');
+    grd.addColorStop(1, 'rgba(255,170,60,0.7)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(0, -26); ctx.lineTo(4, -2); ctx.closePath(); ctx.fill();
+    // rock
+    ctx.fillStyle = '#5b4636'; ctx.beginPath(); ctx.arc(0, 0, m.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#3a2c20'; ctx.beginPath(); ctx.arc(2, 2, m.r * 0.4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffce5a'; ctx.beginPath(); ctx.arc(-2, -2, m.r * 0.3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawHawk(hk) {
+    ctx.save();
+    ctx.translate(hk.x, hk.y);
+    ctx.scale(hk.dir, 1);
+    const flap = Math.sin(hk.flap) * 6;
+    ctx.fillStyle = '#5a4632';
+    // body
+    ctx.beginPath(); ctx.ellipse(0, 0, 9, 4, 0, 0, Math.PI*2); ctx.fill();
+    // head + beak
+    ctx.beginPath(); ctx.arc(8, -1, 3.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#e0a64a'; ctx.beginPath(); ctx.moveTo(11, -1); ctx.lineTo(15, 0); ctx.lineTo(11, 1.5); ctx.fill();
+    // wings (flapping)
+    ctx.fillStyle = '#6b5440';
+    ctx.beginPath(); ctx.moveTo(-2, 0); ctx.quadraticCurveTo(-10, -flap - 2, -18, flap * 0.5); ctx.quadraticCurveTo(-9, -2, -2, -2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(2, 0); ctx.quadraticCurveTo(8, -flap - 2, 14, flap * 0.5); ctx.quadraticCurveTo(7, -2, 2, -2); ctx.fill();
+    // eye
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(8.5, -1.5, 0.9, 0, Math.PI*2); ctx.fill();
+    // tail
+    ctx.fillStyle = '#5a4632'; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-14, -2); ctx.lineTo(-14, 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCampsite() {
+    const gy = GROUND_Y;
+    const t = performance.now() / 120;
+
+    // Tent (left)
+    const tx = 84;
+    ctx.fillStyle = '#3f5d78';
+    ctx.beginPath(); ctx.moveTo(tx, gy); ctx.lineTo(tx + 34, gy - 48); ctx.lineTo(tx + 52, gy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5e86ab';
+    ctx.beginPath(); ctx.moveTo(tx - 48, gy); ctx.lineTo(tx + 34, gy - 48); ctx.lineTo(tx + 22, gy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#21303d';
+    ctx.beginPath(); ctx.moveTo(tx - 6, gy); ctx.lineTo(tx + 8, gy - 32); ctx.lineTo(tx + 8, gy); ctx.closePath(); ctx.fill();
+    // tent pole tip
+    ctx.strokeStyle = '#2a3a48'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(tx + 34, gy - 48); ctx.lineTo(tx + 34, gy - 56); ctx.stroke();
+
+    // Campfire (right)
+    const fx = W - 110;
+    const fl = 0.7 + 0.3 * Math.sin(t * 3);
+    const grd = ctx.createRadialGradient(fx, gy - 10, 2, fx, gy - 10, 46);
+    grd.addColorStop(0, `rgba(255,170,60,${0.40 * fl})`);
+    grd.addColorStop(1, 'rgba(255,140,40,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(fx, gy - 10, 46, 0, Math.PI*2); ctx.fill();
+    // logs
+    ctx.strokeStyle = '#5a3a1e'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(fx - 16, gy - 2); ctx.lineTo(fx + 16, gy - 10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fx - 16, gy - 10); ctx.lineTo(fx + 16, gy - 2); ctx.stroke();
+    // flames
+    function flame(h, w, col) {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(fx - w, gy - 8);
+      ctx.quadraticCurveTo(fx - w * 0.3, gy - 8 - h * 0.6, fx, gy - 8 - h);
+      ctx.quadraticCurveTo(fx + w * 0.3, gy - 8 - h * 0.6, fx + w, gy - 8);
+      ctx.quadraticCurveTo(fx, gy - 2, fx - w, gy - 8);
+      ctx.fill();
+    }
+    flame(30 * fl + 12, 12, '#ff8c1a');
+    flame(20 * fl + 7, 8, '#ffd24a');
+
+    // a log seat between them
+    ctx.strokeStyle = '#5a3a1e'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(W/2 - 30, gy - 4); ctx.lineTo(W/2 + 30, gy - 4); ctx.stroke();
+  }
+
+  function drawGround() {
+    ctx.fillStyle = '#241a12';
+    ctx.fillRect(0, GROUND_Y, W, 18);
+    ctx.fillStyle = '#34281a';
+    for (let i = 0; i < W; i += 24) ctx.fillRect(i, GROUND_Y, 12, 4);
+  }
+
+  // ---- Woodland critters: ambient, decorative, non-interactive ----
+  function spawnCritter() {
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const type = CRITTER_TYPES[Math.floor(Math.random() * CRITTER_TYPES.length)];
+    let speed = 0.5 + Math.random() * 0.6;
+    if (type === 'rabbit') speed += 0.5;
+    if (type === 'deer') speed -= 0.1;
+    critters.push({ type, dir, speed, x: dir === 1 ? -36 : W + 36, phase: Math.random() * 6 });
+  }
+  function updateCritters() {
+    critterTimer--;
+    if (critterTimer <= 0 && critters.length < 3) {
+      spawnCritter();
+      critterTimer = 160 + Math.random() * 260;
+    }
+    for (const c of critters) { c.x += c.dir * c.speed; c.phase += 0.2; }
+    critters = critters.filter(c => c.x > -60 && c.x < W + 60);
+  }
+  function drawCritter(c) {
+    const legs = Math.sin(c.phase) * 2;
+    const hop = c.type === 'rabbit' ? Math.max(0, Math.sin(c.phase)) * 4 : 0;
+    ctx.save();
+    ctx.translate(c.x, GROUND_Y - 1 - hop);
+    ctx.scale(c.dir, 1);
+    if (c.type === 'rabbit')        drawRabbit(legs);
+    else if (c.type === 'fox')      drawFox(legs);
+    else if (c.type === 'deer')     drawDeer(legs);
+    else if (c.type === 'hedgehog') drawHedgehog(legs);
+    ctx.restore();
+  }
+  function drawRabbit(legs) {
+    ctx.fillStyle = '#b8a890';
+    ctx.beginPath(); ctx.ellipse(0, -7, 10, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(8, -12, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(6, -24, 2, 11); ctx.fillRect(9, -24, 2, 11);
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-9, -7, 3, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#9a8a72'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-3, -1); ctx.lineTo(-3 + legs, 0); ctx.moveTo(5, -1); ctx.lineTo(5 - legs, 0); ctx.stroke();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(10, -13, 0.9, 0, Math.PI*2); ctx.fill();
+  }
+  function drawFox(legs) {
+    ctx.fillStyle = '#d9743a';
+    ctx.beginPath(); ctx.ellipse(0, -8, 12, 6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-10, -8); ctx.quadraticCurveTo(-23, -15, -16, -1); ctx.quadraticCurveTo(-12, -6, -10, -8); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-19, -4, 2.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#d9743a';
+    ctx.beginPath(); ctx.arc(11, -12, 4.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(13, -13); ctx.lineTo(21, -11); ctx.lineTo(13, -9); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(8, -15); ctx.lineTo(10, -22); ctx.lineTo(13, -15); ctx.fill();
+    ctx.strokeStyle = '#a8542a'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-4, -3); ctx.lineTo(-4 + legs, 0); ctx.moveTo(6, -3); ctx.lineTo(6 - legs, 0); ctx.stroke();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(12, -13, 0.9, 0, Math.PI*2); ctx.fill();
+  }
+  function drawDeer(legs) {
+    ctx.strokeStyle = '#7d5331'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-7, -14); ctx.lineTo(-7 + legs, 0);
+    ctx.moveTo(7, -14);  ctx.lineTo(7 - legs, 0);
+    ctx.moveTo(-3, -14); ctx.lineTo(-3 - legs, 0);
+    ctx.moveTo(10, -14); ctx.lineTo(10 + legs, 0);
+    ctx.stroke();
+    ctx.fillStyle = '#9c6b3f';
+    ctx.beginPath(); ctx.ellipse(0, -16, 13, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.save(); ctx.translate(11, -18); ctx.rotate(-0.5); ctx.fillRect(-2, -13, 5, 15); ctx.restore();
+    ctx.beginPath(); ctx.ellipse(16, -30, 5, 3.5, 0.4, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(15, -33); ctx.lineTo(13, -41); ctx.moveTo(15, -33); ctx.lineTo(18, -41);
+    ctx.moveTo(13, -41); ctx.lineTo(11, -44); ctx.moveTo(18, -41); ctx.lineTo(20, -44);
+    ctx.stroke();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(17, -30, 0.9, 0, Math.PI*2); ctx.fill();
+  }
+  function drawHedgehog(legs) {
+    ctx.fillStyle = '#6b5034';
+    ctx.beginPath(); ctx.arc(0, -6, 8, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle = '#4a3722'; ctx.lineWidth = 1.5;
+    for (let i = -7; i <= 5; i += 3) { ctx.beginPath(); ctx.moveTo(i, -8); ctx.lineTo(i - 1, -15); ctx.stroke(); }
+    ctx.fillStyle = '#c9a878'; ctx.beginPath(); ctx.moveTo(7, -6); ctx.lineTo(13, -4); ctx.lineTo(7, -2); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(12, -4, 1, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(8, -7, 0.9, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#4a3722'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-3, -1); ctx.lineTo(-3 + legs, 0); ctx.moveTo(3, -1); ctx.lineTo(3 - legs, 0); ctx.stroke();
+  }
+
+  // One sky theme per level: a full day cycle from early morning (L1) to night (L10).
+  // body: 'sun' | 'moon' | 'none'; cy = celestial height (lower = nearer the horizon)
+  const SKY_THEMES = [
+    /* L1 early morning */ { sky:[[0,'#1b2450'],[0.45,'#4b4a7e'],[0.72,'#c98a86'],[1,'#f0b97a']], stars:0.45, body:'sun',  disc:'#ffd9a0', glow:'rgba(255,190,130,0.45)', cy:0.30, mtn:'#3a3f66', rim:'#f4c79a' },
+    /* L2 morning       */ { sky:[[0,'#5a93c8'],[0.55,'#9ec8e6'],[1,'#ffe6b8']],                 stars:0,    body:'sun',  disc:'#fff2c0', glow:'rgba(255,235,160,0.5)',  cy:0.26, mtn:'#5b7fa6', rim:'#dfeafc' },
+    /* L3 late morning  */ { sky:[[0,'#4486cc'],[0.55,'#86bce6'],[1,'#dff0fb']],                 stars:0,    body:'sun',  disc:'#fffbe0', glow:'rgba(255,250,210,0.45)', cy:0.20, mtn:'#6a93b8', rim:'#eaf3ff' },
+    /* L4 midday        */ { sky:[[0,'#3f7fd2'],[0.55,'#6fa9e2'],[1,'#c4e3f6']],                 stars:0,    body:'sun',  disc:'#ffffff', glow:'rgba(255,255,235,0.5)',  cy:0.15, mtn:'#6f9ec4', rim:'#ffffff' },
+    /* L5 afternoon     */ { sky:[[0,'#4a82c6'],[0.55,'#8bb6d8'],[1,'#f2e4b6']],                 stars:0,    body:'sun',  disc:'#fff6d2', glow:'rgba(255,240,180,0.5)',  cy:0.20, mtn:'#6d8fb0', rim:'#fdeecb' },
+    /* L6 golden hour   */ { sky:[[0,'#3f5690'],[0.45,'#9c6f86'],[0.78,'#e0a35e'],[1,'#ffd884']], stars:0,    body:'sun',  disc:'#ffdf8c', glow:'rgba(255,200,110,0.55)', cy:0.30, mtn:'#7a5f7e', rim:'#ffba6e' },
+    /* L7 sunset        */ { sky:[[0,'#2a2f70'],[0.45,'#7e447e'],[0.72,'#d2604a'],[1,'#ffae52']], stars:0.2,  body:'sun',  disc:'#ff8a4a', glow:'rgba(255,120,70,0.5)',   cy:0.40, mtn:'#5a3f63', rim:'#ff8a52' },
+    /* L8 dusk          */ { sky:[[0,'#2b1d4e'],[0.5,'#5a3c79'],[0.8,'#b1607e'],[1,'#e6915a']],   stars:0.45, body:'moon', disc:'rgba(240,240,218,0.92)', glow:'rgba(238,238,214,0.4)',  cy:0.18, mtn:'#412e5c', rim:'#f0a36a' },
+    /* L9 twilight      */ { sky:[[0,'#121238'],[0.5,'#2a2a60'],[0.8,'#4a3a6e'],[1,'#714c5e']],   stars:0.7,  body:'moon', disc:'rgba(240,240,222,0.95)', glow:'rgba(238,238,214,0.45)', cy:0.16, mtn:'#2e2a52', rim:'#b9c0e4' },
+    /* L10 night        */ { sky:[[0,'#080818'],[0.5,'#10102a'],[1,'#1c1c3a']],                   stars:1,    body:'moon', disc:'rgba(244,244,226,0.98)', glow:'rgba(238,238,214,0.5)',  cy:0.14, mtn:'#1e2240', rim:'#cfd4ee' },
+  ];
+  function theme() { return SKY_THEMES[(Math.max(wave, 1) - 1) % 10]; }
+  const TIME_NAMES = ['Early Morning', 'Morning', 'Late Morning', 'Midday', 'Afternoon',
+                      'Golden Hour', 'Sunset', 'Dusk', 'Twilight', 'Night'];
+  function timeName() { return TIME_NAMES[(Math.max(wave, 1) - 1) % 10]; }
+
+  function drawSky() {
+    const th = theme();
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    for (const s of th.sky) g.addColorStop(s[0], s[1]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawCelestial() {
+    const th = theme();
+    if (th.stars > 0) {
+      for (let i = 0; i < 40; i++) {
+        const x = (i * 97) % W, y = (i * 53) % (H * 0.42);
+        const s = (i % 3) * 0.6 + 0.4;
+        ctx.fillStyle = `rgba(255,255,255,${0.5 * th.stars})`;
+        ctx.fillRect(x, y, s, s);
+      }
+    }
+    if (th.body !== 'none') {
+      const cx = W - 110, cy = H * th.cy, cr = th.body === 'sun' ? 34 : 30;
+      const gr = ctx.createRadialGradient(cx, cy, 4, cx, cy, cr * 2.4);
+      gr.addColorStop(0, th.glow);
+      gr.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath(); ctx.arc(cx, cy, cr * 2.4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = th.disc;
+      ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // A single mountain range as a jagged silhouette; peaks given as [xFrac, yFrac]
+  function drawRange(peaks, color, snow) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (const p of peaks) ctx.lineTo(p[0] * W, p[1] * H);
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+    if (snow) {
+      ctx.fillStyle = 'rgba(255,228,212,0.6)';
+      for (let i = 1; i < peaks.length - 1; i++) {
+        const px = peaks[i][0] * W, py = peaks[i][1] * H;
+        if (peaks[i][1] < peaks[i-1][1] && peaks[i][1] < peaks[i+1][1]) {
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px - 14, py + 18);
+          ctx.lineTo(px - 4, py + 12);
+          ctx.lineTo(px + 4, py + 18);
+          ctx.lineTo(px + 13, py + 11);
+          ctx.lineTo(px + 20, py + 18);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  function drawMountains() {
+    const mtn = theme().mtn;
+    // far range — hazed by atmosphere (drawn semi-transparent so the sky tints it)
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    drawRange([[0,0.46],[0.10,0.34],[0.20,0.44],[0.32,0.30],[0.45,0.43],
+               [0.58,0.33],[0.72,0.45],[0.85,0.36],[1,0.44]], mtn, false);
+    ctx.restore();
+    // near range — solid, taller, snow-capped
+    drawRange([[0,0.58],[0.14,0.40],[0.27,0.55],[0.40,0.36],[0.52,0.52],
+               [0.66,0.38],[0.80,0.55],[0.92,0.44],[1,0.56]], mtn, true);
+  }
+
+  // Layered pine silhouette
+  function pine(x, baseY, h, w, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 1.5, baseY - 3, 3, 4);
+    for (let i = 0; i < 3; i++) {
+      const ly = baseY - 3 - i * (h * 0.30);
+      const lw = w * (1 - i * 0.24);
+      ctx.beginPath();
+      ctx.moveTo(x, ly - h * 0.42);
+      ctx.lineTo(x - lw / 2, ly);
+      ctx.lineTo(x + lw / 2, ly);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawTrees() {
+    const baseY = GROUND_Y + 2;
+    // distant treeline band along the foot of the mountains
+    for (let x = -8; x < W + 20; x += 24) {
+      const h = 26 + ((x * 37) % 7) * 4;
+      pine(x, GROUND_Y - 6, h, 20, '#2a1d3a');
+    }
+    // a couple of larger foreground pines framing the edges
+    pine(26, baseY, 96, 46, '#180f24');
+    pine(W - 30, baseY, 110, 52, '#180f24');
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    drawSky();
+    drawCelestial();
+    drawMountains();
+    drawTrees();
+    drawGround();
+    drawCampsite();
+    for (const c of critters) drawCritter(c);
+
+    for (const r of raccoons) if (r.alive) drawRaccoon(r);
+    for (const b of bosses) if (b.alive) drawBoss(b);
+    powerups.forEach(drawPowerup);
+    rocks.forEach(drawProjectile);
+    acorns.forEach(drawAcorn);
+    meteors.forEach(drawMeteor);
+    hawks.forEach(drawHawk);
+
+    if (state !== STATE.MENU) {
+      // invincibility aura
+      if (performance.now() < invincibleUntil) {
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 90);
+        ctx.save();
+        ctx.strokeStyle = `rgba(255,210,60,${0.5 + 0.4 * pulse})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(sasquatch.x, sasquatch.y, sasquatch.h * 0.62, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      drawSasquatch(sasquatch.x, sasquatch.y);
+    }
+
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, 3, 3);
+    }
+    ctx.globalAlpha = 1;
+
+    for (const fl of floats) {
+      ctx.globalAlpha = Math.max(0, fl.life);
+      ctx.fillStyle = fl.color;
+      ctx.font = 'bold 18px Trebuchet MS, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(fl.text, fl.x, fl.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+  }
+
+  let titleDrawn = false;
+  function loop() {
+    update();
+    updateCritters();
+    render();
+    if (!titleDrawn && titleCanvas.getBoundingClientRect().width > 0) { drawTitle(); titleDrawn = true; }
+    requestAnimationFrame(loop);
+  }
+  drawTitle();
+  loop();
+})();
+</script>
+</body>
+</html>
