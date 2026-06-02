@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐚 Seashell Shore Dash</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #2a6f97;
+    font-family: 'Comic Sans MS', 'Baloo', 'Trebuchet MS', sans-serif;
+    -webkit-user-select: none; user-select: none;
+    touch-action: none;
+  }
+  #wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 30%, #7ec8e3, #2a6f97);
+  }
+  canvas {
+    display: block;
+    background: #ffe7c2;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+    border-radius: 8px;
+    max-width: 100%; max-height: 100%;
+    image-rendering: auto;
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game"></canvas></div>
+<script>
+(function () {
+"use strict";
+
+// ---------------------------------------------------------------------------
+// Seashell Shore Dash — a gentle side-scrolling collect-a-thon for ages 4-8.
+// A little girl with bubble braids runs along the beach. The top of the screen
+// shows an order of 10 seashells. Run into the matching shell to collect it,
+// JUMP over every other shell. The shore scrolls faster each of the 10 levels.
+// Single self-contained file, Canvas API, no dependencies.
+// ---------------------------------------------------------------------------
+
+var DW = 960, DH = 600;            // design resolution (game logic coords)
+var GROUND_Y = 500;                // y of the sand surface where feet/shells sit
+var GIRL_X = 230;                  // fixed x where the girl runs
+
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+var scale = 1, offX = 0, offY = 0;
+
+function resize() {
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var s = Math.min(vw / DW, vh / DH);
+  scale = s;
+  var cssW = DW * s, cssH = DH * s;
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(DW * s * dpr);
+  canvas.height = Math.round(DH * s * dpr);
+  offX = (vw - cssW) / 2; offY = (vh - cssH) / 2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---------------------------------------------------------------------------
+// Tiny sound helper (WebAudio). Only after first user gesture.
+// ---------------------------------------------------------------------------
+var AC = null, soundOn = true;
+function audio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { soundOn = false; } }
+  return AC;
+}
+function beep(freq, dur, type, vol, when) {
+  if (!soundOn) return;
+  var ac = audio(); if (!ac) return;
+  var t0 = ac.currentTime + (when || 0);
+  var o = ac.createOscillator(), g = ac.createGain();
+  o.type = type || 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol || 0.18, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(ac.destination);
+  o.start(t0); o.stop(t0 + dur + 0.02);
+}
+function sCollect() { beep(660, 0.12, 'sine', 0.2); beep(990, 0.14, 'sine', 0.18, 0.08); beep(1320, 0.16, 'sine', 0.16, 0.16); }
+function sJump()    { beep(520, 0.10, 'square', 0.10); beep(760, 0.10, 'square', 0.08, 0.05); }
+function sTrip()    { beep(200, 0.22, 'sawtooth', 0.14); beep(150, 0.26, 'sawtooth', 0.12, 0.08); }
+function sLevel()   { var n=[523,659,784,1047]; for(var i=0;i<n.length;i++) beep(n[i],0.18,'sine',0.2,i*0.12); }
+function sWin()     { var n=[523,659,784,1047,1319,1047,1319]; for(var i=0;i<n.length;i++) beep(n[i],0.22,'sine',0.22,i*0.14); }
+
+// ---------------------------------------------------------------------------
+// Seashell kinds. Each has a name, a bright color and a draw routine. Young
+// players match by shape AND color, so the kinds are kept very distinct.
+// ---------------------------------------------------------------------------
+function lighten(hex, amt) {
+  var c = parseInt(hex.slice(1), 16);
+  var r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+  r = Math.min(255, Math.round(r + (255 - r) * amt));
+  g = Math.min(255, Math.round(g + (255 - g) * amt));
+  b = Math.min(255, Math.round(b + (255 - b) * amt));
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+function darken(hex, amt) {
+  var c = parseInt(hex.slice(1), 16);
+  var r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+  r = Math.round(r * (1 - amt)); g = Math.round(g * (1 - amt)); b = Math.round(b * (1 - amt));
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+
+var KINDS = [
+  { name: 'Pink Fan',    color: '#ff7eb3', shape: 'scallop' },
+  { name: 'Orange Conch',color: '#ff9f43', shape: 'conch'   },
+  { name: 'Purple Clam', color: '#a55eea', shape: 'clam'    },
+  { name: 'Yellow Star', color: '#ffd93d', shape: 'star'    },
+  { name: 'White Disc',  color: '#f2f6ff', shape: 'sand'    },
+  { name: 'Teal Swirl',  color: '#3ec9c9', shape: 'snail'   }
+];
+
+// Draw a shell of the given kind centred at (cx,cy) with overall radius r.
+function drawShell(g, kind, cx, cy, r) {
+  var K = KINDS[kind], col = K.color;
+  g.save();
+  g.translate(cx, cy);
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  g.lineWidth = Math.max(1.5, r * 0.09);
+  g.strokeStyle = darken(col === '#f2f6ff' ? '#cfd8ea' : col, 0.35);
+  var grad = g.createLinearGradient(0, -r, 0, r);
+  grad.addColorStop(0, lighten(col, 0.35));
+  grad.addColorStop(1, col);
+  g.fillStyle = grad;
+
+  if (K.shape === 'scallop') {
+    // fan-shaped scallop with ridges
+    g.beginPath();
+    g.moveTo(0, r * 0.72);
+    var ribs = 7;
+    for (var i = 0; i <= ribs; i++) {
+      var a = Math.PI + (i / ribs) * Math.PI;
+      var rr = r * (i % 2 === 0 ? 1.0 : 0.86);
+      g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.9 + r * 0.1);
+    }
+    g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = darken(col, 0.18); g.lineWidth = r * 0.06;
+    for (var j = 1; j < ribs; j++) {
+      var aa = Math.PI + (j / ribs) * Math.PI;
+      g.beginPath(); g.moveTo(0, r * 0.5);
+      g.lineTo(Math.cos(aa) * r * 0.82, Math.sin(aa) * r * 0.78 + r * 0.1);
+      g.stroke();
+    }
+  } else if (K.shape === 'conch') {
+    // pointed spiral conch
+    g.beginPath();
+    g.ellipse(0, 0, r * 0.95, r, 0, 0, Math.PI * 2);
+    g.fill(); g.stroke();
+    g.fillStyle = lighten(col, 0.5);
+    g.beginPath(); g.ellipse(-r * 0.15, -r * 0.1, r * 0.45, r * 0.6, -0.3, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = darken(col, 0.2); g.lineWidth = r * 0.07;
+    for (var s = 0; s < 4; s++) {
+      g.beginPath();
+      g.ellipse(0, r * 0.15 - s * r * 0.18, r * (0.75 - s * 0.16), r * (0.4 - s * 0.06), 0, Math.PI * 0.1, Math.PI * 0.95);
+      g.stroke();
+    }
+  } else if (K.shape === 'clam') {
+    // rounded clam with hinge ridges
+    g.beginPath();
+    g.moveTo(-r, r * 0.45);
+    g.quadraticCurveTo(-r * 1.02, -r * 0.55, 0, -r * 0.95);
+    g.quadraticCurveTo(r * 1.02, -r * 0.55, r, r * 0.45);
+    g.quadraticCurveTo(0, r * 0.75, -r, r * 0.45);
+    g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = darken(col, 0.18); g.lineWidth = r * 0.06;
+    for (var c2 = -2; c2 <= 2; c2++) {
+      g.beginPath(); g.moveTo(0, r * 0.55);
+      g.lineTo(c2 * r * 0.34, -r * 0.7); g.stroke();
+    }
+  } else if (K.shape === 'star') {
+    // chunky 5-point starfish
+    g.beginPath();
+    for (var p = 0; p < 10; p++) {
+      var ang = -Math.PI / 2 + p * Math.PI / 5;
+      var rad = (p % 2 === 0) ? r : r * 0.45;
+      var x = Math.cos(ang) * rad, y = Math.sin(ang) * rad;
+      if (p === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = darken(col, 0.16);
+    for (var d = 0; d < 5; d++) {
+      var an = -Math.PI / 2 + d * 2 * Math.PI / 5;
+      g.beginPath(); g.arc(Math.cos(an) * r * 0.5, Math.sin(an) * r * 0.5, r * 0.07, 0, Math.PI * 2); g.fill();
+    }
+  } else if (K.shape === 'sand') {
+    // sand dollar disc with 5-petal flower
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.strokeStyle = darken('#cfd8ea', 0.18); g.lineWidth = r * 0.05;
+    for (var f = 0; f < 5; f++) {
+      var fa = -Math.PI / 2 + f * 2 * Math.PI / 5;
+      g.beginPath();
+      g.ellipse(Math.cos(fa) * r * 0.32, Math.sin(fa) * r * 0.32, r * 0.16, r * 0.42, fa + Math.PI / 2, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.fillStyle = darken('#cfd8ea', 0.12);
+    g.beginPath(); g.arc(0, 0, r * 0.08, 0, Math.PI * 2); g.fill();
+  } else if (K.shape === 'snail') {
+    // round swirl/snail shell
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.strokeStyle = darken(col, 0.28); g.lineWidth = r * 0.13;
+    g.beginPath();
+    var steps = 36, maxA = Math.PI * 3.4;
+    for (var t = 0; t <= steps; t++) {
+      var th = (t / steps) * maxA;
+      var rr2 = r * 0.92 * (1 - t / steps);
+      var xx = Math.cos(th) * rr2, yy = Math.sin(th) * rr2;
+      if (t === 0) g.moveTo(xx, yy); else g.lineTo(xx, yy);
+    }
+    g.stroke();
+  }
+  g.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Game state
+// ---------------------------------------------------------------------------
+var TOTAL_LEVELS = 10;
+var state = 'menu';   // menu | play | levelclear | gameover | win
+var level = 1;
+var order = [];       // array of 10 kind indices to collect, in order
+var collected = 0;    // how many of the order are done
+var hearts = 3;
+var shells = [];      // active shells on the shore
+var distToSpawn = 0;
+var scroll = 0;       // world scroll distance (for parallax + ground texture)
+var sparkles = [];
+var bgItems = [];     // decorative ground pebbles/starfish (parallax, no gameplay)
+var time = 0;
+var flashTimer = 0;   // red stumble flash
+var cheerTimer = 0;
+var bestLevel = loadBest();
+
+var girl = { feetY: GROUND_Y, vy: 0, jumping: false, runPhase: 0, stumble: 0, bob: 0 };
+
+function loadBest() { try { return parseInt(localStorage.getItem('seashellBest') || '1', 10) || 1; } catch (e) { return 1; } }
+function saveBest(v) { try { localStorage.setItem('seashellBest', String(v)); } catch (e) {} }
+
+function levelSpeed(lv) {
+  // gentle ramp: ~250 px/s at L1 up to ~470 px/s at L10
+  return 250 + (lv - 1) * 24;
+}
+
+function randKind() { return (Math.random() * KINDS.length) | 0; }
+
+function startLevel(lv) {
+  level = lv;
+  order = [];
+  for (var i = 0; i < 10; i++) order.push(randKind());
+  collected = 0;
+  hearts = 3;
+  shells = [];
+  sparkles = [];
+  distToSpawn = 420;       // a little breathing room before the first shell
+  scroll = 0;
+  flashTimer = 0; cheerTimer = 0;
+  girl.feetY = GROUND_Y; girl.vy = 0; girl.jumping = false; girl.stumble = 0;
+  // seed decorative background pebbles
+  bgItems = [];
+  for (var b = 0; b < 14; b++) {
+    bgItems.push({ x: Math.random() * DW, y: GROUND_Y + 14 + Math.random() * 80, s: 2 + Math.random() * 4, t: Math.random() });
+  }
+  state = 'play';
+}
+
+// Jump physics (tuned so airtime < shell gap at every level)
+var JUMP_V = 860, GRAV = 2300;
+function doJump() {
+  if (!girl.jumping) {
+    girl.jumping = true;
+    girl.vy = -JUMP_V;
+    sJump();
+  }
+}
+
+function spawnShell() {
+  var needed = order[collected];
+  var kind;
+  if (Math.random() < 0.45) {
+    kind = needed;                 // the matching shell to collect
+  } else {
+    do { kind = randKind(); } while (kind === needed);  // a decoy to jump over
+  }
+  shells.push({ x: DW + 60, kind: kind, r: 26, handled: false, popped: 0 });
+}
+
+function addSparkles(x, y, col) {
+  for (var i = 0; i < 14; i++) {
+    var a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 160;
+    sparkles.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, life: 0.6 + Math.random() * 0.4, col: col, r: 2 + Math.random() * 3 });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Update
+// ---------------------------------------------------------------------------
+function update(dt) {
+  time += dt;
+  // sparkles always animate
+  for (var i = sparkles.length - 1; i >= 0; i--) {
+    var p = sparkles[i];
+    p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 300 * dt;
+    if (p.life <= 0) sparkles.splice(i, 1);
+  }
+  if (flashTimer > 0) flashTimer -= dt;
+  if (cheerTimer > 0) cheerTimer -= dt;
+
+  if (state !== 'play') { girl.runPhase += dt * 6; return; }
+
+  var speed = levelSpeed(level);
+  scroll += speed * dt;
+  girl.runPhase += dt * (6 + speed * 0.012);
+
+  // background parallax pebbles
+  for (var b = 0; b < bgItems.length; b++) {
+    var it = bgItems[b];
+    it.x -= speed * 0.55 * dt;
+    if (it.x < -10) { it.x = DW + Math.random() * 60; it.y = GROUND_Y + 14 + Math.random() * 80; it.s = 2 + Math.random() * 4; }
+  }
+
+  // girl jump integration
+  if (girl.jumping) {
+    girl.vy += GRAV * dt;
+    girl.feetY += girl.vy * dt;
+    if (girl.feetY >= GROUND_Y) { girl.feetY = GROUND_Y; girl.vy = 0; girl.jumping = false; }
+  }
+  if (girl.stumble > 0) girl.stumble -= dt;
+  girl.bob = girl.jumping ? 0 : Math.abs(Math.sin(girl.runPhase)) * 4;
+
+  // spawn shells by distance so spacing feels right at every speed
+  distToSpawn -= speed * dt;
+  if (distToSpawn <= 0) {
+    spawnShell();
+    distToSpawn = 220 + speed * 0.45 * (0.9 + Math.random() * 0.5);
+  }
+
+  // move + collide shells
+  var girlHalf = 30;
+  for (var s = shells.length - 1; s >= 0; s--) {
+    var sh = shells[s];
+    sh.x -= speed * dt;
+    if (sh.popped > 0) { sh.popped += dt; if (sh.popped > 0.4) shells.splice(s, 1); continue; }
+
+    var shellTop = GROUND_Y - sh.r * 1.7;     // top of shell on ground
+    var overlap = Math.abs(sh.x - GIRL_X) < (girlHalf + sh.r * 0.8);
+    if (!sh.handled && overlap) {
+      var feet = girl.feetY;
+      if (feet < shellTop - 6) {
+        // girl is above the shell — she is clearing it, do nothing
+      } else {
+        sh.handled = true;
+        if (sh.kind === order[collected]) {
+          collected++;
+          addSparkles(sh.x, GROUND_Y - 30, KINDS[sh.kind].color);
+          sCollect(); cheerTimer = 0.7;
+          sh.popped = 0.0001;
+          if (collected >= 10) {
+            // level complete!
+            sLevel();
+            if (level >= TOTAL_LEVELS) {
+              state = 'win';
+              if (TOTAL_LEVELS + 1 > bestLevel) { bestLevel = TOTAL_LEVELS + 1; saveBest(bestLevel); }
+            } else {
+              state = 'levelclear';
+              if (level + 1 > bestLevel) { bestLevel = level + 1; saveBest(bestLevel); }
+            }
+            return;
+          }
+        } else {
+          hearts--;
+          flashTimer = 0.35; girl.stumble = 0.4;
+          sTrip();
+          sh.popped = 0.0001;
+          if (hearts <= 0) { state = 'gameover'; return; }
+        }
+      }
+    }
+    if (sh.x < -60) shells.splice(s, 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Drawing the world
+// ---------------------------------------------------------------------------
+function drawBackground() {
+  // sky
+  var sky = ctx.createLinearGradient(0, 0, 0, 330);
+  sky.addColorStop(0, '#bdeaff');
+  sky.addColorStop(1, '#8fd6f2');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, DW, 330);
+
+  // sun
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,250,200,0.95)';
+  ctx.beginPath(); ctx.arc(810, 95, 46, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,250,200,0.25)';
+  ctx.beginPath(); ctx.arc(810, 95, 66, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // clouds (slow parallax)
+  var cx = (-scroll * 0.06) % (DW + 400);
+  drawCloud(150 + cx, 80, 1.0);
+  drawCloud(520 + cx, 130, 0.7);
+  drawCloud(900 + cx, 70, 0.85);
+  drawCloud(150 + cx + DW + 400, 80, 1.0);
+  drawCloud(520 + cx + DW + 400, 130, 0.7);
+
+  // ocean
+  var oce = ctx.createLinearGradient(0, 150, 0, 360);
+  oce.addColorStop(0, '#2aa6d6');
+  oce.addColorStop(1, '#3fc1e0');
+  ctx.fillStyle = oce;
+  ctx.fillRect(0, 150, DW, 210);
+
+  // wave bands (medium parallax)
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 3;
+  for (var w = 0; w < 5; w++) {
+    var wy = 185 + w * 32;
+    var ph = (scroll * 0.25 + w * 40) % 80;
+    ctx.beginPath();
+    for (var x = -80; x <= DW + 80; x += 40) {
+      var yy = wy + Math.sin((x + ph) * 0.05 + time + w) * 5;
+      if (x === -80) ctx.moveTo(x, yy); else ctx.quadraticCurveTo(x - 20, yy + 6, x, yy);
+    }
+    ctx.globalAlpha = 0.5 - w * 0.06;
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // wet sand strip with foam edge
+  var foamY = 352 + Math.sin(time * 1.5) * 3;
+  ctx.fillStyle = '#ffeccb';
+  ctx.fillRect(0, 350, DW, DH - 350);
+  ctx.fillStyle = '#f5dca8';
+  ctx.fillRect(0, 350, DW, 26);
+  // foam
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(0, foamY);
+  for (var fx = 0; fx <= DW; fx += 36) {
+    ctx.quadraticCurveTo(fx + 9, foamY - 9 + Math.sin(fx * 0.08 + time * 2) * 4, fx + 18, foamY);
+    ctx.quadraticCurveTo(fx + 27, foamY + 9, fx + 36, foamY);
+  }
+  ctx.lineTo(DW, 348); ctx.lineTo(0, 348); ctx.closePath(); ctx.fill();
+
+  // dry beach sand
+  var sand = ctx.createLinearGradient(0, 376, 0, DH);
+  sand.addColorStop(0, '#ffe7b8');
+  sand.addColorStop(1, '#f7d79a');
+  ctx.fillStyle = sand;
+  ctx.fillRect(0, 376, DW, DH - 376);
+
+  // sand speckles (scrolling, so the ground reads as moving)
+  ctx.fillStyle = 'rgba(180,140,90,0.35)';
+  for (var d = 0; d < 60; d++) {
+    var sx = ((d * 137.5 - scroll * 1.0) % (DW + 40) + DW + 40) % (DW + 40) - 20;
+    var sy = 392 + ((d * 53) % (DH - 396));
+    ctx.fillRect(sx, sy, 3, 3);
+  }
+
+  // decorative pebbles / tiny starfish
+  for (var b = 0; b < bgItems.length; b++) {
+    var it = bgItems[b];
+    ctx.fillStyle = it.t > 0.7 ? 'rgba(255,160,120,0.8)' : 'rgba(150,120,90,0.5)';
+    ctx.beginPath(); ctx.arc(it.x, it.y, it.s, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawCloud(x, y, s) {
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(s, s);
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.beginPath();
+  ctx.arc(0, 0, 26, 0, Math.PI * 2);
+  ctx.arc(28, 6, 22, 0, Math.PI * 2);
+  ctx.arc(-26, 8, 20, 0, Math.PI * 2);
+  ctx.arc(6, -16, 20, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawShellsOnGround() {
+  for (var s = 0; s < shells.length; s++) {
+    var sh = shells[s];
+    var pop = sh.popped > 0 ? 1 + sh.popped * 2 : 1;
+    var alpha = sh.popped > 0 ? Math.max(0, 1 - sh.popped * 2.5) : 1;
+    // shadow
+    ctx.save();
+    ctx.globalAlpha = 0.18 * alpha;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(sh.x, GROUND_Y + 6, sh.r * 0.95, sh.r * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // little bounce
+    var bounce = Math.sin(time * 4 + sh.x * 0.05) * 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawShell(ctx, sh.kind, sh.x, GROUND_Y - sh.r * 0.9 - bounce, sh.r * pop);
+    ctx.restore();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The little girl with brown hair and bubble braids
+// ---------------------------------------------------------------------------
+function drawGirl() {
+  var x = GIRL_X;
+  var feet = girl.feetY - girl.bob;
+  var run = girl.runPhase;
+  var inAir = girl.jumping;
+  var legSwing = inAir ? 0.5 : Math.sin(run) * 0.7;
+  var legSwing2 = inAir ? -0.4 : Math.sin(run + Math.PI) * 0.7;
+  var armSwing = inAir ? -0.9 : Math.sin(run + Math.PI) * 0.6;
+  var armSwing2 = inAir ? -1.2 : Math.sin(run) * 0.6;
+
+  var skin = '#ffd9b3', skinShade = '#f0b98a';
+  var hair = '#6b4226', hairLt = '#85563a';
+  var dress = '#ff7aa8', dressLt = '#ffa3c4', dressDk = '#e85f8e';
+  var tie = '#ff5d8f';
+
+  ctx.save();
+  ctx.translate(x, feet);
+  if (girl.stumble > 0) {
+    ctx.rotate(Math.sin(girl.stumble * 40) * 0.06);
+  }
+
+  var hipY = -78;     // hips
+  var shoulderY = -120;
+  var headY = -150;
+
+  // ---- legs ----
+  ctx.lineCap = 'round';
+  function drawLeg(swing, shade) {
+    ctx.strokeStyle = shade ? skinShade : skin;
+    ctx.lineWidth = 11;
+    var kx = Math.sin(swing) * 16, ky = hipY + 30 + Math.cos(swing) * 4;
+    var fx = kx + Math.sin(swing * 1.1) * 14, fyv = -6 + Math.abs(Math.cos(swing)) * 4;
+    ctx.beginPath();
+    ctx.moveTo(0, hipY);
+    ctx.lineTo(kx, ky);
+    ctx.lineTo(fx, fyv);
+    ctx.stroke();
+    // shoe
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#e0507f'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(fx + 4, fyv, 9, 5, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
+  drawLeg(legSwing2, true);
+
+  // ---- back arm ----
+  ctx.strokeStyle = skinShade; ctx.lineWidth = 9;
+  ctx.beginPath();
+  ctx.moveTo(0, shoulderY + 8);
+  var ax = Math.sin(armSwing) * 20, ay = shoulderY + 34 + Math.cos(armSwing) * 6;
+  ctx.lineTo(ax, ay);
+  ctx.stroke();
+
+  // ---- dress ----
+  ctx.fillStyle = dress;
+  ctx.beginPath();
+  ctx.moveTo(-13, shoulderY + 10);
+  ctx.lineTo(13, shoulderY + 10);
+  ctx.lineTo(30, hipY + 14);
+  ctx.quadraticCurveTo(0, hipY + 26, -30, hipY + 14);
+  ctx.closePath();
+  ctx.fill();
+  // dress shading + hem
+  ctx.fillStyle = dressDk;
+  ctx.beginPath();
+  ctx.moveTo(-30, hipY + 14);
+  ctx.quadraticCurveTo(0, hipY + 26, 30, hipY + 14);
+  ctx.lineTo(26, hipY + 8);
+  ctx.quadraticCurveTo(0, hipY + 18, -26, hipY + 8);
+  ctx.closePath(); ctx.fill();
+  // polka dots
+  ctx.fillStyle = dressLt;
+  ctx.beginPath(); ctx.arc(-8, shoulderY + 30, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(7, shoulderY + 40, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-2, hipY + 2, 2.5, 0, Math.PI * 2); ctx.fill();
+
+  // ---- front leg (over dress) ----
+  drawLeg(legSwing, false);
+
+  // ---- neck + head ----
+  ctx.strokeStyle = skin; ctx.lineWidth = 9;
+  ctx.beginPath(); ctx.moveTo(0, shoulderY + 6); ctx.lineTo(0, headY + 16); ctx.stroke();
+
+  // bubble braids (behind head) — two pigtails of stacked bubbles
+  function braid(side) {
+    var bx = side * 19, by = headY - 2;
+    ctx.fillStyle = hair;
+    var sizes = [9, 8, 7, 6];
+    var yy = by + 4;
+    for (var i = 0; i < sizes.length; i++) {
+      yy += sizes[i] + (i === 0 ? 2 : 4);
+      ctx.beginPath();
+      ctx.arc(bx + side * (4 + i * 3), yy, sizes[i], 0, Math.PI * 2);
+      ctx.fill();
+      // hair tie between bubbles
+      ctx.fillStyle = (i % 2 === 0) ? '#ffd93d' : '#3ec9c9';
+      ctx.fillRect(bx + side * (4 + i * 3) - 3, yy - sizes[i] - 2, 6, 3);
+      ctx.fillStyle = hair;
+    }
+  }
+  braid(-1); braid(1);
+
+  // head
+  ctx.fillStyle = skin;
+  ctx.beginPath(); ctx.arc(0, headY, 18, 0, Math.PI * 2); ctx.fill();
+
+  // hair cap + bangs
+  ctx.fillStyle = hair;
+  ctx.beginPath();
+  ctx.arc(0, headY, 18.5, Math.PI * 1.02, Math.PI * 2.02, false);
+  ctx.lineTo(18, headY + 2);
+  ctx.quadraticCurveTo(10, headY - 4, 4, headY + 3);
+  ctx.quadraticCurveTo(0, headY - 5, -4, headY + 3);
+  ctx.quadraticCurveTo(-10, headY - 4, -18, headY + 1);
+  ctx.closePath();
+  ctx.fill();
+  // hair shine
+  ctx.fillStyle = hairLt;
+  ctx.beginPath(); ctx.ellipse(-6, headY - 9, 5, 3, -0.5, 0, Math.PI * 2); ctx.fill();
+
+  // face — eyes, cheeks, smile
+  ctx.fillStyle = '#3a2a22';
+  ctx.beginPath(); ctx.arc(-6, headY + 2, 2.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, headY + 2, 2.3, 0, Math.PI * 2); ctx.fill();
+  // eye sparkle
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(-5.2, headY + 1.2, 0.8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6.8, headY + 1.2, 0.8, 0, Math.PI * 2); ctx.fill();
+  // cheeks
+  ctx.fillStyle = 'rgba(255,150,170,0.6)';
+  ctx.beginPath(); ctx.arc(-9, headY + 7, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(9, headY + 7, 3, 0, Math.PI * 2); ctx.fill();
+  // smile
+  ctx.strokeStyle = '#b5503f'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(0, headY + 6, 5, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+
+  // ---- front arm + bucket ----
+  ctx.strokeStyle = skin; ctx.lineWidth = 9; ctx.lineCap = 'round';
+  var hx = 6 + Math.sin(armSwing2) * 16, hy = shoulderY + 34 + Math.cos(armSwing2) * 4;
+  ctx.beginPath();
+  ctx.moveTo(2, shoulderY + 8);
+  ctx.lineTo(hx, hy);
+  ctx.stroke();
+  // sand pail in hand
+  ctx.save();
+  ctx.translate(hx + 4, hy + 8);
+  ctx.fillStyle = '#ff5d5d';
+  ctx.beginPath();
+  ctx.moveTo(-8, -6); ctx.lineTo(8, -6); ctx.lineTo(6, 8); ctx.lineTo(-6, 8); ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#ffb3b3'; ctx.fillRect(-8, -6, 16, 3);
+  ctx.strokeStyle = '#ffd93d'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, -6, 8, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+  ctx.restore();
+
+  // happy bounce hearts when collecting
+  if (cheerTimer > 0) {
+    ctx.fillStyle = 'rgba(255,90,140,' + Math.min(1, cheerTimer * 2) + ')';
+    var hyf = headY - 34 - (0.7 - cheerTimer) * 30;
+    drawHeart(14, hyf, 6);
+    drawHeart(-16, hyf + 6, 5);
+  }
+
+  ctx.restore();
+}
+
+function drawHeart(x, y, s) {
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(s / 6, s / 6);
+  ctx.beginPath();
+  ctx.moveTo(0, 3);
+  ctx.bezierCurveTo(-1, 0, -6, 0, -6, -3.5);
+  ctx.bezierCurveTo(-6, -6, -3, -7, 0, -4);
+  ctx.bezierCurveTo(3, -7, 6, -6, 6, -3.5);
+  ctx.bezierCurveTo(6, 0, 1, 0, 0, 3);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// HUD — the order of 10 shells across the top
+// ---------------------------------------------------------------------------
+function drawHUD() {
+  // level pill (top-left)
+  roundRect(16, 14, 150, 40, 20, 'rgba(255,255,255,0.85)');
+  ctx.fillStyle = '#2a6f97';
+  ctx.font = 'bold 22px "Comic Sans MS", sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('Level ' + level, 32, 35);
+
+  // hearts (top-right)
+  ctx.fillStyle = '#ff4d7d';
+  for (var h = 0; h < 3; h++) {
+    ctx.save();
+    ctx.globalAlpha = h < hearts ? 1 : 0.25;
+    drawHeart(DW - 36 - h * 34, 34, 12);
+    ctx.restore();
+  }
+
+  // order panel (top-center)
+  var n = 10, chip = 42, gap = 6;
+  var panelW = n * chip + (n - 1) * gap + 24;
+  var px = (DW - panelW) / 2, py = 10;
+  roundRect(px, py, panelW, chip + 22, 16, 'rgba(255,255,255,0.85)');
+  for (var i = 0; i < n; i++) {
+    var cxp = px + 12 + i * (chip + gap) + chip / 2;
+    var cyp = py + 12 + chip / 2;
+    var isDone = i < collected;
+    var isNext = i === collected;
+    // chip background
+    ctx.save();
+    if (isNext) {
+      var glow = 0.5 + Math.sin(time * 6) * 0.5;
+      ctx.shadowColor = 'rgba(255,210,60,' + (0.6 + glow * 0.4) + ')';
+      ctx.shadowBlur = 16;
+    }
+    roundRect(cxp - chip / 2, cyp - chip / 2, chip, chip, 10,
+      isNext ? '#fff6d6' : (isDone ? '#dfeee0' : '#f3f0ea'));
+    ctx.restore();
+    // shell
+    ctx.save();
+    ctx.globalAlpha = isDone ? 0.45 : 1;
+    drawShell(ctx, order[i], cxp, cyp, 14);
+    ctx.restore();
+    if (isDone) {
+      // green check
+      ctx.strokeStyle = '#3bb24a'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cxp - 7, cyp + 1); ctx.lineTo(cxp - 2, cyp + 7); ctx.lineTo(cxp + 8, cyp - 7);
+      ctx.stroke();
+    }
+    if (isNext) {
+      // bouncing arrow above
+      var ay = py + chip + 16 + Math.sin(time * 6) * 3;
+      ctx.fillStyle = '#ff8c00';
+      ctx.beginPath();
+      ctx.moveTo(cxp, ay + 8); ctx.lineTo(cxp - 7, ay); ctx.lineTo(cxp + 7, ay);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+}
+
+function roundRect(x, y, w, h, r, fill) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+}
+
+function drawSparkles() {
+  for (var i = 0; i < sparkles.length; i++) {
+    var p = sparkles[i];
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.col;
+    drawStar(p.x, p.y, p.r * 1.6);
+    ctx.restore();
+  }
+}
+function drawStar(x, y, r) {
+  ctx.beginPath();
+  for (var p = 0; p < 10; p++) {
+    var a = -Math.PI / 2 + p * Math.PI / 5;
+    var rad = (p % 2 === 0) ? r : r * 0.45;
+    var xx = x + Math.cos(a) * rad, yy = y + Math.sin(a) * rad;
+    if (p === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+  }
+  ctx.closePath(); ctx.fill();
+}
+
+// ---------------------------------------------------------------------------
+// Overlays (menu / level clear / game over / win)
+// ---------------------------------------------------------------------------
+function drawCenterPanel(w, h) {
+  var x = (DW - w) / 2, y = (DH - h) / 2;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.25)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 8;
+  roundRect(x, y, w, h, 28, 'rgba(255,255,255,0.95)');
+  ctx.restore();
+  return { x: x, y: y };
+}
+
+function drawButton(label) {
+  var bw = 240, bh = 64, bx = (DW - bw) / 2, by = DH / 2 + 110;
+  var pulse = 1 + Math.sin(time * 4) * 0.03;
+  ctx.save();
+  ctx.translate(DW / 2, by + bh / 2);
+  ctx.scale(pulse, pulse);
+  ctx.translate(-DW / 2, -(by + bh / 2));
+  roundRect(bx, by, bw, bh, 32, '#ff6aa0');
+  roundRect(bx, by, bw, bh - 6, 30, '#ff86b3');
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 28px "Comic Sans MS", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, DW / 2, by + bh / 2);
+  ctx.restore();
+  return { x: bx, y: by, w: bw, h: bh };
+}
+
+function drawTitle() {
+  ctx.save();
+  ctx.textAlign = 'center';
+  var ty = DH / 2 - 120 + Math.sin(time * 2) * 4;
+  // decorative shells around title
+  drawShell(ctx, 0, DW / 2 - 200, ty + 10, 26);
+  drawShell(ctx, 3, DW / 2 + 200, ty + 6, 26);
+  ctx.font = 'bold 58px "Comic Sans MS", sans-serif';
+  ctx.lineWidth = 8; ctx.strokeStyle = '#2a6f97';
+  ctx.fillStyle = '#ffd93d';
+  ctx.strokeText('Seashell', DW / 2, ty);
+  ctx.fillText('Seashell', DW / 2, ty);
+  ctx.font = 'bold 58px "Comic Sans MS", sans-serif';
+  ctx.fillStyle = '#ff7aa8';
+  ctx.strokeText('Shore Dash', DW / 2, ty + 64);
+  ctx.fillText('Shore Dash', DW / 2, ty + 64);
+  ctx.restore();
+}
+
+function drawOverlay() {
+  // dim
+  ctx.fillStyle = 'rgba(40,90,120,0.35)';
+  ctx.fillRect(0, 0, DW, DH);
+
+  if (state === 'menu') {
+    drawTitle();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#2a6f97';
+    ctx.font = '22px "Comic Sans MS", sans-serif';
+    ctx.fillText('Run into the matching shell to collect it.', DW / 2, DH / 2 + 6);
+    ctx.fillText('Tap / Space to JUMP over the others!', DW / 2, DH / 2 + 38);
+    if (bestLevel > 1) {
+      ctx.fillStyle = '#ff7aa8';
+      ctx.font = 'bold 20px "Comic Sans MS", sans-serif';
+      ctx.fillText('Best: reached Level ' + Math.min(TOTAL_LEVELS, bestLevel), DW / 2, DH / 2 + 72);
+    }
+    drawButton('Play!');
+  } else if (state === 'levelclear') {
+    var p = drawCenterPanel(520, 320);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = 'bold 44px "Comic Sans MS", sans-serif';
+    ctx.strokeStyle = '#2a6f97'; ctx.lineWidth = 6;
+    ctx.strokeText('Great job!', DW / 2, p.y + 80);
+    ctx.fillText('Great job!', DW / 2, p.y + 80);
+    // stars
+    ctx.fillStyle = '#ffd93d';
+    for (var i = 0; i < 3; i++) { drawStar(DW / 2 - 60 + i * 60, p.y + 140 + Math.sin(time * 4 + i) * 4, 22); }
+    ctx.fillStyle = '#2a6f97';
+    ctx.font = '24px "Comic Sans MS", sans-serif';
+    ctx.fillText('Level ' + level + ' complete!', DW / 2, p.y + 200);
+    ctx.fillText('Next level is a little faster...', DW / 2, p.y + 232);
+    drawButton('Next Level');
+  } else if (state === 'gameover') {
+    var p2 = drawCenterPanel(520, 320);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff7aa8';
+    ctx.font = 'bold 42px "Comic Sans MS", sans-serif';
+    ctx.strokeStyle = '#2a6f97'; ctx.lineWidth = 6;
+    ctx.strokeText('Oopsie!', DW / 2, p2.y + 90);
+    ctx.fillText('Oopsie!', DW / 2, p2.y + 90);
+    drawShell(ctx, 2, DW / 2, p2.y + 150, 30);
+    ctx.fillStyle = '#2a6f97';
+    ctx.font = '24px "Comic Sans MS", sans-serif';
+    ctx.fillText("Let's try Level " + level + ' again!', DW / 2, p2.y + 210);
+    drawButton('Try Again');
+  } else if (state === 'win') {
+    var p3 = drawCenterPanel(560, 360);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = 'bold 46px "Comic Sans MS", sans-serif';
+    ctx.strokeStyle = '#2a6f97'; ctx.lineWidth = 7;
+    ctx.strokeText('YOU WIN!', DW / 2, p3.y + 90);
+    ctx.fillText('YOU WIN!', DW / 2, p3.y + 90);
+    ctx.fillStyle = '#ff7aa8';
+    ctx.font = '24px "Comic Sans MS", sans-serif';
+    ctx.fillText('You collected every shell', DW / 2, p3.y + 150);
+    ctx.fillText('on the whole shore! 🐚', DW / 2, p3.y + 184);
+    // row of all shell kinds
+    for (var k = 0; k < KINDS.length; k++) {
+      drawShell(ctx, k, DW / 2 - (KINDS.length - 1) * 22 + k * 44, p3.y + 240, 18);
+    }
+    drawButton('Play Again');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main render
+// ---------------------------------------------------------------------------
+function render() {
+  ctx.save();
+  ctx.scale(scale * dpr, scale * dpr);
+  drawBackground();
+  drawShellsOnGround();
+  drawGirl();
+  drawSparkles();
+  drawHUD();
+  // stumble flash
+  if (flashTimer > 0) {
+    ctx.fillStyle = 'rgba(255,80,80,' + (flashTimer * 0.6) + ')';
+    ctx.fillRect(0, 0, DW, DH);
+  }
+  if (state !== 'play') drawOverlay();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Input
+// ---------------------------------------------------------------------------
+function primaryAction() {
+  audio();
+  if (state === 'play') { doJump(); }
+  else if (state === 'menu') { startLevel(1); }
+  else if (state === 'levelclear') { startLevel(level + 1); }
+  else if (state === 'gameover') { startLevel(level); }
+  else if (state === 'win') { startLevel(1); }
+}
+
+window.addEventListener('keydown', function (e) {
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    primaryAction();
+  }
+});
+
+function pointerHandler(e) {
+  e.preventDefault();
+  primaryAction();
+}
+canvas.addEventListener('pointerdown', pointerHandler);
+window.addEventListener('pointerdown', function (e) {
+  // allow taps anywhere on the page (letterbox areas) to act too
+  if (e.target !== canvas) primaryAction();
+});
+
+// ---------------------------------------------------------------------------
+// Loop
+// ---------------------------------------------------------------------------
+var last = performance.now();
+function frame(now) {
+  var dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

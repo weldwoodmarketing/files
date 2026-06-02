@@ -33,3 +33,30 @@ A Space Invaders–style browser game where **Sasquatch defends the campsite fro
 ## 🛠️ Tech
 
 A single self-contained HTML file — no build step, no dependencies. Rendered with the Canvas API. Just open `index.html` in a browser, or play the hosted version above.
+
+---
+
+# 🐚 Seashell Shore Dash 👧🌊
+
+A gentle side-scrolling beach game for **ages 4–8**. A little girl with brown **bubble braids** dashes along the shore while the ocean rolls by. The top of the screen shows an **order of 10 seashells** — run into the matching shell to collect it, and **jump over** every other shell. The shore scrolls a little faster on each of the **10 levels**.
+
+## ▶️ Play
+
+Open [`seashell-shore-dash.html`](seashell-shore-dash.html) in any browser, or visit **[ghostyandbones.com/seashell-shore-dash.html](https://ghostyandbones.com/seashell-shore-dash.html)**.
+
+## 🎮 Controls
+
+| Action | Keyboard | Touch |
+| --- | --- | --- |
+| Jump | `Space` · `↑` · `Enter` | Tap anywhere |
+| Start / next / retry | `Space` or the button | Tap |
+
+## 🏖️ How to play
+
+- The screen **always moves left to right**, so be quick!
+- The order panel up top lists **10 shells**; the glowing one (with a bouncing arrow) is the one to grab next.
+- **Run into** the matching shell to collect it — it gets a green check.
+- **Jump over** any shell that doesn't match. Touching a wrong shell costs a ❤️ (you have 3 per level).
+- Collect all 10 in order to finish the level. Beat all **10 levels** to win — each one is a touch faster than the last.
+
+A single self-contained HTML file, Canvas API, no dependencies.
