@@ -90,6 +90,9 @@ function sJump()    { beep(520, 0.10, 'square', 0.10); beep(760, 0.10, 'square',
 function sTrip()    { beep(200, 0.22, 'sawtooth', 0.14); beep(150, 0.26, 'sawtooth', 0.12, 0.08); }
 function sLevel()   { var n=[523,659,784,1047]; for(var i=0;i<n.length;i++) beep(n[i],0.18,'sine',0.2,i*0.12); }
 function sWin()     { var n=[523,659,784,1047,1319,1047,1319]; for(var i=0;i<n.length;i++) beep(n[i],0.22,'sine',0.22,i*0.14); }
+function sClick()   { beep(1500, 0.025, 'square', 0.07); beep(1850, 0.022, 'square', 0.05, 0.035); }  // crab claws
+function sPinch()   { beep(320, 0.08, 'square', 0.13); beep(220, 0.12, 'sawtooth', 0.12, 0.05); }       // crab pinch
+function sHeartGain(){ beep(784, 0.10, 'sine', 0.18); beep(1047, 0.12, 'sine', 0.18, 0.08); beep(1319, 0.16, 'sine', 0.16, 0.18); }
 
 // ---------------------------------------------------------------------------
 // Upbeat tropical music — warm marimba / steel-drum tones, a bouncy bass, a
@@ -440,7 +443,10 @@ var level = 1;
 var order = [];       // array of 10 kind indices to collect, in order
 var collected = 0;    // how many of the order are done
 var hearts = 3;
-var shells = [];      // active shells on the shore
+var heartsLost = 0;   // hearts lost this level (drives the rescue-heart pickups)
+var heartsToSpawn = 0;// queued rescue-heart pickups to drop into the stream
+var rainbowT = 0;     // level-complete rainbow sweep progress
+var shells = [];      // active shells on the shore (also crabs and heart pickups)
 var distToSpawn = 0;
 var scroll = 0;       // world scroll distance (for parallax + ground texture)
 var sparkles = [];
@@ -493,6 +499,7 @@ function startLevel(lv) {
   for (var i = 0; i < 10; i++) order.push(randKind());
   collected = 0;
   hearts = 3;
+  heartsLost = 0; heartsToSpawn = 0; rainbowT = 0;
   shells = [];
   sparkles = [];
   popups = [];
@@ -544,6 +551,17 @@ function doJump() {
 }
 
 function spawnShell() {
+  // crabs scuttle in among the shells from level 3 onward — jump over them!
+  if (level >= 3 && Math.random() < 0.22) {
+    shells.push({ type: 'crab', x: DW + 60, r: 24, handled: false, popped: 0, clickT: 0.2 + Math.random() * 0.5 });
+    return;
+  }
+  // drop a rescue heart into the pattern after the 7th shell (if one was lost)
+  if (heartsToSpawn > 0 && Math.random() < 0.6) {
+    heartsToSpawn--;
+    shells.push({ type: 'heart', x: DW + 60, r: 20, handled: false, popped: 0 });
+    return;
+  }
   var needed = order[collected];
   var kind;
   if (Math.random() < 0.45) {
@@ -551,7 +569,7 @@ function spawnShell() {
   } else {
     do { kind = randKind(); } while (kind === needed);  // a decoy to jump over
   }
-  shells.push({ x: DW + 60, kind: kind, r: 26, handled: false, popped: 0 });
+  shells.push({ type: 'shell', x: DW + 60, kind: kind, r: 26, handled: false, popped: 0 });
 }
 
 function addSparkles(x, y, col) {
@@ -581,6 +599,7 @@ function update(dt) {
   if (flashTimer > 0) flashTimer -= dt;
   if (cheerTimer > 0) cheerTimer -= dt;
   if (bannerTimer > 0) bannerTimer -= dt;
+  if (state === 'levelclear' || state === 'win') rainbowT = Math.min(1, rainbowT + dt * 1.2);
 
   // sea creatures breach the ocean (ambient — animate in every state)
   spawnCreatureTimer -= dt;
@@ -639,30 +658,51 @@ function update(dt) {
     distToSpawn = speed * (1.05 + Math.random() * 0.5);
   }
 
-  // move + collide shells
+  // move + collide shells / crabs / hearts
   var girlHalf = 30;
   for (var s = shells.length - 1; s >= 0; s--) {
     var sh = shells[s];
     sh.x -= speed * dt;
+    // crabs click their claws while on screen
+    if (sh.type === 'crab' && sh.popped === 0) {
+      sh.clickT -= dt;
+      if (sh.clickT <= 0 && sh.x > -10 && sh.x < DW + 20) { sClick(); sh.clickT = 0.5 + Math.random() * 0.9; }
+    }
     if (sh.popped > 0) { sh.popped += dt; if (sh.popped > 0.4) shells.splice(s, 1); continue; }
 
-    var shellTop = GROUND_Y - sh.r * 1.7;     // top of shell on ground
+    var objTop = GROUND_Y - sh.r * 1.7;       // top of the object on the ground
     var overlap = Math.abs(sh.x - GIRL_X) < (girlHalf + sh.r * 0.8);
     if (!sh.handled && overlap) {
       var feet = girl.feetY;
-      if (feet < shellTop - 6) {
-        // girl is above the shell — she is clearing it, do nothing
+      if (feet < objTop - 6) {
+        // girl is above it — clearing it (a jump), so no effect
       } else {
         sh.handled = true;
-        if (sh.kind === order[collected]) {
+        if (sh.type === 'crab') {
+          hearts--; heartsLost++;
+          flashTimer = 0.35; girl.stumble = 0.4;
+          sPinch();
+          sh.popped = 0.0001;
+          if (heartsToSpawn === 0 && collected >= 7 && hearts > 0) heartsToSpawn = Math.min(heartsLost, 2);
+          if (hearts <= 0) { stopMusic(); state = 'gameover'; return; }
+        } else if (sh.type === 'heart') {
+          if (hearts < 3) hearts++;
+          addScore(0, sh.x, GROUND_Y - 56, '');
+          addSparkles(sh.x, GROUND_Y - 30, '#ff5d8f');
+          sHeartGain(); cheerTimer = 0.7;
+          sh.popped = 0.0001;
+        } else if (sh.kind === order[collected]) {
           collected++;
           addScore(10, sh.x, GROUND_Y - 56, '+10');
           addSparkles(sh.x, GROUND_Y - 30, KINDS[sh.kind].color);
           sCollect(); cheerTimer = 0.7;
           sh.popped = 0.0001;
+          // after the 7th shell, send rescue hearts if any were lost
+          if (collected === 7 && heartsLost > 0) heartsToSpawn = Math.min(heartsLost, 2);
           if (collected >= 10) {
-            // level complete! bonus points
+            // level complete! bonus points + a rainbow
             addScore(50, DW / 2, DH / 2 - 40, '+50');
+            rainbowT = 0;
             stopMusic();
             if (level >= TOTAL_LEVELS) {
               sWin();
@@ -676,10 +716,11 @@ function update(dt) {
             return;
           }
         } else {
-          hearts--;
+          hearts--; heartsLost++;
           flashTimer = 0.35; girl.stumble = 0.4;
           sTrip();
           sh.popped = 0.0001;
+          if (heartsToSpawn === 0 && collected >= 7 && hearts > 0) heartsToSpawn = Math.min(heartsLost, 2);
           if (hearts <= 0) { stopMusic(); state = 'gameover'; return; }
         }
       }
@@ -1013,13 +1054,72 @@ function drawShellsOnGround() {
     ctx.ellipse(sh.x, GROUND_Y + 6, sh.r * 0.95, sh.r * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    // little bounce
     var bounce = Math.sin(time * 4 + sh.x * 0.05) * 2;
     ctx.save();
     ctx.globalAlpha = alpha;
-    drawShell(ctx, sh.kind, sh.x, GROUND_Y - sh.r * 0.9 - bounce, sh.r * pop);
+    if (sh.type === 'crab') {
+      drawCrab(sh.x, GROUND_Y - sh.r * 0.7, sh.r * pop);
+    } else if (sh.type === 'heart') {
+      var hb = GROUND_Y - sh.r * 1.3 - bounce - Math.abs(Math.sin(time * 3)) * 4;
+      ctx.fillStyle = '#ff5d8f';
+      drawHeart(sh.x, hb, sh.r * 0.9 * pop);
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.fillStyle = '#fff';
+      drawHeart(sh.x - sh.r * 0.18, hb - sh.r * 0.18, sh.r * 0.3 * pop);
+    } else {
+      drawShell(ctx, sh.kind, sh.x, GROUND_Y - sh.r * 0.9 - bounce, sh.r * pop);
+    }
     ctx.restore();
   }
+}
+
+// a cute scuttling crab (obstacle) — claws click open and shut
+function drawCrab(cx, cy, r) {
+  var claw = Math.abs(Math.sin(time * 11 + cx * 0.05));   // 0..1 claw open
+  ctx.save();
+  ctx.translate(cx, cy);
+  var body = '#ff6b4a', bodyDk = '#e0512f', shine = '#ff9277';
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  // legs (3 each side, jittering)
+  ctx.strokeStyle = bodyDk; ctx.lineWidth = r * 0.12;
+  for (var i = 0; i < 3; i++) {
+    var ly = -r * 0.1 + i * r * 0.28;
+    var kick = Math.sin(time * 12 + i) * r * 0.06;
+    ctx.beginPath(); ctx.moveTo(-r * 0.6, ly); ctx.lineTo(-r * 1.15, ly + r * 0.18 + kick); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r * 0.6, ly); ctx.lineTo(r * 1.15, ly + r * 0.18 - kick); ctx.stroke();
+  }
+  // claws on little arms
+  for (var sgn = -1; sgn <= 1; sgn += 2) {
+    var ax = sgn * r * 0.85, ay = -r * 0.5;
+    ctx.strokeStyle = bodyDk; ctx.lineWidth = r * 0.14;
+    ctx.beginPath(); ctx.moveTo(sgn * r * 0.5, -r * 0.2); ctx.lineTo(ax, ay); ctx.stroke();
+    ctx.fillStyle = body; ctx.strokeStyle = bodyDk; ctx.lineWidth = r * 0.06;
+    // lower pincer
+    ctx.beginPath(); ctx.ellipse(ax, ay, r * 0.26, r * 0.16, sgn * 0.5, 0, Math.PI * 2); ctx.fill();
+    // upper pincer opens/closes
+    ctx.save(); ctx.translate(ax, ay); ctx.rotate(-sgn * (0.2 + claw * 0.6));
+    ctx.beginPath(); ctx.ellipse(0, -r * 0.12, r * 0.22, r * 0.11, sgn * 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  // body shell
+  ctx.fillStyle = body; ctx.strokeStyle = bodyDk; ctx.lineWidth = r * 0.08;
+  ctx.beginPath(); ctx.ellipse(0, 0, r * 0.7, r * 0.55, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = shine;
+  ctx.beginPath(); ctx.ellipse(-r * 0.2, -r * 0.18, r * 0.2, r * 0.12, -0.4, 0, Math.PI * 2); ctx.fill();
+  // eyes on stalks
+  ctx.strokeStyle = bodyDk; ctx.lineWidth = r * 0.08;
+  ctx.beginPath(); ctx.moveTo(-r * 0.2, -r * 0.4); ctx.lineTo(-r * 0.24, -r * 0.7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(r * 0.2, -r * 0.4); ctx.lineTo(r * 0.24, -r * 0.7); ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(-r * 0.24, -r * 0.78, r * 0.13, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(r * 0.24, -r * 0.78, r * 0.13, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2a1a14';
+  ctx.beginPath(); ctx.arc(-r * 0.24, -r * 0.78, r * 0.06, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(r * 0.24, -r * 0.78, r * 0.06, 0, Math.PI * 2); ctx.fill();
+  // smile
+  ctx.strokeStyle = bodyDk; ctx.lineWidth = r * 0.06;
+  ctx.beginPath(); ctx.arc(0, -r * 0.05, r * 0.22, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
@@ -1443,10 +1543,33 @@ function drawTitle() {
   ctx.restore();
 }
 
+function drawRainbow() {
+  var p = rainbowT;                     // 0..1 sweep progress
+  if (p <= 0) return;
+  var cx = DW / 2, cy = 660, R = 600, w = 15;
+  var cols = ['#ff5d5d', '#ff9f43', '#ffd93d', '#5fd16a', '#4fb0e0', '#5a6fd6', '#a55eea'];
+  ctx.save();
+  ctx.lineCap = 'round';
+  var end = Math.PI + p * Math.PI;      // sweep from the left across to the right
+  // soft white halo under the bands
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = w * 7.4;
+  ctx.beginPath(); ctx.arc(cx, cy, R - w * 3.5, Math.PI, end); ctx.stroke();
+  ctx.globalAlpha = 0.9;
+  for (var i = 0; i < cols.length; i++) {
+    ctx.strokeStyle = cols[i];
+    ctx.lineWidth = w + 1;
+    ctx.beginPath(); ctx.arc(cx, cy, R - i * w, Math.PI, end); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawOverlay() {
   // dim
   ctx.fillStyle = 'rgba(40,90,120,0.35)';
   ctx.fillRect(0, 0, DW, DH);
+  if (state === 'levelclear' || state === 'win') drawRainbow();
 
   if (state === 'menu') {
     drawTitle();
