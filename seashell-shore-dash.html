@@ -92,6 +92,98 @@ function sLevel()   { var n=[523,659,784,1047]; for(var i=0;i<n.length;i++) beep
 function sWin()     { var n=[523,659,784,1047,1319,1047,1319]; for(var i=0;i<n.length;i++) beep(n[i],0.22,'sine',0.22,i*0.14); }
 
 // ---------------------------------------------------------------------------
+// Happy 8-bit beach music. A looping chiptune (cheerful I–vi–IV–V) with a
+// bouncy square-wave lead, a triangle bass, and a soft shaker hi-hat. It runs
+// during a level and speeds up a touch on higher levels.
+// ---------------------------------------------------------------------------
+var NOTE = { 0:0,
+  G3:196.00, A3:220.00, B3:246.94,
+  C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, C6:1046.50,
+  C3:130.81, E3:164.81, F3:174.61, A2:110.00, F2:87.31, G2:98.00 };
+// each step is an eighth-note; {f: freq, s: how many eighth-steps it lasts}
+var LEAD = [
+  {f:NOTE.C5,s:2},{f:NOTE.E5,s:2},{f:NOTE.G5,s:2},{f:NOTE.E5,s:2},
+  {f:NOTE.A4,s:2},{f:NOTE.C5,s:2},{f:NOTE.E5,s:2},{f:NOTE.D5,s:2},
+  {f:NOTE.F5,s:2},{f:NOTE.E5,s:2},{f:NOTE.D5,s:2},{f:NOTE.C5,s:2},
+  {f:NOTE.G4,s:2},{f:NOTE.B4,s:2},{f:NOTE.C5,s:4}
+];
+var BASS = [
+  {f:NOTE.C3,s:2},{f:NOTE.C3,s:2},{f:NOTE.G3,s:2},{f:NOTE.G3,s:2},
+  {f:NOTE.A2,s:2},{f:NOTE.A2,s:2},{f:NOTE.E3,s:2},{f:NOTE.E3,s:2},
+  {f:NOTE.F2,s:2},{f:NOTE.F2,s:2},{f:NOTE.C3,s:2},{f:NOTE.C3,s:2},
+  {f:NOTE.G2,s:2},{f:NOTE.G2,s:2},{f:NOTE.G2,s:4}
+];
+var music = { playing: false, timer: null, stepDur: 0.18, voices: null, hatNext: 0, noiseBuf: null };
+
+function buildNoise(ac) {
+  var len = Math.floor(ac.sampleRate * 0.2);
+  var buf = ac.createBuffer(1, len, ac.sampleRate);
+  var d = buf.getChannelData(0);
+  for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return buf;
+}
+function musNote(ac, f, t, dur, type, vol) {
+  var o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.012);
+  g.gain.setValueAtTime(vol, t + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(ac.destination);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+function musHat(ac, t) {
+  if (!music.noiseBuf) return;
+  var src = ac.createBufferSource(); src.buffer = music.noiseBuf;
+  var hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000;
+  var g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.04, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  src.connect(hp); hp.connect(g); g.connect(ac.destination);
+  src.start(t); src.stop(t + 0.06);
+}
+function scheduleMusic() {
+  if (!music.playing || !AC) return;
+  var ahead = AC.currentTime + 0.2;
+  for (var v = 0; v < music.voices.length; v++) {
+    var vo = music.voices[v];
+    while (vo.next < ahead) {
+      var note = vo.seq[vo.i];
+      var dur = note.s * music.stepDur;
+      if (note.f > 0) musNote(AC, note.f, vo.next, dur * 0.92, vo.type, vo.vol);
+      vo.next += dur;
+      vo.i = (vo.i + 1) % vo.seq.length;
+    }
+  }
+  var beat = music.stepDur * 2;          // shaker on every beat
+  while (music.hatNext < ahead) { musHat(AC, music.hatNext); music.hatNext += beat; }
+}
+function startMusic() {
+  if (!soundOn) return;
+  var ac = audio(); if (!ac) return;
+  if (ac.state === 'suspended') ac.resume();
+  stopMusic();
+  if (!music.noiseBuf) music.noiseBuf = buildNoise(ac);
+  music.stepDur = Math.max(0.13, 0.185 - (level - 1) * 0.004);  // a touch faster each level
+  var t0 = ac.currentTime + 0.12;
+  music.voices = [
+    { seq: LEAD, i: 0, next: t0, type: 'square',   vol: 0.09 },
+    { seq: BASS, i: 0, next: t0, type: 'triangle', vol: 0.13 }
+  ];
+  music.hatNext = t0;
+  music.playing = true;
+  if (music.timer) clearInterval(music.timer);
+  music.timer = setInterval(scheduleMusic, 30);
+  scheduleMusic();
+}
+function stopMusic() {
+  music.playing = false;
+  if (music.timer) { clearInterval(music.timer); music.timer = null; }
+}
+
+// ---------------------------------------------------------------------------
 // Seashell kinds. Each has a name, a bright color and a draw routine. Young
 // players match by shape AND color, so the kinds are kept very distinct.
 // ---------------------------------------------------------------------------
@@ -282,10 +374,12 @@ function startLevel(lv) {
   decor = [];
   for (var d2 = 0; d2 < 18; d2++) decor.push(makeDecor(Math.random() * DW));
   state = 'play';
+  startMusic();
 }
 
-// Jump physics (tuned so airtime < shell gap at every level)
-var JUMP_V = 860, GRAV = 2300;
+// Jump physics: a nice high, floaty hop that's easy for little kids to time.
+// (Airtime stays under the shell spacing so she still lands between shells.)
+var JUMP_V = 1010, GRAV = 2300;
 function doJump() {
   if (!girl.jumping) {
     girl.jumping = true;
@@ -360,7 +454,7 @@ function update(dt) {
   if (distToSpawn <= 0) {
     spawnShell();
     // gap measured in travel-time so a jump (~0.75s) always lands between shells
-    distToSpawn = speed * (0.92 + Math.random() * 0.5);
+    distToSpawn = speed * (1.05 + Math.random() * 0.5);
   }
 
   // move + collide shells
@@ -385,11 +479,13 @@ function update(dt) {
           sh.popped = 0.0001;
           if (collected >= 10) {
             // level complete!
-            sLevel();
+            stopMusic();
             if (level >= TOTAL_LEVELS) {
+              sWin();
               state = 'win';
               if (TOTAL_LEVELS + 1 > bestLevel) { bestLevel = TOTAL_LEVELS + 1; saveBest(bestLevel); }
             } else {
+              sLevel();
               state = 'levelclear';
               if (level + 1 > bestLevel) { bestLevel = level + 1; saveBest(bestLevel); }
             }
@@ -400,7 +496,7 @@ function update(dt) {
           flashTimer = 0.35; girl.stumble = 0.4;
           sTrip();
           sh.popped = 0.0001;
-          if (hearts <= 0) { state = 'gameover'; return; }
+          if (hearts <= 0) { stopMusic(); state = 'gameover'; return; }
         }
       }
     }
