@@ -446,6 +446,10 @@ var scroll = 0;       // world scroll distance (for parallax + ground texture)
 var sparkles = [];
 var bgItems = [];     // decorative ground pebbles/starfish (parallax, no gameplay)
 var decor = [];       // scattered seashells resting on the beach (decor, no gameplay)
+var palms = [];       // background palm trees (parallax)
+var creatures = [];   // dolphins / whales / seals / turtles breaching the ocean
+var spawnCreatureTimer = 1.5;
+var bannerTimer = 0;  // shows the level name at the start of a level
 var time = 0;
 var flashTimer = 0;   // red stumble flash
 var cheerTimer = 0;
@@ -504,8 +508,28 @@ function startLevel(lv) {
   // scatter a bunch of decorative seashells across the beach
   decor = [];
   for (var d2 = 0; d2 < 18; d2++) decor.push(makeDecor(Math.random() * DW));
+  // background palm trees, spaced across the shore
+  palms = [];
+  for (var pi = 0; pi < 5; pi++) {
+    palms.push({ x: 120 + pi * 230 + Math.random() * 80, baseY: 378 + Math.random() * 10, scale: 0.7 + Math.random() * 0.5, ph: Math.random() * 6 });
+  }
+  creatures = [];
+  spawnCreatureTimer = 1.2;
+  bannerTimer = 2.6;       // show the level name briefly
   state = 'play';
   startMusic();
+}
+
+var CREATURE_TYPES = ['dolphin', 'whale', 'seal', 'turtle'];
+function spawnCreature() {
+  var type = CREATURE_TYPES[(Math.random() * CREATURE_TYPES.length) | 0];
+  var seaY = 215 + Math.random() * 110;                 // higher = further out
+  var scale = 0.6 + (seaY - 215) / 110 * 0.6;            // nearer ones are bigger
+  var dur = type === 'dolphin' ? 1.7 : (type === 'whale' ? 3.2 : (type === 'seal' ? 2.4 : 2.8));
+  creatures.push({
+    type: type, x: 120 + Math.random() * (DW - 220), seaY: seaY, scale: scale,
+    t: 0, dur: dur, dir: Math.random() < 0.5 ? 1 : -1, vx: (Math.random() * 14 + 6) * (Math.random() < 0.5 ? 1 : -1)
+  });
 }
 
 // Jump physics: a nice high, floaty hop that's easy for little kids to time.
@@ -556,6 +580,20 @@ function update(dt) {
   }
   if (flashTimer > 0) flashTimer -= dt;
   if (cheerTimer > 0) cheerTimer -= dt;
+  if (bannerTimer > 0) bannerTimer -= dt;
+
+  // sea creatures breach the ocean (ambient — animate in every state)
+  spawnCreatureTimer -= dt;
+  if (spawnCreatureTimer <= 0 && creatures.length < 3) {
+    spawnCreature();
+    spawnCreatureTimer = 1.6 + Math.random() * 2.2;
+  }
+  for (var ci = creatures.length - 1; ci >= 0; ci--) {
+    var cc = creatures[ci];
+    cc.t += dt / cc.dur;
+    cc.x += cc.vx * dt;
+    if (cc.t >= 1) creatures.splice(ci, 1);
+  }
 
   if (state !== 'play') { girl.runPhase += dt * 6; return; }
 
@@ -568,6 +606,13 @@ function update(dt) {
     var it = bgItems[b];
     it.x -= speed * 0.55 * dt;
     if (it.x < -10) { it.x = DW + Math.random() * 60; it.y = GROUND_Y + 14 + Math.random() * 80; it.s = 2 + Math.random() * 4; }
+  }
+
+  // palm trees (slow parallax)
+  for (var pm = 0; pm < palms.length; pm++) {
+    var pt = palms[pm];
+    pt.x -= speed * 0.4 * dt;
+    if (pt.x < -120) { pt.x = DW + 120 + Math.random() * 120; pt.baseY = 378 + Math.random() * 10; pt.scale = 0.7 + Math.random() * 0.5; pt.ph = Math.random() * 6; }
   }
 
   // decorative seashells scroll with the beach (right -> left)
@@ -646,19 +691,36 @@ function update(dt) {
 // ---------------------------------------------------------------------------
 // Drawing the world
 // ---------------------------------------------------------------------------
+// Each level has its own color scheme (sky, ocean, sand, sun).
+var THEMES = [
+  { skyT:'#bdeaff', skyB:'#8fd6f2', ocT:'#2aa6d6', ocB:'#3fc1e0', s1:'#ffe7b8', s2:'#f7d79a', wet:'#f5dca8', sun:'rgba(255,250,200,0.95)' },
+  { skyT:'#c9f3ee', skyB:'#9fe0d2', ocT:'#1fb3a6', ocB:'#48cebf', s1:'#fdeccb', s2:'#f2d9a4', wet:'#ecd49d', sun:'rgba(255,250,210,0.95)' },
+  { skyT:'#aee0ff', skyB:'#79b8ec', ocT:'#1f6fd6', ocB:'#2aa6e0', s1:'#eef0e6', s2:'#dadcc6', wet:'#e4e4cc', sun:'rgba(250,250,235,0.95)' },
+  { skyT:'#ffe6c2', skyB:'#ffc98f', ocT:'#1fa6b8', ocB:'#39c2c2', s1:'#ffe0b0', s2:'#f7c98f', wet:'#f3c98f', sun:'rgba(255,225,170,0.97)' },
+  { skyT:'#ffd9e6', skyB:'#ffb0cd', ocT:'#2bb3c9', ocB:'#48cfd0', s1:'#ffe2d0', s2:'#f7c9b0', wet:'#f3c9b8', sun:'rgba(255,240,220,0.95)' },
+  { skyT:'#d6f5c9', skyB:'#a9e6a0', ocT:'#1fb0c9', ocB:'#41d0d0', s1:'#f3e4bf', s2:'#e3cf99', wet:'#ddc98f', sun:'rgba(255,250,210,0.95)' },
+  { skyT:'#ffd1a3', skyB:'#f59e7a', ocT:'#2a6f97', ocB:'#3a8bb0', s1:'#f3d6a8', s2:'#e0b483', wet:'#d9b07f', sun:'rgba(255,205,150,0.97)' },
+  { skyT:'#c9f0d8', skyB:'#8fd6ac', ocT:'#1f8f7a', ocB:'#33b89a', s1:'#e7e3bf', s2:'#cfc98f', wet:'#c9c487', sun:'rgba(245,250,225,0.95)' },
+  { skyT:'#e8d0ff', skyB:'#c9a3e6', ocT:'#5a6fc9', ocB:'#6f8bd6', s1:'#f3d9c2', s2:'#e0b9a3', wet:'#d9b39f', sun:'rgba(255,225,205,0.92)' },
+  { skyT:'#ffb07a', skyB:'#e0608f', ocT:'#6a4a97', ocB:'#9a5bb0', s1:'#e0c49a', s2:'#c9a87f', wet:'#c2a07a', sun:'rgba(255,200,120,0.97)' }
+];
+function themeFor(lv) { return THEMES[(lv - 1) % THEMES.length]; }
+function levelName(lv) { return SONGS[(lv - 1) % SONGS.length].name; }
+
 function drawBackground() {
+  var TH = themeFor(level);
   // sky
   var sky = ctx.createLinearGradient(0, 0, 0, 330);
-  sky.addColorStop(0, '#bdeaff');
-  sky.addColorStop(1, '#8fd6f2');
+  sky.addColorStop(0, TH.skyT);
+  sky.addColorStop(1, TH.skyB);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, DW, 330);
 
   // sun
   ctx.save();
-  ctx.fillStyle = 'rgba(255,250,200,0.95)';
+  ctx.fillStyle = TH.sun;
   ctx.beginPath(); ctx.arc(810, 95, 46, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(255,250,200,0.25)';
+  ctx.globalAlpha = 0.28;
   ctx.beginPath(); ctx.arc(810, 95, 66, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
@@ -672,8 +734,8 @@ function drawBackground() {
 
   // ocean
   var oce = ctx.createLinearGradient(0, 150, 0, 360);
-  oce.addColorStop(0, '#2aa6d6');
-  oce.addColorStop(1, '#3fc1e0');
+  oce.addColorStop(0, TH.ocT);
+  oce.addColorStop(1, TH.ocB);
   ctx.fillStyle = oce;
   ctx.fillRect(0, 150, DW, 210);
 
@@ -695,9 +757,9 @@ function drawBackground() {
 
   // wet sand strip with foam edge
   var foamY = 352 + Math.sin(time * 1.5) * 3;
-  ctx.fillStyle = '#ffeccb';
+  ctx.fillStyle = TH.s1;
   ctx.fillRect(0, 350, DW, DH - 350);
-  ctx.fillStyle = '#f5dca8';
+  ctx.fillStyle = TH.wet;
   ctx.fillRect(0, 350, DW, 26);
   // foam
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -711,13 +773,13 @@ function drawBackground() {
 
   // dry beach sand
   var sand = ctx.createLinearGradient(0, 376, 0, DH);
-  sand.addColorStop(0, '#ffe7b8');
-  sand.addColorStop(1, '#f7d79a');
+  sand.addColorStop(0, TH.s1);
+  sand.addColorStop(1, TH.s2);
   ctx.fillStyle = sand;
   ctx.fillRect(0, 376, DW, DH - 376);
 
   // sand speckles (scrolling, so the ground reads as moving)
-  ctx.fillStyle = 'rgba(180,140,90,0.35)';
+  ctx.fillStyle = 'rgba(150,120,90,0.32)';
   for (var d = 0; d < 60; d++) {
     var sx = ((d * 137.5 - scroll * 1.0) % (DW + 40) + DW + 40) % (DW + 40) - 20;
     var sy = 392 + ((d * 53) % (DH - 396));
@@ -743,6 +805,178 @@ function drawCloud(x, y, s) {
   ctx.arc(6, -16, 20, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+}
+
+// ---- background palm trees ----
+function drawPalms() {
+  for (var i = 0; i < palms.length; i++) {
+    var p = palms[i];
+    ctx.save();
+    ctx.translate(p.x, p.baseY);
+    ctx.scale(p.scale, p.scale);
+    var sway = Math.sin(time * 1.3 + p.ph) * 0.12;
+    ctx.rotate(sway * 0.15);
+    // trunk (curved, tapered)
+    ctx.strokeStyle = '#9c6b3f'; ctx.lineCap = 'round';
+    ctx.lineWidth = 13;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-10, -70, 6, -150); ctx.stroke();
+    ctx.strokeStyle = '#7d5230'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(-2, -10); ctx.quadraticCurveTo(-12, -70, 4, -148); ctx.stroke();
+    var topX = 6, topY = -150;
+    // coconuts
+    ctx.fillStyle = '#5b3a26';
+    ctx.beginPath(); ctx.arc(topX - 5, topY + 4, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(topX + 5, topY + 6, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(topX + 1, topY + 11, 5, 0, Math.PI * 2); ctx.fill();
+    // fronds
+    var fronds = 7;
+    for (var f = 0; f < fronds; f++) {
+      var a = (-Math.PI * 0.92) + (f / (fronds - 1)) * (Math.PI * 0.84);
+      var droop = sway * 6;
+      var ex = topX + Math.cos(a) * 62, ey = topY + Math.sin(a) * 46 + 18 + droop;
+      var mx = topX + Math.cos(a) * 34, my = topY + Math.sin(a) * 24 - 6;
+      ctx.strokeStyle = (f % 2 === 0) ? '#2f9e4f' : '#37b85c';
+      ctx.lineWidth = 8;
+      ctx.beginPath(); ctx.moveTo(topX, topY + 2); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = '#1f7d3a';
+      ctx.beginPath(); ctx.moveTo(topX, topY + 2); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ---- cute sea creatures breaching the ocean ----
+function drawSplash(x, y, r) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+  for (var i = -2; i <= 2; i++) {
+    ctx.beginPath(); ctx.arc(x + i * r * 0.5, y - Math.abs(i) * 2 - 3, r * 0.16, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawCreatures() {
+  for (var i = 0; i < creatures.length; i++) {
+    var c = creatures[i];
+    var tt = Math.min(1, Math.max(0, c.t));
+    var rise = Math.sin(tt * Math.PI);
+    ctx.save();
+    if (tt < 0.16 || tt > 0.84) drawSplash(c.x, c.seaY + 2, 12 * c.scale);
+    if (c.type === 'dolphin') {
+      var peak = 78 * c.scale;
+      var y = c.seaY - rise * peak;
+      var ang = Math.cos(tt * Math.PI) * 0.95 * c.dir;   // nose-up then dive
+      ctx.translate(c.x, y); ctx.scale(c.dir * c.scale, c.scale); ctx.rotate(-ang);
+      drawDolphin();
+    } else if (c.type === 'whale') {
+      var y2 = c.seaY - rise * 30 * c.scale;
+      ctx.translate(c.x, y2); ctx.scale(c.dir * c.scale, c.scale);
+      drawWhale(tt);
+    } else if (c.type === 'seal') {
+      var y3 = c.seaY - rise * 40 * c.scale;
+      ctx.translate(c.x, y3); ctx.scale(c.scale, c.scale);
+      drawSeal();
+    } else { // turtle
+      var y4 = c.seaY - rise * 30 * c.scale;
+      ctx.translate(c.x, y4); ctx.scale(c.dir * c.scale, c.scale);
+      ctx.rotate(Math.cos(tt * Math.PI) * 0.2 * c.dir);
+      drawTurtle();
+    }
+    ctx.restore();
+  }
+}
+function eyeSmile(ex, ey) {
+  ctx.fillStyle = '#22303a';
+  ctx.beginPath(); ctx.arc(ex, ey, 2.4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(ex - 0.8, ey - 0.8, 0.9, 0, Math.PI * 2); ctx.fill();
+}
+function drawDolphin() {
+  ctx.fillStyle = '#7fb5cf'; ctx.strokeStyle = '#4f8aa6'; ctx.lineWidth = 2;
+  // body (comma shape)
+  ctx.beginPath();
+  ctx.moveTo(-34, 4);
+  ctx.quadraticCurveTo(-6, -26, 30, -14);
+  ctx.quadraticCurveTo(12, -6, 16, 6);
+  ctx.quadraticCurveTo(-6, 0, -34, 16);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // dorsal fin
+  ctx.beginPath(); ctx.moveTo(-2, -16); ctx.quadraticCurveTo(6, -30, 14, -16); ctx.closePath(); ctx.fill();
+  // tail fluke
+  ctx.beginPath(); ctx.moveTo(-34, 4); ctx.quadraticCurveTo(-46, -2, -44, -12);
+  ctx.quadraticCurveTo(-36, -6, -30, 2); ctx.quadraticCurveTo(-40, 12, -44, 18);
+  ctx.quadraticCurveTo(-36, 16, -34, 16); ctx.closePath(); ctx.fill();
+  // belly
+  ctx.fillStyle = '#e8f4fa';
+  ctx.beginPath(); ctx.moveTo(2, 6); ctx.quadraticCurveTo(16, 2, 24, -6); ctx.quadraticCurveTo(16, 10, 2, 10); ctx.closePath(); ctx.fill();
+  // snout smile + eye
+  ctx.strokeStyle = '#4f8aa6'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(22, -6, 5, 0.1, 1.1); ctx.stroke();
+  eyeSmile(20, -12);
+}
+function drawWhale(tt) {
+  // spout
+  if (tt > 0.35 && tt < 0.7) {
+    ctx.save(); ctx.fillStyle = 'rgba(200,235,255,0.85)';
+    for (var s = 0; s < 5; s++) {
+      var sy = -34 - s * 7;
+      ctx.beginPath(); ctx.arc((s - 2) * 3, sy, 3.2 - s * 0.3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  ctx.fillStyle = '#5f86c9'; ctx.strokeStyle = '#3f5fa6'; ctx.lineWidth = 2;
+  // big rounded body
+  ctx.beginPath(); ctx.ellipse(0, 0, 38, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // tail fluke
+  ctx.beginPath(); ctx.moveTo(-34, 0); ctx.quadraticCurveTo(-52, -10, -56, -20);
+  ctx.quadraticCurveTo(-44, -12, -36, -6); ctx.quadraticCurveTo(-48, 0, -54, 8);
+  ctx.quadraticCurveTo(-44, 6, -34, 6); ctx.closePath(); ctx.fill();
+  // belly
+  ctx.fillStyle = '#dfeafc';
+  ctx.beginPath(); ctx.ellipse(6, 10, 26, 10, 0, 0, Math.PI); ctx.fill();
+  // eye + smile
+  eyeSmile(20, -4);
+  ctx.strokeStyle = '#3f5fa6'; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.arc(22, 2, 7, 0.05, 1.0); ctx.stroke();
+}
+function drawSeal() {
+  ctx.fillStyle = '#9aa7b2'; ctx.strokeStyle = '#6f7d88'; ctx.lineWidth = 2;
+  // shoulders
+  ctx.beginPath(); ctx.ellipse(0, 18, 24, 16, 0, 0, Math.PI * 2); ctx.fill();
+  // flippers
+  ctx.beginPath(); ctx.ellipse(-16, 24, 7, 4, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(16, 24, 7, 4, -0.5, 0, Math.PI * 2); ctx.fill();
+  // head
+  ctx.beginPath(); ctx.arc(0, -2, 16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // snout
+  ctx.fillStyle = '#c2ccd4';
+  ctx.beginPath(); ctx.ellipse(0, 4, 8, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3a4750';
+  ctx.beginPath(); ctx.arc(0, 2, 2, 0, Math.PI * 2); ctx.fill();
+  // eyes
+  eyeSmile(-6, -4); eyeSmile(6, -4);
+  // whiskers
+  ctx.strokeStyle = '#6f7d88'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-3, 5); ctx.lineTo(-12, 4); ctx.moveTo(-3, 7); ctx.lineTo(-12, 8);
+  ctx.moveTo(3, 5); ctx.lineTo(12, 4); ctx.moveTo(3, 7); ctx.lineTo(12, 8); ctx.stroke();
+}
+function drawTurtle() {
+  // flippers
+  ctx.fillStyle = '#4fae84';
+  ctx.beginPath(); ctx.ellipse(14, 10, 10, 5, -0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-16, 10, 9, 5, 0.5, 0, Math.PI * 2); ctx.fill();
+  // head
+  ctx.fillStyle = '#5fbf92';
+  ctx.beginPath(); ctx.arc(22, -2, 8, 0, Math.PI * 2); ctx.fill();
+  eyeSmile(24, -4);
+  // shell
+  ctx.fillStyle = '#3f8f5f'; ctx.strokeStyle = '#2f6f47'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, 0, 22, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // shell pattern
+  ctx.fillStyle = '#6fc98f';
+  ctx.beginPath(); ctx.arc(0, -2, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-11, 2, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(11, 2, 4, 0, Math.PI * 2); ctx.fill();
 }
 
 function drawDecorShells() {
@@ -1021,17 +1255,37 @@ function drawHeart(x, y, s) {
   ctx.restore();
 }
 
+// Big level-name banner shown for a moment at the start of each level.
+function drawBanner() {
+  var a = Math.min(1, bannerTimer, (2.6 - bannerTimer) * 3);   // fade in then out
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, a);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#2a6f97';
+  ctx.font = 'bold 26px "Comic Sans MS", sans-serif';
+  ctx.fillText('Level ' + level, DW / 2, 150);
+  ctx.font = 'bold 60px "Comic Sans MS", sans-serif';
+  ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff';
+  ctx.strokeText(levelName(level), DW / 2, 200);
+  ctx.fillStyle = '#ffd93d';
+  ctx.fillText(levelName(level), DW / 2, 200);
+  ctx.restore();
+}
+
 // ---------------------------------------------------------------------------
 // HUD — the order of 10 shells across the top
 // ---------------------------------------------------------------------------
 function drawHUD() {
   if (order.length < 10) return;   // nothing to show until a level has started
-  // level pill (top-left)
-  roundRect(16, 14, 150, 40, 20, 'rgba(255,255,255,0.85)');
-  ctx.fillStyle = '#2a6f97';
-  ctx.font = 'bold 22px "Comic Sans MS", sans-serif';
+  // level pill (top-left) with the level's name
+  roundRect(16, 14, 210, 40, 20, 'rgba(255,255,255,0.85)');
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText('Level ' + level, 32, 35);
+  ctx.fillStyle = '#ff7aa8';
+  ctx.font = 'bold 16px "Comic Sans MS", sans-serif';
+  ctx.fillText('L' + level, 30, 35);
+  ctx.fillStyle = '#2a6f97';
+  ctx.font = 'bold 19px "Comic Sans MS", sans-serif';
+  ctx.fillText(levelName(level), 64, 35);
 
   // score pill (below the level pill) with a little star
   roundRect(16, 60, 150, 38, 19, 'rgba(255,255,255,0.85)');
@@ -1220,7 +1474,7 @@ function drawOverlay() {
     for (var i = 0; i < 3; i++) { drawStar(DW / 2 - 60 + i * 60, p.y + 124 + Math.sin(time * 4 + i) * 4, 22); }
     ctx.fillStyle = '#2a6f97';
     ctx.font = '24px "Comic Sans MS", sans-serif';
-    ctx.fillText('Level ' + level + ' complete!', DW / 2, p.y + 178);
+    ctx.fillText(levelName(level) + ' complete!', DW / 2, p.y + 178);
     ctx.font = 'bold 28px "Comic Sans MS", sans-serif';
     ctx.fillStyle = '#ff7aa8';
     ctx.fillText('Score:  ' + score, DW / 2, p.y + 218);
@@ -1275,12 +1529,15 @@ function render() {
   ctx.save();
   ctx.scale(scale * dpr, scale * dpr);
   drawBackground();
+  drawCreatures();
+  drawPalms();
   drawDecorShells();
   drawShellsOnGround();
   drawGirl();
   drawSparkles();
   drawPopups();
   if (state !== 'menu' && state !== 'win') drawHUD();
+  if (state === 'play' && bannerTimer > 0) drawBanner();
   // stumble flash
   if (flashTimer > 0) {
     ctx.fillStyle = 'rgba(255,80,80,' + (flashTimer * 0.6) + ')';
