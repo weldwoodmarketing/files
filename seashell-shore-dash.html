@@ -1530,7 +1530,10 @@ function drawCenterPanel(w, h) {
 }
 
 function drawButton(label) {
-  var bw = 240, bh = 64, bx = (DW - bw) / 2, by = DH / 2 + 110;
+  var bh = 64, by = DH / 2 + 110;
+  ctx.font = 'bold 28px "Comic Sans MS", sans-serif';
+  var bw = Math.max(240, ctx.measureText(label).width + 64);   // widen to fit the label
+  var bx = (DW - bw) / 2;
   var pulse = 1 + Math.sin(time * 4) * 0.03;
   ctx.save();
   ctx.translate(DW / 2, by + bh / 2);
@@ -1607,23 +1610,23 @@ function drawOverlay() {
     }
     drawButton('Play!');
   } else if (state === 'story') {
-    var pst = drawCenterPanel(700, 372);
+    var pst = drawCenterPanel(840, 450);
     ctx.textAlign = 'center';
     // chapter heading
     ctx.fillStyle = '#2a6f97';
-    ctx.font = 'bold 20px "Comic Sans MS", sans-serif';
-    ctx.fillText('Level ' + storyLevel, DW / 2, pst.y + 48);
+    ctx.font = 'bold 26px "Comic Sans MS", sans-serif';
+    ctx.fillText('Level ' + storyLevel, DW / 2, pst.y + 56);
     ctx.fillStyle = '#ff7aa8';
-    ctx.font = 'bold 34px "Comic Sans MS", sans-serif';
-    ctx.fillText(levelName(storyLevel), DW / 2, pst.y + 84);
+    ctx.font = 'bold 46px "Comic Sans MS", sans-serif';
+    ctx.fillText(levelName(storyLevel), DW / 2, pst.y + 106);
     // flanking shells
-    drawShell(ctx, (storyLevel * 2) % KINDS.length, DW / 2 - 150, pst.y + 78, 16);
-    drawShell(ctx, (storyLevel * 5 + 1) % KINDS.length, DW / 2 + 150, pst.y + 78, 16);
+    drawShell(ctx, (storyLevel * 2) % KINDS.length, DW / 2 - 230, pst.y + 96, 22);
+    drawShell(ctx, (storyLevel * 5 + 1) % KINDS.length, DW / 2 + 230, pst.y + 96, 22);
     // story lines
-    ctx.fillStyle = '#3a5a6a';
-    ctx.font = '20px "Comic Sans MS", sans-serif';
+    ctx.fillStyle = '#34525f';
+    ctx.font = 'bold 28px "Comic Sans MS", sans-serif';
     var lines = STORY[storyLevel - 1];
-    for (var li = 0; li < lines.length; li++) ctx.fillText(lines[li], DW / 2, pst.y + 126 + li * 30);
+    for (var li = 0; li < lines.length; li++) ctx.fillText(lines[li], DW / 2, pst.y + 162 + li * 40);
     drawButton(storyLevel === 1 ? "Pearl's Adventure!" : 'Start!');
   } else if (state === 'levelclear') {
     var p = drawCenterPanel(520, 360);
