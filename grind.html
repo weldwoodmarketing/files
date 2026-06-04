@@ -335,7 +335,7 @@ const G = {
   nextBoss:1000, bossIdx:0,
   inBoss:false, boss:null, bossWarn:0,
   obstacles:[], pickups:[], shots:[], particles:[], floaters:[],
-  spawnGap:70, spawnTimer:60, pickTimer:300,
+  spawnGap:70, spawnTimer:60, pickTimer:300, lastObKey:'',
   shake:0, flash:0, flashColor:'#fff',
   hi:loadHi(), muted:false, newHi:false,
   paused:false, musicTrack:'city',
@@ -354,7 +354,7 @@ function resetRun(){
   G.hearts=3; G.burnout=0; G.bossesDefeated=0;
   G.nextBoss=1000; G.bossIdx=0; G.inBoss=false; G.boss=null; G.bossWarn=0;
   G.obstacles.length=0; G.pickups.length=0; G.shots.length=0; G.particles.length=0; G.floaters.length=0;
-  G.spawnGap=70; G.spawnTimer=50; G.pickTimer=320; G.shake=0; G.flash=0; G.newHi=false;
+  G.spawnGap=70; G.spawnTimer=50; G.pickTimer=320; G.lastObKey=''; G.shake=0; G.flash=0; G.newHi=false;
   P.x=150; P.y=GROUND-54; P.w=38; P.h=54; P.vy=0; P.onGround=true; P.ducking=false;
   P.kick=0; P.shootCd=0; P.invuln=0; P.shield=0; P.platform=null; P.run=0;
   G.paused=false; G.musicTrack='city';
@@ -367,17 +367,45 @@ function resetRun(){
 //============================================================
 // shape: box(ground, jump/kick) | bar(overhead, duck) | fly(airborne, shoot) | blob(grow,kick) | ghost(fade,shoot)
 const OBSTACLES = [
-  {key:'client_exp', label:'Client Expectations',   action:'jump',  shape:'box',  w:34,h:50},
-  {key:'late_emp',   label:'Late Employee',          action:'jump',  shape:'box',  w:34,h:46},
-  {key:'logo',       label:'Logo Bigger Please',     action:'jump',  shape:'box',  w:40,h:54},
-  {key:'after_call', label:'After-Hours Call',       action:'duck',  shape:'bar',  w:54,h:30},
-  {key:'meeting',    label:"Could've Been An Email",  action:'duck',  shape:'bar',  w:66,h:28},
-  {key:'bills',      label:'Bills',                  action:'kick',  shape:'box',  w:40,h:56},
-  {key:'red',        label:'Make The Whole Thing Red',action:'kick', shape:'box',  w:46,h:58},
-  {key:'scope',      label:'Scope Creep',            action:'kick',  shape:'blob', w:36,h:36},
-  {key:'invoice',    label:'Unpaid Invoice',         action:'shoot', shape:'fly',  w:40,h:52},
-  {key:'pop',        label:'Can You Make It Pop',     action:'shoot', shape:'fly',  w:46,h:50},
-  {key:'ghost',      label:'Client Ghosting',        action:'shoot', shape:'ghost',w:36,h:46}
+  // JUMP (▲) — leap over it
+  {key:'client_exp', label:'Client Expectations',     action:'jump',  shape:'box',  w:34,h:50},
+  {key:'late_emp',   label:'Late Employee',           action:'jump',  shape:'box',  w:34,h:46},
+  {key:'logo',       label:'Logo Bigger Please',      action:'jump',  shape:'box',  w:40,h:54},
+  {key:'chargeback', label:'Surprise Chargeback',     action:'jump',  shape:'box',  w:38,h:50},
+  {key:'rush',       label:'Last-Minute Rush Order',  action:'jump',  shape:'box',  w:46,h:52},
+  {key:'onestar',    label:'1-Star Review',           action:'jump',  shape:'box',  w:38,h:48},
+  {key:'manager',    label:'Speak To Your Manager',   action:'jump',  shape:'box',  w:48,h:54},
+  {key:'pivot',      label:'Pivot To Video',          action:'jump',  shape:'box',  w:40,h:52},
+  {key:'permit',     label:'Permit Renewal',          action:'jump',  shape:'box',  w:38,h:50},
+  // DUCK (▼) — slide under it
+  {key:'after_call', label:'After-Hours Call',        action:'duck',  shape:'bar',  w:54,h:30},
+  {key:'meeting',    label:"Could've Been An Email",   action:'duck',  shape:'bar',  w:66,h:28},
+  {key:'replyall',   label:'Reply-All Apocalypse',    action:'duck',  shape:'bar',  w:64,h:28},
+  {key:'quickq',     label:'Got A Quick Question?',   action:'duck',  shape:'bar',  w:70,h:28},
+  {key:'lastemail',  label:'Per My Last Email',       action:'duck',  shape:'bar',  w:62,h:28},
+  {key:'slack',      label:'Sunday Night Slack',      action:'duck',  shape:'bar',  w:62,h:28},
+  {key:'circleback', label:"Let's Circle Back",       action:'duck',  shape:'bar',  w:60,h:28},
+  // KICK (X) — destroy it
+  {key:'bills',      label:'Bills',                   action:'kick',  shape:'box',  w:40,h:56},
+  {key:'red',        label:'Make The Whole Thing Red',action:'kick',  shape:'box',  w:46,h:58},
+  {key:'scope',      label:'Scope Creep',             action:'kick',  shape:'blob', w:36,h:36},
+  {key:'rent',       label:'Overdue Rent',            action:'kick',  shape:'box',  w:42,h:56},
+  {key:'fees',       label:'Surprise Merchant Fees',  action:'kick',  shape:'box',  w:46,h:54},
+  {key:'spin',       label:'Make The Logo Spin',      action:'kick',  shape:'box',  w:46,h:56},
+  {key:'edits',      label:'One More Tiny Edit',      action:'kick',  shape:'box',  w:46,h:54},
+  {key:'feature',    label:'Feature Creep',           action:'kick',  shape:'blob', w:36,h:36},
+  {key:'subs',       label:'Subscription Creep',      action:'kick',  shape:'blob', w:36,h:36},
+  // SHOOT (Z) — pelt it with paper
+  {key:'invoice',    label:'Unpaid Invoice',          action:'shoot', shape:'fly',  w:40,h:52},
+  {key:'pop',        label:'Can You Make It Pop',      action:'shoot', shape:'fly',  w:46,h:50},
+  {key:'ghost',      label:'Client Ghosting',         action:'shoot', shape:'ghost',w:36,h:46},
+  {key:'net30',      label:"Net-30 (It's Day 90)",    action:'shoot', shape:'fly',  w:48,h:52},
+  {key:'exposure',   label:"We'll Pay In Exposure",   action:'shoot', shape:'fly',  w:50,h:50},
+  {key:'cheaper',    label:'Can You Do It Cheaper?',   action:'shoot', shape:'fly',  w:50,h:52},
+  {key:'finalnotice',label:'FINAL NOTICE',            action:'shoot', shape:'fly',  w:44,h:52},
+  {key:'spam',       label:'Spammy Cold DM',          action:'shoot', shape:'fly',  w:44,h:50},
+  {key:'ghostlead',  label:'Ghosted Lead',            action:'shoot', shape:'ghost',w:36,h:46},
+  {key:'vanish',     label:'Vanishing Retainer',      action:'shoot', shape:'ghost',w:38,h:46}
 ];
 
 function spawnObstacle(){
@@ -387,7 +415,13 @@ function spawnObstacle(){
     if((o.action==='kick')&&G.dist<140) return false;
     return true;
   });
-  const tmpl = pool[(Math.random()*pool.length)|0];
+  // no duplicates on screen at once, and never the same one twice in a row
+  const onScreen = new Set(G.obstacles.map(o=>o.key));
+  let choices = pool.filter(o=>!onScreen.has(o.key) && o.key!==G.lastObKey);
+  if(choices.length===0) choices = pool.filter(o=>!onScreen.has(o.key));
+  if(choices.length===0) choices = pool;
+  const tmpl = choices[(Math.random()*choices.length)|0];
+  G.lastObKey = tmpl.key;
   const o = {
     key:tmpl.key, label:tmpl.label, action:tmpl.action, shape:tmpl.shape,
     w:tmpl.w, h:tmpl.h, x:W+30, collided:false, dead:false,
