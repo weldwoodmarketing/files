@@ -80,26 +80,34 @@
   #crt::after{content:"";position:absolute;inset:0;
     background:radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.07), rgba(255,255,255,0) 60%);}
 
-  /* on-screen action buttons — only KICK/SHOOT; jump/duck are screen-half taps,
-     so the left side stays clear of the player. Kept small + in the bottom-right
-     corner (below the action lane) so they don't hide gameplay or the boss. */
+  /* on-screen action buttons — JUMP/KICK stacked on the left, DUCK/SHOOT on the
+     right, each coloured to match its obstacle action. Edge-hugging so they
+     clear the player; translucent so gameplay shows through. */
   #pad{position:absolute;inset:0;z-index:6;pointer-events:none;}
   .btn{
-    position:absolute;bottom:5%;
-    width:clamp(44px,10vmin,84px);height:clamp(44px,10vmin,84px);
-    border-radius:50%;border:3px solid rgba(255,255,255,.5);
-    background:rgba(20,12,8,.5);color:#fff;font-weight:900;
-    display:flex;align-items:center;justify-content:center;
-    font-size:clamp(10px,2.2vmin,14px);letter-spacing:1px;
+    position:absolute;
+    width:clamp(44px,9.5vmin,80px);height:clamp(44px,9.5vmin,80px);
+    border-radius:50%;border:3px solid rgba(255,255,255,.35);
+    font-weight:900;display:flex;align-items:center;justify-content:center;
+    font-size:clamp(10px,2.1vmin,14px);letter-spacing:.5px;
     pointer-events:auto;user-select:none;
-    box-shadow:0 3px 0 rgba(0,0,0,.4);opacity:.66;
+    text-shadow:0 1px 1px rgba(0,0,0,.35);
+    box-shadow:0 3px 0 rgba(0,0,0,.35);opacity:.8;
   }
-  .btn:active{transform:translateY(2px);box-shadow:none;opacity:.95;}
-  #bShoot{right:3%;border-color:var(--pink);color:#ffe1e9;}
-  #bKick{right:calc(3% + clamp(44px,10vmin,84px) + 10px);border-color:var(--red);color:#ffd9cf;}
+  .btn:active{transform:translateY(2px);box-shadow:none;opacity:1;}
+  /* left column: JUMP on top, KICK below */
+  #bJump{ left:3%; bottom:calc(5% + clamp(44px,9.5vmin,80px) + 10px);
+          background:#f2b134e6; border-color:var(--gold-dk); color:var(--ink); }
+  #bKick{ left:3%; bottom:5%;
+          background:#d6402fe6; border-color:var(--red-dk); color:#fff6e2; }
+  /* right column: DUCK on top, SHOOT below */
+  #bDuck{ right:3%; bottom:calc(5% + clamp(44px,9.5vmin,80px) + 10px);
+          background:#1f8a82e6; border-color:var(--teal-dk); color:#fff6e2; }
+  #bShoot{ right:3%; bottom:5%;
+          background:#e98ca3f2; border-color:#b14e63; color:var(--ink); }
   #hint{position:absolute;left:0;right:0;bottom:1%;text-align:center;color:#fff;
     opacity:.34;font-size:clamp(8px,1.6vw,11px);z-index:6;pointer-events:none;letter-spacing:.5px;}
-  @media (hover:hover) and (pointer:fine){ .btn{opacity:.42;} }
+  @media (hover:hover) and (pointer:fine){ .btn{opacity:.62;} }
 </style>
 </head>
 <body>
@@ -108,10 +116,12 @@
     <div id="screen">
       <canvas id="game" width="960" height="540"></canvas>
       <div id="pad">
+        <div class="btn" id="bJump">JUMP</div>
         <div class="btn" id="bKick">KICK</div>
+        <div class="btn" id="bDuck">DUCK</div>
         <div class="btn" id="bShoot">SHOOT</div>
       </div>
-      <div id="hint">◄ tap JUMP &nbsp;·&nbsp; tap DUCK ► &nbsp;·&nbsp; KICK / SHOOT buttons &nbsp;·&nbsp; keys: SPACE ▲ ▼ X Z · M mute</div>
+      <div id="hint">JUMP ▲ / KICK ✕ left &nbsp;·&nbsp; DUCK ▼ / SHOOT ◉ right &nbsp;·&nbsp; keys: SPACE ▲ ▼ X Z · M mute</div>
       <div id="crt"></div>
     </div>
   </div>
@@ -210,7 +220,9 @@ function btn(id,onDown,onUp){
             el.addEventListener('pointerleave',e=>{onUp();});
             el.addEventListener('pointercancel',e=>{onUp();}); }
 }
-btn('bKick',()=>{ press('kick'); });
+btn('bJump',()=>{ press('jump'); press('start'); });
+btn('bDuck',()=>{ touchDuck=true; press('start'); }, ()=>{ touchDuck=false; });
+btn('bKick',()=>{ press('kick'); press('start'); });
 btn('bShoot',()=>{ press('shoot'); press('start'); });
 // tap halves of the screen (left=jump, right=duck) — buttons sit on top and stopPropagation via own handlers
 screenEl.addEventListener('pointerdown',e=>{
