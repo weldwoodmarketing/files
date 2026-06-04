@@ -39,29 +39,30 @@
       #0e0a07;
   }
 
-  /* arcade cabinet frame */
+  /* arcade cabinet frame — shrinks to wrap the screen so there are no gutters */
   #cab{
     position:relative;
-    /* as wide as the container allows, but never so tall it needs scrolling
-       (whole cabinet is ~16:10, so cap width at 1.6x the available height) */
-    width:min(100vw, calc(100vh * 1.6));
-    max-width:1100px;
-    padding:14px 14px 10px;
-    border-radius:18px;
+    width:fit-content;max-width:100vw;margin:auto;
+    padding:8px 12px 6px;
+    border-radius:16px;
     background:linear-gradient(180deg,#3a2b1e,#241811);
     box-shadow:0 24px 60px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.06);
   }
   #marquee{
     text-align:center;color:var(--gold);
-    font-weight:900;letter-spacing:2px;font-size:clamp(10px,2.4vw,15px);
+    font-weight:900;letter-spacing:1px;font-size:clamp(9px,2vw,15px);
     text-shadow:0 2px 0 var(--red-dk);
-    padding:2px 0 8px;text-transform:uppercase;
+    padding:1px 0 6px;text-transform:uppercase;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   #marquee small{display:block;color:var(--paper);opacity:.7;font-size:.7em;letter-spacing:1px;}
 
-  /* the screen — fixed 9:5-ish aspect, scales to width */
+  /* the screen — 16:9, sized off whichever of width/height is the tighter
+     limit so the whole cabinet always fits the viewport (no top clipping) */
   #screen{
-    position:relative;width:100%;aspect-ratio:960 / 540;
+    position:relative;
+    width:min(calc(100vw - 26px), 1100px, calc((100vh - 56px) * 1.7778));
+    aspect-ratio:960 / 540;
     border-radius:10px;overflow:hidden;
     background:#120d18;
     box-shadow:inset 0 0 0 4px #120d09, inset 0 0 60px rgba(0,0,0,.7);
@@ -79,25 +80,26 @@
   #crt::after{content:"";position:absolute;inset:0;
     background:radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.07), rgba(255,255,255,0) 60%);}
 
-  /* on-screen action buttons (touch) */
+  /* on-screen action buttons — only KICK/SHOOT; jump/duck are screen-half taps,
+     so the left side stays clear of the player. Kept small + in the bottom-right
+     corner (below the action lane) so they don't hide gameplay or the boss. */
   #pad{position:absolute;inset:0;z-index:6;pointer-events:none;}
   .btn{
-    position:absolute;bottom:3.5%;width:13%;aspect-ratio:1/1;
-    border-radius:50%;border:3px solid rgba(255,255,255,.55);
-    background:rgba(20,12,8,.42);color:#fff;font-weight:900;
+    position:absolute;bottom:5%;
+    width:clamp(44px,10vmin,84px);height:clamp(44px,10vmin,84px);
+    border-radius:50%;border:3px solid rgba(255,255,255,.5);
+    background:rgba(20,12,8,.5);color:#fff;font-weight:900;
     display:flex;align-items:center;justify-content:center;
-    font-size:clamp(11px,2.4vw,16px);letter-spacing:1px;
-    pointer-events:auto;user-select:none;backdrop-filter:blur(1px);
-    box-shadow:0 3px 0 rgba(0,0,0,.4);
+    font-size:clamp(10px,2.2vmin,14px);letter-spacing:1px;
+    pointer-events:auto;user-select:none;
+    box-shadow:0 3px 0 rgba(0,0,0,.4);opacity:.66;
   }
-  .btn:active{transform:translateY(2px);box-shadow:none;}
-  #bKick{right:16.5%;border-color:var(--red);color:#ffd9cf;}
-  #bShoot{right:2.5%;border-color:var(--pink);color:#ffe1e9;}
-  #bJump{left:2.5%;border-color:var(--gold);color:#ffe9bf;}
-  #bDuck{left:16.5%;border-color:var(--teal);color:#cdeee9;}
-  #hint{position:absolute;left:0;right:0;bottom:.5%;text-align:center;color:#fff;
-    opacity:.32;font-size:clamp(8px,1.6vw,11px);z-index:6;pointer-events:none;letter-spacing:1px;}
-  @media (hover:hover) and (pointer:fine){ .btn{opacity:.5;} }
+  .btn:active{transform:translateY(2px);box-shadow:none;opacity:.95;}
+  #bShoot{right:3%;border-color:var(--pink);color:#ffe1e9;}
+  #bKick{right:calc(3% + clamp(44px,10vmin,84px) + 10px);border-color:var(--red);color:#ffd9cf;}
+  #hint{position:absolute;left:0;right:0;bottom:1%;text-align:center;color:#fff;
+    opacity:.34;font-size:clamp(8px,1.6vw,11px);z-index:6;pointer-events:none;letter-spacing:.5px;}
+  @media (hover:hover) and (pointer:fine){ .btn{opacity:.42;} }
 </style>
 </head>
 <body>
@@ -106,12 +108,10 @@
     <div id="screen">
       <canvas id="game" width="960" height="540"></canvas>
       <div id="pad">
-        <div class="btn" id="bJump">JUMP</div>
-        <div class="btn" id="bDuck">DUCK</div>
         <div class="btn" id="bKick">KICK</div>
         <div class="btn" id="bShoot">SHOOT</div>
       </div>
-      <div id="hint">SPACE/▲ jump · ▼ duck · X kick · Z shoot · M mute</div>
+      <div id="hint">◄ tap JUMP &nbsp;·&nbsp; tap DUCK ► &nbsp;·&nbsp; KICK / SHOOT buttons &nbsp;·&nbsp; keys: SPACE ▲ ▼ X Z · M mute</div>
       <div id="crt"></div>
     </div>
   </div>
@@ -210,8 +210,6 @@ function btn(id,onDown,onUp){
             el.addEventListener('pointerleave',e=>{onUp();});
             el.addEventListener('pointercancel',e=>{onUp();}); }
 }
-btn('bJump',()=>{ press('jump'); press('start'); });
-btn('bDuck',()=>{ touchDuck=true; }, ()=>{ touchDuck=false; });
 btn('bKick',()=>{ press('kick'); });
 btn('bShoot',()=>{ press('shoot'); press('start'); });
 // tap halves of the screen (left=jump, right=duck) — buttons sit on top and stopPropagation via own handlers
