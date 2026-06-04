@@ -145,12 +145,12 @@ const C = {
   skyHi:'#2c2350', skyMid:'#7d4a64', skyLo:'#e0794b',
   cream:'#fff6e2'
 };
-// each action gets a signature colour so players learn the language fast
+// each action shows the KEY you press, colour-matched to its on-screen button
 const ACT = {
-  jump:{c:C.gold, dk:C.goldDk, glyph:'▲'},
-  duck:{c:C.teal, dk:C.tealDk, glyph:'▼'},
-  kick:{c:C.red,  dk:C.redDk,  glyph:'✕'},
-  shoot:{c:C.pink, dk:'#b14e63', glyph:'◉'}
+  jump:{c:C.gold, dk:C.goldDk, key:'▲', text:C.ink},
+  duck:{c:C.teal, dk:C.tealDk, key:'▼', text:C.cream},
+  kick:{c:C.red,  dk:C.redDk,  key:'X', text:C.cream},
+  shoot:{c:C.pink, dk:'#b14e63', key:'Z', text:C.ink}
 };
 
 //---------------- tiny WebAudio blips (juice, fully optional) -----------
@@ -289,8 +289,8 @@ const OBSTACLES = [
   {key:'bills',      label:'Bills',                  action:'kick',  shape:'box',  w:40,h:56},
   {key:'red',        label:'Make The Whole Thing Red',action:'kick', shape:'box',  w:46,h:58},
   {key:'scope',      label:'Scope Creep',            action:'kick',  shape:'blob', w:36,h:36},
-  {key:'invoice',    label:'Unpaid Invoice',         action:'shoot', shape:'fly',  w:40,h:30},
-  {key:'pop',        label:'Can You Make It Pop',     action:'shoot', shape:'fly',  w:44,h:32},
+  {key:'invoice',    label:'Unpaid Invoice',         action:'shoot', shape:'fly',  w:40,h:52},
+  {key:'pop',        label:'Can You Make It Pop',     action:'shoot', shape:'fly',  w:46,h:50},
   {key:'ghost',      label:'Client Ghosting',        action:'shoot', shape:'ghost',w:36,h:46}
 ];
 
@@ -310,7 +310,7 @@ function spawnObstacle(){
   if(tmpl.shape==='box'){ o.y=GROUND-o.h; }
   else if(tmpl.shape==='blob'){ o.y=GROUND-o.h; }
   else if(tmpl.shape==='bar'){ o.y=GROUND-72; }              // overhead, gap beneath
-  else if(tmpl.shape==='fly'){ o.y=GROUND-74-Math.random()*26; o.vx=-0.4; } // chest height, drifts at you
+  else if(tmpl.shape==='fly'){ o.y=GROUND-o.h; }             // on the ground now — shoot it
   else if(tmpl.shape==='ghost'){ o.y=GROUND-o.h; o.fade=0.006; }
   G.obstacles.push(o);
 }
@@ -830,11 +830,10 @@ function drawObstacles(){
       ctx.fillStyle=a.c; roundRect(o.x,o.y,o.w,o.h,6); ctx.fill();
       ctx.strokeStyle=C.ink; ctx.lineWidth=2; roundRect(o.x,o.y,o.w,o.h,6); ctx.stroke();
     } else if(o.shape==='fly'){
-      const fy=o.y+Math.sin(o.bob)*5;
-      ctx.fillStyle=C.paper; roundRect(o.x,fy,o.w,o.h,3); ctx.fill();
-      ctx.strokeStyle=a.c; ctx.lineWidth=3; roundRect(o.x,fy,o.w,o.h,3); ctx.stroke();
-      ctx.fillStyle=a.dk; ctx.fillRect(o.x+6,fy+8,o.w-12,3); ctx.fillRect(o.x+6,fy+15,o.w-16,3);
-      o._dy=fy;
+      // a stack of papers on the ground (shoot it)
+      ctx.fillStyle=C.paper; roundRect(o.x,o.y,o.w,o.h,3); ctx.fill();
+      ctx.strokeStyle=a.c; ctx.lineWidth=3; roundRect(o.x,o.y,o.w,o.h,3); ctx.stroke();
+      ctx.fillStyle=a.dk; for(let ry=o.y+9; ry<o.y+o.h-6; ry+=9){ ctx.fillRect(o.x+6,ry,o.w-12,3); }
     } else if(o.shape==='blob'){
       ctx.fillStyle=a.c; ctx.beginPath();
       const cx=o.x+o.w/2, cy=o.y+o.h/2, rr=o.w/2;
@@ -855,18 +854,32 @@ function drawObstacles(){
     }
     ctx.restore();
 
-    // label + action glyph
-    const ly = (o.shape==='bar')? o.y+o.h+16 : (o.shape==='fly'? (o._dy||o.y)-8 : o.y-8);
-    drawLabel(o.label, o.x+o.w/2, ly, a);
+    // big colour-coded KEY badge + readable name, above the obstacle
+    // (overhead bar labels go below it so they don't run off the top)
+    const cx=o.x+o.w/2;
+    if(o.shape==='bar') drawTag(cx, o.y+o.h, +1, a, o.label);
+    else                drawTag(cx, o.y,      -1, a, o.label);
   }
 }
-function drawLabel(txt,cx,y,a){
+// dir = -1 stacks labels upward (ground obstacles), +1 downward (overhead bar)
+function drawTag(cx, edgeY, dir, a, name){
   ctx.save();
-  ctx.font="700 12px 'Trebuchet MS',sans-serif"; ctx.textAlign='center';
-  const w=ctx.measureText(txt).width+18;
-  ctx.fillStyle='rgba(34,26,19,0.82)'; roundRect(cx-w/2,y-13,w,18,9); ctx.fill();
-  ctx.fillStyle=a.c; ctx.fillText(a.glyph+' ',cx-w/2+9,y); // glyph at left
-  ctx.fillStyle=C.cream; ctx.fillText(txt,cx+5,y);
+  ctx.textAlign='center';
+  // KEY badge nearest the obstacle — large, high-contrast, colour-matched
+  const kw=34, kh=26;
+  const keyCY = edgeY + dir*(kh/2 + 5);
+  ctx.fillStyle=a.c; roundRect(cx-kw/2, keyCY-kh/2, kw, kh, 7); ctx.fill();
+  ctx.lineWidth=2.5; ctx.strokeStyle=C.ink; roundRect(cx-kw/2, keyCY-kh/2, kw, kh, 7); ctx.stroke();
+  ctx.fillStyle=a.text; ctx.font="900 18px 'Arial Black',sans-serif";
+  ctx.textBaseline='middle'; ctx.fillText(a.key, cx, keyCY+1);
+  // NAME pill further out — bigger, near-opaque, light outline for contrast
+  const ny = keyCY + dir*(kh/2 + 13);
+  ctx.font="800 13px 'Trebuchet MS',sans-serif"; ctx.textBaseline='middle';
+  const w=ctx.measureText(name).width+18;
+  ctx.fillStyle='rgba(18,12,8,0.94)'; roundRect(cx-w/2, ny-11, w, 22, 11); ctx.fill();
+  ctx.lineWidth=1.5; ctx.strokeStyle='rgba(255,255,255,0.28)'; roundRect(cx-w/2, ny-11, w, 22, 11); ctx.stroke();
+  ctx.fillStyle=C.cream; ctx.fillText(name, cx, ny);
+  ctx.textBaseline='alphabetic';
   ctx.restore();
 }
 
@@ -1040,8 +1053,8 @@ function drawTitle(){
   ctx.fillText('A Weldwood Marketing Joint',W/2,ly+56);
 
   // action legend
-  const legend=[['▲ JUMP',C.gold,'Client Expectations'],['▼ DUCK',C.teal,'After-Hours Call'],
-                ['✕ KICK',C.red,'Bills & Scope Creep'],['◉ SHOOT',C.pink,'Unpaid Invoices']];
+  const legend=[['▲ = JUMP',C.gold,'Up Arrow / tap left'],['▼ = DUCK',C.teal,'Down Arrow / tap right'],
+                ['X = KICK',C.red,'the X key'],['Z = SHOOT',C.pink,'the Z key']];
   ctx.font="700 13px 'Trebuchet MS',sans-serif";
   let lx=W/2-300;
   for(const [k,c,d] of legend){
