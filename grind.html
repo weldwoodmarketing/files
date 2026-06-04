@@ -42,8 +42,10 @@
   /* arcade cabinet frame */
   #cab{
     position:relative;
-    width:min(100vw, calc(100vh * 0.6818)); /* keep 15:22-ish cabinet */
-    max-width:980px;
+    /* as wide as the container allows, but never so tall it needs scrolling
+       (whole cabinet is ~16:10, so cap width at 1.6x the available height) */
+    width:min(100vw, calc(100vh * 1.6));
+    max-width:1100px;
     padding:14px 14px 10px;
     border-radius:18px;
     background:linear-gradient(180deg,#3a2b1e,#241811);
