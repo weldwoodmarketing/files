@@ -1242,9 +1242,14 @@ function drawGameOver(){
   ctx.fillStyle='rgba(18,13,24,0.78)'; ctx.fillRect(0,0,W,H);
   ctx.textAlign='center';
   ctx.fillStyle=C.red; ctx.font="900 64px 'Arial Black',sans-serif";
-  ctx.strokeStyle=C.ink; ctx.lineWidth=8; ctx.strokeText('GAME OVER',W/2,H*0.26); ctx.fillText('GAME OVER',W/2,H*0.26);
+  ctx.strokeStyle=C.ink; ctx.lineWidth=8; ctx.strokeText('GAME OVER',W/2,H*0.24); ctx.fillText('GAME OVER',W/2,H*0.24);
 
-  ctx.fillStyle=C.cream; ctx.font="900 30px 'Arial Black',monospace";
+  // sarcastic send-off
+  ctx.fillStyle=C.gold; ctx.font="900 27px 'Arial Black',sans-serif";
+  ctx.strokeStyle=C.ink; ctx.lineWidth=5;
+  ctx.strokeText('GO WORK FOR SOMEONE ELSE.',W/2,H*0.325); ctx.fillText('GO WORK FOR SOMEONE ELSE.',W/2,H*0.325);
+
+  ctx.fillStyle=C.cream; ctx.font="900 28px 'Arial Black',monospace";
   ctx.fillText('DISTANCE  '+Math.floor(G.dist)+'m',W/2,H*0.40);
   ctx.font="700 18px 'Trebuchet MS',sans-serif"; ctx.fillStyle=C.gold;
   ctx.fillText('Catastrophes Survived: '+G.bossesDefeated + (G.newHi?'   ★ NEW BEST ★':''),W/2,H*0.47);
