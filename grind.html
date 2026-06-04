@@ -86,25 +86,28 @@
   #pad{position:absolute;inset:0;z-index:6;pointer-events:none;}
   .btn{
     position:absolute;
-    width:clamp(44px,9.5vmin,80px);height:clamp(44px,9.5vmin,80px);
+    width:clamp(46px,10vmin,82px);height:clamp(46px,10vmin,82px);
     border-radius:50%;border:3px solid rgba(255,255,255,.35);
-    font-weight:900;display:flex;align-items:center;justify-content:center;
+    font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
     font-size:clamp(10px,2.1vmin,14px);letter-spacing:.5px;
     pointer-events:auto;user-select:none;
     text-shadow:0 1px 1px rgba(0,0,0,.35);
-    box-shadow:0 3px 0 rgba(0,0,0,.35);opacity:.8;
+    box-shadow:0 3px 0 rgba(0,0,0,.35);opacity:.82;
   }
+  .btn b{ font-size:clamp(14px,3.1vmin,22px); }
+  .btn i{ font-style:normal; font-size:clamp(7px,1.5vmin,10px); margin-top:1px; }
+  .btn b, .btn i{ pointer-events:none; }     /* taps register on the button, not the label */
   .btn:active{transform:translateY(2px);box-shadow:none;opacity:1;}
-  /* left column: JUMP on top, KICK below */
-  #bJump{ left:3%; bottom:calc(5% + clamp(44px,9.5vmin,80px) + 10px);
-          background:#f2b134e6; border-color:var(--gold-dk); color:var(--ink); }
-  #bKick{ left:3%; bottom:5%;
+  /* left column: KICK (X) on top, SHOOT (Z) below */
+  #bKick{ left:3%; bottom:calc(5% + clamp(46px,10vmin,82px) + 10px);
           background:#d6402fe6; border-color:var(--red-dk); color:#fff6e2; }
-  /* right column: DUCK on top, SHOOT below */
-  #bDuck{ right:3%; bottom:calc(5% + clamp(44px,9.5vmin,80px) + 10px);
+  #bShoot{ left:3%; bottom:5%;
+           background:#e98ca3f2; border-color:#b14e63; color:var(--ink); }
+  /* right column: JUMP (▲) on top, DUCK (▼) below */
+  #bJump{ right:3%; bottom:calc(5% + clamp(46px,10vmin,82px) + 10px);
+          background:#f2b134e6; border-color:var(--gold-dk); color:var(--ink); }
+  #bDuck{ right:3%; bottom:5%;
           background:#1f8a82e6; border-color:var(--teal-dk); color:#fff6e2; }
-  #bShoot{ right:3%; bottom:5%;
-          background:#e98ca3f2; border-color:#b14e63; color:var(--ink); }
   /* pause — small, top-right corner */
   #bPause{ top:3%; right:2%; bottom:auto;
            width:clamp(26px,5.4vmin,40px); height:clamp(26px,5.4vmin,40px);
@@ -121,13 +124,13 @@
     <div id="screen">
       <canvas id="game" width="960" height="540"></canvas>
       <div id="pad">
-        <div class="btn" id="bJump">JUMP</div>
-        <div class="btn" id="bKick">KICK</div>
-        <div class="btn" id="bDuck">DUCK</div>
-        <div class="btn" id="bShoot">SHOOT</div>
+        <div class="btn" id="bKick"><b>X</b><i>KICK</i></div>
+        <div class="btn" id="bShoot"><b>Z</b><i>SHOOT</i></div>
+        <div class="btn" id="bJump"><b>▲</b><i>JUMP</i></div>
+        <div class="btn" id="bDuck"><b>▼</b><i>DUCK</i></div>
         <div class="btn" id="bPause">❚❚</div>
       </div>
-      <div id="hint">JUMP ▲ / KICK X left &nbsp;·&nbsp; DUCK ▼ / SHOOT Z right &nbsp;·&nbsp; keys: SPACE ▲ ▼ X Z · P pause · M mute</div>
+      <div id="hint">KICK X / SHOOT Z left &nbsp;·&nbsp; JUMP ▲ / DUCK ▼ right &nbsp;·&nbsp; keys: SPACE ▲ ▼ X Z · P pause · M mute</div>
       <div id="crt"></div>
     </div>
   </div>
@@ -310,16 +313,11 @@ function togglePause(){
 }
 // tap halves of the screen (left=jump, right=duck) — buttons sit on top and stopPropagation via own handlers
 screenEl.addEventListener('pointerdown',e=>{
-  if(e.target.classList.contains('btn')) return;
-  if(G.state==='play' && G.paused){ togglePause(); return; }  // tap anywhere to resume
+  if(e.target.classList.contains('btn')) return;       // the four action buttons handle themselves
+  if(G.state==='play' && G.paused){ togglePause(); return; } // tap anywhere to resume
   Sound.resume();
-  const r=screenEl.getBoundingClientRect();
-  const x=(e.clientX-r.left)/r.width;
-  if(x<0.5){ press('jump'); press('start'); }
-  else { touchDuck=true; press('start'); }
+  press('start');                                      // tap the screen to start / restart
 });
-screenEl.addEventListener('pointerup',e=>{ touchDuck=false; });
-screenEl.addEventListener('pointercancel',e=>{ touchDuck=false; });
 
 //---------------- high score (sandbox-safe) ----------------------------
 function loadHi(){ try{ return parseInt(localStorage.getItem('grind_hi')||'0',10)||0; }catch(e){ return 0; } }
@@ -498,7 +496,9 @@ function updatePlayer(){
   if(Input.shootEdge && P.shootCd<=0){
     P.shootCd=12;
     const sy=P.y+ (P.ducking?6:14);
-    G.shots.push({x:P.x+P.w, y:sy, w:18,h:8, vx:13, dead:false, kind:Math.random()<0.5?'inv':'cof'});
+    const kind = (G.boss && G.boss.idx===1) ? (Math.random()<0.5?'bill':'roll')  // pipe: $ bills & paper towels
+                                            : (Math.random()<0.5?'inv':'cof');
+    G.shots.push({x:P.x+P.w, y:sy, w:18,h:8, vx:13, dead:false, kind});
     Sound.shoot();
     burst(P.x+P.w+6,sy+4,C.pink,4,2);
   }
@@ -638,8 +638,8 @@ function destroyObstacle(o,msg){
 //  BOSSES
 //============================================================
 const BOSSES = [
-  {name:'THE IRS AUDIT',     tag:'homing paperwork · hit the red stamp', hp:14, color:'#cdb27a'},
-  {name:'THE BUSTED PIPE',   tag:'rising water · jump the crates · shoot the valve', hp:13, color:'#5fa6c4'},
+  {name:'THE IRS AUDIT',     tag:'throw paper & files — hit the boss OR its paperwork', hp:16, color:'#cdb27a'},
+  {name:'THE BUSTED PIPE',   tag:'hurl dollar bills & paper towels — the water is harmless', hp:16, color:'#5fa6c4'},
   {name:'THE BREAK-IN',      tag:'fast shadow · time your hits', hp:12, color:'#3a3550'},
   {name:'THE INSURANCE CLAIM',tag:'red-tape tentacles · slice the core', hp:16, color:'#b8323f'}
 ];
@@ -668,17 +668,15 @@ function bossTakeShot(s){
   if(bossCanHurt(b)) hitBoss(1);
   else burst(s.x,s.y,'#888',5,2);   // sparks off the shield when not vulnerable
 }
-// Can the boss take damage *right now*?  IRS/Pipe glow in windows; shadow only when stunned; core always.
+// Can the boss take damage *right now*?  Shadow only when stunned; everything else always.
 function bossCanHurt(b){
   if(b.idx===2) return b.state==='stun';
-  if(b.idx===3) return true;
-  return b.vuln;
+  return true;
 }
-// Weak points sit at the player's shot line (~GROUND-40) so coffee/invoices actually connect.
+// IRS & Pipe: the whole boss is the target (hit it anywhere). Others have a weak point.
 function bossWeakRect(b){
-  const wy=GROUND-60, wh=48;
-  if(b.idx===0) return {x:b.x+b.w/2-22, y:wy, w:44, h:wh};               // red stamp
-  if(b.idx===1) return {x:b.x+14,       y:wy, w:42, h:wh};               // valve
+  if(b.idx===0) return {x:b.x,y:b.y,w:b.w,h:b.h};                        // IRS — hit anywhere
+  if(b.idx===1) return {x:b.x,y:b.y,w:b.w,h:b.h};                        // Pipe — hit anywhere
   if(b.idx===2) return (b.state==='stun')?{x:b.x,y:b.y,w:b.w,h:b.h}:null;// shadow only when stunned
   if(b.idx===3) return {x:b.x+b.w/2-26, y:GROUND-64, w:52, h:52};        // core
   return null;
@@ -729,8 +727,8 @@ function updateBoss(){
     if(rectHit({x:P.x,y:P.y,w:P.w,h:P.h},{x:pr.x-pr.r,y:pr.y-pr.r,w:pr.r*2,h:pr.r*2})){
       pr.dead=true; loseHeart('HIT!');
     }
-    // player can shoot down paperwork
-    for(const s of G.shots){ if(!s.dead && rectHit(s,{x:pr.x-pr.r,y:pr.y-pr.r,w:pr.r*2,h:pr.r*2})){ s.dead=true; pr.dead=true; burst(pr.x,pr.y,C.paper,6,2);} }
+    // shooting down the flying paperwork/drips also damages the IRS & Pipe bosses
+    for(const s of G.shots){ if(!s.dead && rectHit(s,{x:pr.x-pr.r,y:pr.y-pr.r,w:pr.r*2,h:pr.r*2})){ s.dead=true; pr.dead=true; burst(pr.x,pr.y,C.paper,6,2); if(b.idx===0||b.idx===1) hitBoss(1); } }
     if(pr.life<=0||pr.x<-40||pr.x>W+40||pr.y>H+40) pr.dead=true;
   }
   b.projs=b.projs.filter(p=>!p.dead);
@@ -753,15 +751,12 @@ function bossIRS(b){
 // --- BUSTED PIPE: floods come in waves — JUMP to stay dry, shoot the valve
 function bossPipe(b){
   b.x=W-150; b.y=GROUND-170;
-  // water surges up in waves; only floods when the wave crests
+  // water still rises and falls for show, but it's purely cosmetic now — it can't hurt you
   b.phase+=0.018;
-  const surge=Math.max(0,Math.sin(b.phase));    // 0 = dry, 1 = full flood
+  const surge=Math.max(0,Math.sin(b.phase));
   b.water = GROUND - surge*78;
-  const flooding = surge>0.28;                   // water is meaningfully above the street
-  // soaked if the flood is up and you're standing in it (not airborne)
-  if(flooding && P.onGround){ if(b.t%10===0) loseHeart('SOAKED'); }
-  // occasional drip projectiles to keep you honest
-  if(b.t%100===0){ b.projs.push({x:b.x+30,y:b.y+50,vx:-3.4,vy:0,r:10,life:160,home:false}); }
+  // it spits the occasional drip you can dodge or shoot (shooting it also damages the pipe)
+  if(b.t%110===0){ b.projs.push({x:b.x+30,y:b.y+50,vx:-3.4,vy:0,r:10,life:160,home:false}); }
 }
 // --- BREAK-IN: shadow lurks, dashes (dangerous), then stuns (vulnerable)
 function bossBreakin(b){
@@ -1064,9 +1059,20 @@ function drawPickups(){
 function drawShots(){
   for(const s of G.shots){
     ctx.save();
-    ctx.fillStyle = s.kind==='cof'?C.gold:C.paper;
-    roundRect(s.x,s.y,s.w,s.h,2); ctx.fill();
-    ctx.strokeStyle=C.ink; ctx.lineWidth=1.5; roundRect(s.x,s.y,s.w,s.h,2); ctx.stroke();
+    if(s.kind==='bill'){            // dollar bill
+      ctx.fillStyle='#2f7d4f'; roundRect(s.x,s.y,s.w,s.h,2); ctx.fill();
+      ctx.strokeStyle='#0f3d24'; ctx.lineWidth=1.2; roundRect(s.x,s.y,s.w,s.h,2); ctx.stroke();
+      ctx.fillStyle=C.cream; ctx.font="900 7px sans-serif"; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('$',s.x+s.w/2,s.y+s.h/2+0.5); ctx.textBaseline='alphabetic';
+    } else if(s.kind==='roll'){     // paper-towel roll
+      ctx.fillStyle=C.cream; roundRect(s.x,s.y,s.w,s.h,4); ctx.fill();
+      ctx.strokeStyle=C.ink; ctx.lineWidth=1.2; roundRect(s.x,s.y,s.w,s.h,4); ctx.stroke();
+      ctx.strokeStyle='#c9b58e'; ctx.lineWidth=1; ctx.beginPath(); ctx.ellipse(s.x+3,s.y+s.h/2,2,s.h/2-1,0,0,Math.PI*2); ctx.stroke();
+    } else {                        // paper / coffee
+      ctx.fillStyle = s.kind==='cof'?C.gold:C.paper;
+      roundRect(s.x,s.y,s.w,s.h,2); ctx.fill();
+      ctx.strokeStyle=C.ink; ctx.lineWidth=1.5; roundRect(s.x,s.y,s.w,s.h,2); ctx.stroke();
+    }
     ctx.restore();
   }
 }
@@ -1099,16 +1105,18 @@ function drawBoss(){
     ctx.fillStyle=C.ink; ctx.fillRect(b.x+24,b.y+24,14,10); ctx.fillRect(b.x+b.w-38,b.y+24,14,10);
     ctx.fillStyle=C.redDk; ctx.fillRect(b.x+30,b.y+b.h-30,b.w-60,8);
   }
-  // weak point
-  if(wp){
-    const glow = (b.vuln||b.idx===3||b.idx===2);
-    ctx.globalAlpha=1;
-    ctx.fillStyle= glow? C.red : '#6b6b6b';
-    if(glow){ ctx.shadowColor=C.red; ctx.shadowBlur=16; }
-    roundRect(wp.x,wp.y,wp.w,wp.h,6); ctx.fill();
-    ctx.shadowBlur=0;
+  // target indicator
+  if(b.idx===3 && wp){
+    // Insurance core — small glowing weak point
+    ctx.globalAlpha=1; ctx.fillStyle=C.red; ctx.shadowColor=C.red; ctx.shadowBlur=16;
+    roundRect(wp.x,wp.y,wp.w,wp.h,6); ctx.fill(); ctx.shadowBlur=0;
     ctx.fillStyle=C.cream; ctx.font="900 10px sans-serif"; ctx.textAlign='center';
-    ctx.fillText(b.idx===0?'STAMP':(b.idx===1?'VALVE':(b.idx===3?'CORE':'')), wp.x+wp.w/2, wp.y+wp.h/2+3);
+    ctx.fillText('CORE', wp.x+wp.w/2, wp.y+wp.h/2+3);
+  } else if(b.idx===0 || b.idx===1){
+    // IRS / Pipe — whole boss is the target; pulsing red ring says "hit me anywhere"
+    ctx.globalAlpha=1; const p=0.5+0.5*Math.sin(b.t*0.18);
+    ctx.strokeStyle=C.red; ctx.lineWidth=3+2*p; ctx.shadowColor=C.red; ctx.shadowBlur=10*p;
+    roundRect(b.x-3,b.y-3,b.w+6,b.h+6,14); ctx.stroke(); ctx.shadowBlur=0;
   }
   ctx.restore();
 
