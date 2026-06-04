@@ -329,7 +329,7 @@ function saveHi(v){ try{ localStorage.setItem('grind_hi', String(v)); }catch(e){
 const G = {
   state:'title',         // title | play | dead
   t:0,                   // frame counter
-  dist:0, speed:5.2, scrollX:0,
+  dist:0, speed:4.2, scrollX:0,
   hearts:3, burnout:0,
   bossesDefeated:0,
   nextBoss:1000, bossIdx:0,
@@ -350,7 +350,7 @@ const P = {
 };
 
 function resetRun(){
-  G.state='play'; G.t=0; G.dist=0; G.speed=5.2; G.scrollX=0;
+  G.state='play'; G.t=0; G.dist=0; G.speed=4.2; G.scrollX=0;
   G.hearts=3; G.burnout=0; G.bossesDefeated=0;
   G.nextBoss=1000; G.bossIdx=0; G.inBoss=false; G.boss=null; G.bossWarn=0;
   G.obstacles.length=0; G.pickups.length=0; G.shots.length=0; G.particles.length=0; G.floaters.length=0;
@@ -518,7 +518,7 @@ function rectHit(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a
 //============================================================
 function updateWorld(){
   // difficulty ramp
-  G.speed = Math.min(13.5, 5.2 + G.dist*0.00085);
+  G.speed = Math.min(10.8, 4.2 + G.dist*0.00068);   // ~20% slower scroll for readability
   if(!G.inBoss){
     G.dist += G.speed*0.12;          // distance/score
     G.scrollX += G.speed;
@@ -640,7 +640,7 @@ function destroyObstacle(o,msg){
 const BOSSES = [
   {name:'THE IRS AUDIT',     tag:'throw paper & files — hit the boss OR its paperwork', hp:16, color:'#cdb27a'},
   {name:'THE BUSTED PIPE',   tag:'hurl dollar bills & paper towels — the water is harmless', hp:16, color:'#5fa6c4'},
-  {name:'THE BREAK-IN',      tag:'fast shadow · time your hits', hp:12, color:'#3a3550'},
+  {name:'THE BREAK-IN',      tag:'a bandit charges in — KICK them to drive them off', hp:12, color:'#3a3550'},
   {name:'THE INSURANCE CLAIM',tag:'red-tape tentacles · slice the core', hp:16, color:'#b8323f'}
 ];
 
@@ -677,7 +677,7 @@ function bossCanHurt(b){
 function bossWeakRect(b){
   if(b.idx===0) return {x:b.x,y:b.y,w:b.w,h:b.h};                        // IRS — hit anywhere
   if(b.idx===1) return {x:b.x,y:b.y,w:b.w,h:b.h};                        // Pipe — hit anywhere
-  if(b.idx===2) return (b.state==='stun')?{x:b.x,y:b.y,w:b.w,h:b.h}:null;// shadow only when stunned
+  if(b.idx===2) return null;                                            // bandit is kick-only (handled in bossBreakin)
   if(b.idx===3) return {x:b.x+b.w/2-26, y:GROUND-64, w:52, h:52};        // core
   return null;
 }
@@ -758,15 +758,26 @@ function bossPipe(b){
   // it spits the occasional drip you can dodge or shoot (shooting it also damages the pipe)
   if(b.t%110===0){ b.projs.push({x:b.x+30,y:b.y+50,vx:-3.4,vy:0,r:10,life:160,home:false}); }
 }
-// --- BREAK-IN: shadow lurks, dashes (dangerous), then stuns (vulnerable)
+// --- BREAK-IN: a bandit charges the player; KICK them as they arrive for big damage
 function bossBreakin(b){
-  if(b.state==='idle'){ b.x=W+60; b.y=GROUND-120; if(b.t%80===0){ b.state='dash'; b.dashT=0; b.y=GROUND-(60+Math.random()*80);} }
-  else if(b.state==='dash'){
-    b.x-=12; b.dashT++;
-    if(rectHit({x:P.x,y:P.y,w:P.w,h:P.h},{x:b.x,y:b.y,w:b.w,h:b.h})) { loseHeart('BREAK-IN'); b.x=-120; }
-    if(b.x< 120){ b.state='stun'; b.stunT=80; b.x=Math.max(180,Math.min(W-220,P.x+200)); }
-  } else if(b.state==='stun'){
-    b.stunT--; if(b.stunT<=0){ b.state='idle'; b.x=W+60; }
+  if(b.state==='idle'){ b.w=58; b.h=96; b.y=GROUND-b.h; b.x=W+50; b.state='lurk'; b.lurkT=45; }
+  if(b.state==='lurk'){
+    b.x=W+30; b.lurkT--; if(b.lurkT<=0){ b.state='charge'; }
+  } else if(b.state==='charge'){
+    b.x-=9;                                   // run in from the right toward the player
+    const bandit={x:b.x,y:b.y,w:b.w,h:b.h};
+    const kb=kickBox();
+    if(kb && rectHit(kb,bandit)){             // booted! big chunk of life
+      hitBoss(3); b.state='recoil'; b.vx=15; b.recoilT=24;
+      burst(b.x,b.y+b.h*0.5,C.gold,18,5); shake(12); floatText(b.x,b.y-8,'KICKED!',C.gold);
+    } else if(rectHit(bandit,{x:P.x,y:P.y,w:P.w,h:P.h})){  // ran into you
+      loseHeart('BREAK-IN!'); b.state='recoil'; b.vx=11; b.recoilT=18;
+    } else if(b.x < -b.w-30){
+      b.state='lurk'; b.lurkT=26;             // slipped past — circle back
+    }
+  } else if(b.state==='recoil'){
+    b.x+=b.vx; b.vx*=0.9; b.recoilT--;
+    if(b.recoilT<=0){ b.state='lurk'; b.lurkT=30+Math.random()*24; }
   }
 }
 // --- INSURANCE: red-tape tentacle bars sweep at high/low; slice them; core always hittable but tough
@@ -1092,12 +1103,25 @@ function drawBoss(){
   const wp=bossWeakRect(b);
   ctx.save();
   // boss body
-  if(b.idx===2){ // shadow
-    ctx.globalAlpha = b.state==='dash'?0.9:(b.state==='stun'?1:0.5);
-    ctx.fillStyle = b.state==='stun'? '#6b6486' : b.color;
-    roundRect(b.x,b.y,b.w,b.h,10); ctx.fill();
-    ctx.fillStyle=C.red; ctx.fillRect(b.x+24,b.y+30,12,8); ctx.fillRect(b.x+b.w-36,b.y+30,12,8); // eyes
-    if(b.state==='stun'){ ctx.globalAlpha=0.6; ctx.strokeStyle=C.gold; ctx.lineWidth=4; roundRect(b.x-3,b.y-3,b.w+6,b.h+6,12); ctx.stroke(); }
+  if(b.idx===2){ // the bandit
+    ctx.globalAlpha = b.state==='lurk'?0.55:1;
+    // body
+    ctx.fillStyle=b.color; roundRect(b.x,b.y+12,b.w,b.h-12,8); ctx.fill();
+    ctx.strokeStyle=C.ink; ctx.lineWidth=2; roundRect(b.x,b.y+12,b.w,b.h-12,8); ctx.stroke();
+    // legs
+    ctx.fillStyle=C.ink; ctx.fillRect(b.x+12,b.y+b.h-10,9,10); ctx.fillRect(b.x+b.w-21,b.y+b.h-10,9,10);
+    // head + robber mask
+    ctx.fillStyle='#2a2540'; ctx.beginPath(); ctx.arc(b.x+b.w/2,b.y+14,14,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=C.ink; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=C.ink; ctx.fillRect(b.x+b.w/2-14,b.y+10,28,8);
+    ctx.fillStyle=C.red; ctx.fillRect(b.x+b.w/2-9,b.y+11,5,4); ctx.fillRect(b.x+b.w/2+4,b.y+11,5,4);
+    // loot bag with $
+    ctx.fillStyle='#3a3550'; ctx.beginPath(); ctx.arc(b.x+b.w-6,b.y+b.h-26,12,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=C.gold; ctx.font="900 13px sans-serif"; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('$',b.x+b.w-6,b.y+b.h-25); ctx.textBaseline='alphabetic';
+    // KICK prompt while charging
+    if(b.state==='charge'){ ctx.fillStyle=C.red; ctx.font="900 15px 'Arial Black',sans-serif"; ctx.textAlign='center';
+      ctx.strokeStyle=C.ink; ctx.lineWidth=3; ctx.strokeText('KICK! X',b.x+b.w/2,b.y-6); ctx.fillText('KICK! X',b.x+b.w/2,b.y-6); }
   } else {
     ctx.fillStyle=b.color; roundRect(b.x,b.y,b.w,b.h,12); ctx.fill();
     ctx.strokeStyle=C.ink; ctx.lineWidth=3; roundRect(b.x,b.y,b.w,b.h,12); ctx.stroke();
