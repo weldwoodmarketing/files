@@ -105,6 +105,11 @@
           background:#1f8a82e6; border-color:var(--teal-dk); color:#fff6e2; }
   #bShoot{ right:3%; bottom:5%;
           background:#e98ca3f2; border-color:#b14e63; color:var(--ink); }
+  /* pause — small, top-right corner */
+  #bPause{ top:3%; right:2%; bottom:auto;
+           width:clamp(26px,5.4vmin,40px); height:clamp(26px,5.4vmin,40px);
+           font-size:clamp(11px,2.6vmin,15px);
+           background:rgba(20,12,8,.55); border-color:rgba(255,255,255,.55); color:#fff; opacity:.7; }
   #hint{position:absolute;left:0;right:0;bottom:1%;text-align:center;color:#fff;
     opacity:.34;font-size:clamp(8px,1.6vw,11px);z-index:6;pointer-events:none;letter-spacing:.5px;}
   @media (hover:hover) and (pointer:fine){ .btn{opacity:.62;} }
@@ -120,8 +125,9 @@
         <div class="btn" id="bKick">KICK</div>
         <div class="btn" id="bDuck">DUCK</div>
         <div class="btn" id="bShoot">SHOOT</div>
+        <div class="btn" id="bPause">❚❚</div>
       </div>
-      <div id="hint">JUMP ▲ / KICK ✕ left &nbsp;·&nbsp; DUCK ▼ / SHOOT ◉ right &nbsp;·&nbsp; keys: SPACE ▲ ▼ X Z · M mute</div>
+      <div id="hint">JUMP ▲ / KICK X left &nbsp;·&nbsp; DUCK ▼ / SHOOT Z right &nbsp;·&nbsp; keys: SPACE ▲ ▼ X Z · P pause · M mute</div>
       <div id="crt"></div>
     </div>
   </div>
@@ -153,13 +159,15 @@ const ACT = {
   shoot:{c:C.pink, dk:'#b14e63', key:'Z', text:C.ink}
 };
 
-//---------------- tiny WebAudio blips (juice, fully optional) -----------
+//---------------- shared audio context + mute -------------------------
+let _AC=null, AUDIO_MUTED=false;
+function getAC(){ if(!_AC){ try{ _AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ _AC=null; } } return _AC; }
+
+//---------------- tiny WebAudio blips (SFX) ----------------------------
 const Sound = (function(){
-  let actx=null, muted=false;
-  function ac(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ actx=null; } } return actx; }
   function blip(freq,dur,type,vol,slide){
-    if(muted) return;
-    const a=ac(); if(!a) return;
+    if(AUDIO_MUTED) return;
+    const a=getAC(); if(!a) return;
     try{
       const o=a.createOscillator(), g=a.createGain();
       o.type=type||'square'; o.frequency.value=freq;
@@ -179,8 +187,76 @@ const Sound = (function(){
     bossDie(){ blip(110,0.5,'sawtooth',0.09,0.3); },
     warn(){ blip(330,0.2,'triangle',0.05,1.0); },
     start(){ blip(520,0.12,'square',0.05,1.5); blip(700,0.14,'square',0.05,1.4); },
-    toggle(){ muted=!muted; return muted; },
-    resume(){ const a=ac(); if(a&&a.state==='suspended'){ try{a.resume();}catch(e){} } }
+    toggle(){ AUDIO_MUTED=!AUDIO_MUTED; return AUDIO_MUTED; },
+    resume(){ const a=getAC(); if(a&&a.state==='suspended'){ try{a.resume();}catch(e){} } }
+  };
+})();
+
+//---------------- procedural background music --------------------------
+// 'city' = busy walking-bass groove, 'boss' = driving rock & roll boogie.
+const Music = (function(){
+  let track=null, step=0, nextT=0, timer=null, bar=0;
+  function mf(n){ return 440*Math.pow(2,(n-69)/12); }           // midi -> Hz
+  function tone(freq,t,dur,type,vol,glide){
+    if(AUDIO_MUTED) return; const a=getAC(); if(!a) return;
+    try{
+      const o=a.createOscillator(), g=a.createGain();
+      o.type=type; o.frequency.setValueAtTime(freq,t);
+      if(glide) o.frequency.exponentialRampToValueAtTime(glide,t+dur);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+dur+0.03);
+    }catch(e){}
+  }
+  function noise(t,dur,vol,decay){
+    if(AUDIO_MUTED) return; const a=getAC(); if(!a) return;
+    try{
+      const n=Math.max(1,Math.floor(a.sampleRate*dur)); const buf=a.createBuffer(1,n,a.sampleRate); const d=buf.getChannelData(0);
+      for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,decay||2);
+      const s=a.createBufferSource(); s.buffer=buf; const g=a.createGain(); g.gain.value=vol;
+      s.connect(g); g.connect(a.destination); s.start(t);
+    }catch(e){}
+  }
+  function kick(t){ tone(110,t,0.13,'sine',0.17,42); }
+  const city={ bpm:112,
+    kick:[1,0,0,0, 0,0,1,0, 0,0,1,0, 0,0,0,0],
+    snare:[0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    hat:[1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,1],
+    bass:[33,0,0,40, 0,0,45,0, 36,0,0,43, 0,0,41,0] };
+  const cityChords=[[57,60,64],[55,59,62],[53,57,60],[55,59,62]]; // airy offbeat stabs
+  const boss={ bpm:150,
+    kick:[1,0,0,1, 1,0,0,0, 1,0,0,1, 1,0,0,0],
+    snare:[0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    hat:[1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1] };
+  const bossRoots=[40,40,45,40];              // E E A E — bluesy I-I-IV-I
+  const boogie=[0,0,4,4,7,7,9,9];             // root-3rd-5th-6th boogie eighths
+  function schedule(){
+    const a=getAC(); if(!a) return;
+    const st=(60/((track==='boss')?boss.bpm:city.bpm))/4;   // 16th-note length
+    let guard=0;
+    while(nextT < a.currentTime + 0.18 && guard++<64){
+      const s=((step%16)+16)%16;
+      if(track==='city'){
+        if(city.kick[s]) kick(nextT);
+        if(city.snare[s]) noise(nextT,0.09,0.09,2);
+        if(city.hat[s]) noise(nextT,0.025,0.03,3);
+        const b=city.bass[s]; if(b) tone(mf(b),nextT,0.2,'triangle',0.11);
+        if(s%4===2){ const ch=cityChords[Math.floor(step/4)%cityChords.length]; for(const n of ch) tone(mf(n+12),nextT,0.1,'sawtooth',0.02); }
+      } else if(track==='boss'){
+        if(boss.kick[s]) kick(nextT);
+        if(boss.snare[s]) noise(nextT,0.10,0.12,2);
+        if(boss.hat[s]) noise(nextT,0.02,0.028,3);
+        const root=bossRoots[bar%bossRoots.length];
+        if(s%2===0) tone(mf(root-12+boogie[(s/2)|0]),nextT,0.15,'sawtooth',0.12);
+        if(s%4===0){ tone(mf(root),nextT,0.18,'square',0.05); tone(mf(root+7),nextT,0.18,'square',0.04); }
+      }
+      nextT+=st; step++; if(step%16===0) bar++;
+    }
+  }
+  function loop(){ if(!track) return; schedule(); timer=setTimeout(loop,40); }
+  return {
+    set(t){ if(track===t) return; const a=getAC(); track=t; step=0; bar=0; if(a) nextT=a.currentTime+0.06; if(track && !timer) loop(); if(!track){ if(timer){clearTimeout(timer);timer=null;} } },
+    stop(){ track=null; if(timer){ clearTimeout(timer); timer=null; } }
   };
 })();
 
@@ -202,6 +278,7 @@ addEventListener('keydown',e=>{
   if(k==='x'&&!keys[k]) press('kick');
   if(k==='z'&&!keys[k]){ press('shoot'); press('start'); }
   if(k==='m'&&!keys[k]){ G.muted=Sound.toggle(); }
+  if((k==='p'||k==='escape')&&!keys[k]) togglePause();
   keys[k]=true;
 },{passive:false});
 addEventListener('keyup',e=>{
@@ -224,9 +301,17 @@ btn('bJump',()=>{ press('jump'); press('start'); });
 btn('bDuck',()=>{ touchDuck=true; press('start'); }, ()=>{ touchDuck=false; });
 btn('bKick',()=>{ press('kick'); press('start'); });
 btn('bShoot',()=>{ press('shoot'); press('start'); });
+btn('bPause',()=>{ togglePause(); });
+function togglePause(){
+  if(G.state!=='play') return;
+  G.paused=!G.paused;
+  const pb=document.getElementById('bPause'); if(pb) pb.textContent = G.paused?'▶':'❚❚';
+  if(G.paused){ Music.stop(); } else { Music.set(G.musicTrack); Sound.resume(); }
+}
 // tap halves of the screen (left=jump, right=duck) — buttons sit on top and stopPropagation via own handlers
 screenEl.addEventListener('pointerdown',e=>{
   if(e.target.classList.contains('btn')) return;
+  if(G.state==='play' && G.paused){ togglePause(); return; }  // tap anywhere to resume
   Sound.resume();
   const r=screenEl.getBoundingClientRect();
   const x=(e.clientX-r.left)/r.width;
@@ -255,6 +340,7 @@ const G = {
   spawnGap:70, spawnTimer:60, pickTimer:300,
   shake:0, flash:0, flashColor:'#fff',
   hi:loadHi(), muted:false, newHi:false,
+  paused:false, musicTrack:'city',
   blink:0
 };
 
@@ -273,7 +359,9 @@ function resetRun(){
   G.spawnGap=70; G.spawnTimer=50; G.pickTimer=320; G.shake=0; G.flash=0; G.newHi=false;
   P.x=150; P.y=GROUND-54; P.w=38; P.h=54; P.vy=0; P.onGround=true; P.ducking=false;
   P.kick=0; P.shootCd=0; P.invuln=0; P.shield=0; P.platform=null; P.run=0;
-  Sound.start();
+  G.paused=false; G.musicTrack='city';
+  const pb=document.getElementById('bPause'); if(pb) pb.textContent='❚❚';
+  Sound.start(); Sound.resume(); Music.set('city');
 }
 
 //============================================================
@@ -317,12 +405,16 @@ function spawnObstacle(){
 
 function spawnPickup(){
   const coffee = Math.random()<0.66;
-  G.pickups.push({
-    type: coffee?'coffee':'cash',
-    x:W+24, y:GROUND-72-Math.random()*64,
-    w: coffee?40:54, h: coffee?36:30,
-    bob:Math.random()*Math.PI*2, dead:false
-  });
+  const w = coffee?40:54, h = coffee?36:30;
+  const onGround = Math.random()<0.5;                 // either on the ground...
+  const y = onGround ? GROUND-h : GROUND-106-Math.random()*38; // ...or floating in the air
+  G.pickups.push({ type: coffee?'coffee':'cash', x:W+24, y, w, h, bob:Math.random()*Math.PI*2, dead:false });
+}
+// only drop a pickup when the spawn lane is clear, so it never lands on an obstacle
+function pickupLaneClear(){
+  if(G.spawnTimer < 22) return false;                 // an obstacle is about to spawn
+  for(const o of G.obstacles){ if(o.x > W-150) return false; } // obstacle still near the spawn point
+  return true;
 }
 
 //============================================================
@@ -353,7 +445,8 @@ function heal(){ if(G.hearts<3){ G.hearts++; floatText(P.x,P.y-12,'+1 ♥',C.pin
 function addScore(n){ G.dist+=n; }
 
 function gameOver(){
-  G.state='dead';
+  G.state='dead'; G.paused=false;
+  Music.stop();
   const sc=Math.floor(G.dist);
   if(sc>G.hi){ G.hi=sc; G.newHi=true; saveHi(sc); }
   Sound.bossDie();
@@ -449,7 +542,13 @@ function updateWorld(){
     }
     // spawn pickups
     G.pickTimer--;
-    if(G.pickTimer<=0){ spawnPickup(); G.pickTimer=260+Math.random()*260; }
+    if(G.pickTimer<=0){
+      if(pickupLaneClear()){
+        spawnPickup();
+        G.pickTimer=300+Math.random()*260;
+        G.spawnTimer=Math.max(G.spawnTimer,30); // hold the next obstacle off the fresh pickup
+      } else { G.pickTimer=16; } // lane busy — try again in a moment
+    }
   }
 
   // move + resolve obstacles
@@ -549,6 +648,7 @@ function startBoss(){
   const def=BOSSES[G.bossIdx % BOSSES.length];
   G.inBoss=true; G.bossWarn=0;
   G.obstacles.length=0; G.pickups.length=0;
+  G.musicTrack='boss'; Music.set('boss');
   flash('#fff',0.9); shake(18); Sound.warn();
   const b={
     def, idx:G.bossIdx%BOSSES.length, name:def.name, tag:def.tag,
@@ -599,6 +699,7 @@ function defeatBoss(){
   G.bossIdx++; G.nextBoss += 1000;
   G.hearts=Math.min(3,G.hearts+1); G.burnout=Math.max(0,G.burnout-30);
   P.invuln=90; P.platform=null;
+  G.musicTrack='city'; Music.set('city');     // back to the city groove
 }
 
 function updateBoss(){
@@ -740,8 +841,21 @@ function draw(){
 
   ctx.restore(); // end shake
   drawHUD();
+  if(G.state==='play' && G.paused) drawPaused();
   if(G.state==='dead') drawGameOver();
   drawFlash();
+}
+
+function drawPaused(){
+  ctx.save();
+  ctx.fillStyle='rgba(18,13,24,0.72)'; ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  ctx.fillStyle=C.gold; ctx.font="900 56px 'Arial Black',sans-serif";
+  ctx.strokeStyle=C.ink; ctx.lineWidth=7;
+  ctx.strokeText('PAUSED',W/2,H*0.46); ctx.fillText('PAUSED',W/2,H*0.46);
+  ctx.fillStyle=C.cream; ctx.font="700 16px 'Trebuchet MS',sans-serif";
+  ctx.fillText('tap ▶ , tap the screen, or press P / Esc to resume',W/2,H*0.56);
+  ctx.restore();
 }
 
 function drawFlash(){
@@ -866,34 +980,36 @@ function drawObstacles(){
       ctx.strokeStyle=C.ink; ctx.lineWidth=2; roundRect(o.x,o.y,o.w,o.h,5); ctx.stroke();
       ctx.fillStyle=a.dk; ctx.fillRect(o.x+4,o.y+o.h-10,o.w-8,6);
     }
+    drawObstacleKey(o,a);   // the button symbol (▲ ▼ X Z) right on the obstacle
     ctx.restore();
 
-    // big colour-coded KEY badge + readable name, above the obstacle
-    // (overhead bar labels go below it so they don't run off the top)
+    // obstacle name in a readable pill (overhead bars label below so it fits)
     const cx=o.x+o.w/2;
-    if(o.shape==='bar') drawTag(cx, o.y+o.h, +1, a, o.label);
-    else                drawTag(cx, o.y,      -1, a, o.label);
+    if(o.shape==='bar') drawName(cx, o.y+o.h+15, o.label);
+    else                drawName(cx, o.y-15,     o.label);
   }
 }
-// dir = -1 stacks labels upward (ground obstacles), +1 downward (overhead bar)
-function drawTag(cx, edgeY, dir, a, name){
+// the key symbol, large + outlined, centred on the obstacle body
+function drawObstacleKey(o,a){
+  const cx=o.x+o.w/2, cy=o.y+o.h/2;
+  const sz=Math.round(Math.max(15, Math.min(o.w,o.h)*0.72));
   ctx.save();
-  ctx.textAlign='center';
-  // KEY badge nearest the obstacle — large, high-contrast, colour-matched
-  const kw=34, kh=26;
-  const keyCY = edgeY + dir*(kh/2 + 5);
-  ctx.fillStyle=a.c; roundRect(cx-kw/2, keyCY-kh/2, kw, kh, 7); ctx.fill();
-  ctx.lineWidth=2.5; ctx.strokeStyle=C.ink; roundRect(cx-kw/2, keyCY-kh/2, kw, kh, 7); ctx.stroke();
-  ctx.fillStyle=a.text; ctx.font="900 18px 'Arial Black',sans-serif";
-  ctx.textBaseline='middle'; ctx.fillText(a.key, cx, keyCY+1);
-  // NAME pill further out — bigger, near-opaque, light outline for contrast
-  const ny = keyCY + dir*(kh/2 + 13);
-  ctx.font="800 13px 'Trebuchet MS',sans-serif"; ctx.textBaseline='middle';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font="900 "+sz+"px 'Arial Black',sans-serif";
+  ctx.lineWidth=Math.max(3,sz*0.2); ctx.lineJoin='round'; ctx.strokeStyle=C.ink;
+  ctx.strokeText(a.key, cx, cy+1);
+  ctx.fillStyle=a.text; ctx.fillText(a.key, cx, cy+1);
+  ctx.restore();
+}
+function drawName(cx, edgeY, name){
+  ctx.save();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font="800 13px 'Trebuchet MS',sans-serif";
   const w=ctx.measureText(name).width+18;
+  const ny = Math.max(12, edgeY);   // keep the pill on screen near the top
   ctx.fillStyle='rgba(18,12,8,0.94)'; roundRect(cx-w/2, ny-11, w, 22, 11); ctx.fill();
   ctx.lineWidth=1.5; ctx.strokeStyle='rgba(255,255,255,0.28)'; roundRect(cx-w/2, ny-11, w, 22, 11); ctx.stroke();
   ctx.fillStyle=C.cream; ctx.fillText(name, cx, ny);
-  ctx.textBaseline='alphabetic';
   ctx.restore();
 }
 
@@ -1052,8 +1168,8 @@ function drawHUD(){
   ctx.font="900 22px 'Arial Black',monospace"; ctx.textAlign='right'; ctx.fillStyle=C.cream;
   ctx.strokeStyle=C.ink; ctx.lineWidth=4;
   const sc=String(Math.floor(G.dist)).padStart(5,'0')+'m';
-  ctx.strokeText(sc,W-16,34); ctx.fillText(sc,W-16,34);
-  ctx.font="700 11px monospace"; ctx.fillStyle=C.gold; ctx.fillText('HI '+G.hi+'m',W-16,50);
+  ctx.strokeText(sc,W-58,34); ctx.fillText(sc,W-58,34);   // leave room for the pause button
+  ctx.font="700 11px monospace"; ctx.fillStyle=C.gold; ctx.fillText('HI '+G.hi+'m',W-58,50);
 
   // hearts
   ctx.textAlign='left'; ctx.font="20px sans-serif";
@@ -1160,18 +1276,21 @@ function roundRect(x,y,w,h,r){ r=Math.min(r,w/2,h/2); ctx.beginPath();
 //============================================================
 function update(){
   G.t++;
+  const frozen = (G.state==='play' && G.paused);
   // consume start edge
   if(G.state==='title'){ if(Input.startEdge){ resetRun(); } }
   else if(G.state==='dead'){ if(Input.startEdge){ resetRun(); } }
-  else if(G.state==='play'){
+  else if(G.state==='play' && !G.paused){
     updatePlayer();
     updateWorld();
   }
-  // age particles/floaters always (so death screen settles)
-  for(const p of G.particles){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.18; p.life--; }
-  G.particles=G.particles.filter(p=>p.life>0);
-  for(const f of G.floaters){ f.y-=0.7; f.life--; }
-  G.floaters=G.floaters.filter(f=>f.life>0);
+  // age particles/floaters (but freeze while paused)
+  if(!frozen){
+    for(const p of G.particles){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.18; p.life--; }
+    G.particles=G.particles.filter(p=>p.life>0);
+    for(const f of G.floaters){ f.y-=0.7; f.life--; }
+    G.floaters=G.floaters.filter(f=>f.life>0);
+  }
 
   // clear edges
   Input.jumpEdge=Input.kickEdge=Input.shootEdge=Input.startEdge=false;
