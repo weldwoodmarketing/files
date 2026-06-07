@@ -6,6 +6,8 @@ Two free, self-contained browser games. The homepage at **[ghostyandbones.com](h
 | --- | --- | --- |
 | 🦶 **Campsite Invaders** | [`campsite-invaders.html`](campsite-invaders.html) | Space-Invaders action, 100 levels, ages 8+ |
 | 🐚 **Seashell Shore Dash** | [`seashell-shore-dash.html`](seashell-shore-dash.html) | Beach seashell collecting, 10 levels, ages 4–8 |
+| 🏃 **GRIND** | [`grind.html`](grind.html) | Business-owner endless runner, 4 bosses, parody |
+| 🛸 **Conspiracy Theory Catcher** | [`conspiracy-catcher/`](conspiracy-catcher/) | Pixel cryptid-hunt platformer, 10 levels, shop upgrades |
 
 The picker lives in [`index.html`](index.html). Each game is its own single self-contained HTML file — you can also download any of them and open it directly in a browser.
 

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Conspiracy Theory Catcher</title>
+<meta name="description" content="Hunt mythical conspiracy creatures across 10 chunky-pixel levels. Net 'em before they reach safety. Mobile + desktop.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <!-- The pixel game canvas. Internal resolution 320x180, scaled with CSS pixelated. -->
+  <canvas id="game" width="320" height="180"></canvas>
+
+  <!-- ===== Touch controls (shown during play) ===== -->
+  <div id="touch" class="hidden">
+    <div id="dpad">
+      <button class="pad up"    data-btn="jump" aria-label="jump">▲</button>
+      <button class="pad left"  data-btn="left" aria-label="left">◀</button>
+      <button class="pad right" data-btn="right" aria-label="right">▶</button>
+      <button class="pad down"  data-btn="duck" aria-label="duck">▼</button>
+    </div>
+    <button id="actionBtn" data-btn="action" aria-label="catch">CATCH</button>
+  </div>
+
+  <!-- ===== Title screen ===== -->
+  <div id="titleScreen" class="screen">
+    <h1>CONSPIRACY<br>THEORY<br>CATCHER</h1>
+    <p class="tag">Hunt the cryptids. Bag 'em before they bolt.</p>
+    <button class="big" id="playBtn">PLAY</button>
+    <button class="lil" id="resetBtn">erase save</button>
+    <p class="hint">Arrows / WASD to move &middot; Space to catch &middot; or use the touch pad</p>
+  </div>
+
+  <!-- ===== Level intro ===== -->
+  <div id="introScreen" class="screen hidden">
+    <p class="kicker">LEVEL <span id="introNum">1</span></p>
+    <h2 id="introName">BIGFOOT</h2>
+    <p id="introBlurb" class="tag"></p>
+    <p class="tool">Tool: <span id="introTool">Net</span></p>
+    <button class="big" id="startBtn">GO!</button>
+  </div>
+
+  <!-- ===== Level complete ===== -->
+  <div id="completeScreen" class="screen hidden">
+    <h2 id="completeTitle">GOT IT!</h2>
+    <p class="tag" id="completeBlurb"></p>
+    <p class="coins">Coins: <span id="completeCoins">0</span></p>
+    <button class="big" id="nextBtn">NEXT</button>
+  </div>
+
+  <!-- ===== Shop ===== -->
+  <div id="shopScreen" class="screen hidden">
+    <h2>SUPPLY DEPOT</h2>
+    <p class="coins">Coins: <span id="shopCoins">0</span></p>
+    <div id="shopList"></div>
+    <p id="shopGate" class="gate"></p>
+    <button class="big" id="shopContinue">CONTINUE</button>
+  </div>
+
+  <!-- ===== Win ===== -->
+  <div id="winScreen" class="screen hidden">
+    <h1>CASE<br>CLOSED</h1>
+    <p class="tag">Every cryptid bagged. The truth is in the trunk.</p>
+    <p class="coins">Final coins: <span id="winCoins">0</span></p>
+    <button class="big" id="winBtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script src="js/sprites.js"></script>
+<script src="js/input.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/player.js"></script>
+<script src="js/creatures.js"></script>
+<script src="js/shop.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
