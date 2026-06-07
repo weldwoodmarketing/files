@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ghosty &amp; Bones Arcade 🎮</title>
-<meta name="description" content="Pick a game to play: Campsite Invaders, Seashell Shore Dash, or GRIND.">
+<meta name="description" content="Pick a game to play: Campsite Invaders, Seashell Shore Dash, GRIND, or Conspiracy Theory Catcher.">
 <style>
   :root {
     --ink: #1f2937;
@@ -92,6 +92,8 @@
   .card.seashell .play { background: linear-gradient(180deg, #ff86b3, #ff5d8f); }
   .card.grind .play { background: linear-gradient(180deg, #e2553f, #c2351f); }
   .card.grind .tag { background:#f7ede0; color:#c2351f; }
+  .card.cryptid .play { background: linear-gradient(180deg, #6b7e35, #46551f); }
+  .card.cryptid .tag { background:#eef1e2; color:#46551f; }
 
   footer { margin-top: 44px; color: #eaf7ff; font-size: 13px; text-align: center; opacity: 0.85; }
   footer a { color: #fff; }
@@ -105,7 +107,7 @@
   <header>
     <span class="badge">GHOSTY &amp; BONES ARCADE</span>
     <h1>Pick a Game! 🎮</h1>
-    <p class="sub">Three free browser games — no download, just tap and play.</p>
+    <p class="sub">Four free browser games — no download, just tap and play.</p>
   </header>
 
   <main class="cards">
@@ -319,6 +321,64 @@
           <span class="tag">Parody</span>
         </div>
         <span class="play">Play GRIND ▶</span>
+      </div>
+    </a>
+
+    <!-- Conspiracy Theory Catcher -->
+    <a class="card cryptid" href="conspiracy-catcher/index.html" aria-label="Play Conspiracy Theory Catcher">
+      <div class="art">
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" role="img" aria-hidden="true">
+          <defs>
+            <linearGradient id="cc-sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#7ec8e3"/>
+              <stop offset="1" stop-color="#bfe6c8"/>
+            </linearGradient>
+          </defs>
+          <rect width="400" height="200" fill="url(#cc-sky)"/>
+          <!-- sun -->
+          <circle cx="60" cy="48" r="20" fill="#ffe06a"/>
+          <!-- parallax pine hills -->
+          <g fill="#2f5a2c">
+            <polygon points="0,150 70,80 140,150"/><polygon points="120,150 200,70 280,150"/>
+            <polygon points="250,150 330,85 410,150"/>
+          </g>
+          <g fill="#3f7a3a">
+            <polygon points="60,165 130,100 200,165"/><polygon points="210,165 290,95 370,165"/>
+          </g>
+          <!-- ground -->
+          <rect y="160" width="400" height="40" fill="#6b4a22"/>
+          <rect y="160" width="400" height="6" fill="#4a7a2a"/>
+          <!-- cave (safety) -->
+          <path d="M330,160 a36,40 0 0 1 72,0 Z" fill="#1a1410"/>
+          <!-- Bigfoot fleeing right -->
+          <g transform="translate(250,118)">
+            <rect x="-16" y="-14" width="32" height="44" rx="6" fill="#6b4a2a" stroke="#000" stroke-width="3"/>
+            <rect x="-10" y="-30" width="20" height="20" rx="4" fill="#5a3c20" stroke="#000" stroke-width="3"/>
+            <circle cx="-3" cy="-22" r="2.5" fill="#fff"/><circle cx="6" cy="-22" r="2.5" fill="#fff"/>
+          </g>
+          <!-- Army guy with net -->
+          <g transform="translate(120,116)">
+            <rect x="-12" y="-2" width="24" height="30" rx="3" fill="#5a6e2a" stroke="#000" stroke-width="3"/>
+            <rect x="-10" y="-22" width="20" height="18" rx="3" fill="#e0a878" stroke="#000" stroke-width="3"/>
+            <rect x="-13" y="-26" width="26" height="10" rx="3" fill="#2c3a18" stroke="#000" stroke-width="3"/>
+            <line x1="12" y1="-18" x2="40" y2="-34" stroke="#7a5a2a" stroke-width="4"/>
+            <circle cx="46" cy="-38" r="12" fill="rgba(220,230,240,0.5)" stroke="#cfd8e2" stroke-width="3"/>
+          </g>
+          <!-- coins -->
+          <g fill="#f2c33c" stroke="#000" stroke-width="2">
+            <circle cx="180" cy="150" r="6"/><circle cx="300" cy="146" r="6"/><circle cx="230" cy="120" r="6"/>
+          </g>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="title"><span class="emoji">🛸🔦</span>Conspiracy Theory Catcher</div>
+        <p class="desc"><b>Bag the cryptids before they bolt.</b> A chunky-pixel side-scroller — chase Bigfoot, Mothman, the Greys &amp; more across <b>10 levels</b>, upgrade your gear in the shop, and catch 'em with nets, cages &amp; force fields.</p>
+        <div class="meta">
+          <span class="tag">Platformer</span>
+          <span class="tag">10 levels</span>
+          <span class="tag">Pixel art</span>
+        </div>
+        <span class="play">Play Conspiracy Theory Catcher ▶</span>
       </div>
     </a>
 
