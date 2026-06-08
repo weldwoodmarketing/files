@@ -26,7 +26,7 @@
     --sky-hi:#2c2350;
     --sky-mid:#7d4a64;
     --sky-lo:#e0794b;
-    --ctrlH:clamp(74px,15.5vh,126px);  /* height of the control deck under the screen */
+    --btn:clamp(54px,13vh,98px);  /* action-button size (flanking the screen) */
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html,body{height:100%;background:#0e0a07;}
@@ -63,8 +63,8 @@
   /* the screen — 16:9, sized off whichever of width/height is the tighter
      limit so the whole cabinet always fits the viewport (no top clipping) */
   #screen{
-    position:relative;
-    width:min(calc(100vw - 26px), 1100px, calc((100vh - 52px - var(--ctrlH)) * 1.7778));
+    position:relative;flex:0 0 auto;
+    width:min(calc(100vw - 2*var(--btn) - 60px), 1100px, calc((100vh - 50px) * 1.7778));
     aspect-ratio:960 / 540;
     border-radius:10px;overflow:hidden;
     background:#120d18;
@@ -84,16 +84,18 @@
   #crt::after{content:"";position:absolute;inset:0;
     background:radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.07), rgba(255,255,255,0) 60%);}
 
-  /* control deck — sits BELOW the screen so buttons never cover gameplay.
-     KICK/SHOOT on the left, JUMP/DUCK on the right, colour-matched. */
-  #controls{
-    width:100%;height:var(--ctrlH);margin-top:8px;
-    display:flex;align-items:center;justify-content:space-between;
-    padding:0 clamp(8px,3vw,30px);gap:10px;
+  /* stage = side controls flanking the screen, so buttons sit in the gutters
+     and never cover gameplay or get clipped below. */
+  #stage{
+    display:flex;flex-direction:row;align-items:center;justify-content:center;
+    gap:clamp(6px,2vw,22px);
   }
-  .cgroup{ display:flex;align-items:center;gap:clamp(12px,4vw,30px); }
+  .side{
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    gap:clamp(16px,6vh,46px);flex:0 0 auto;align-self:stretch;
+  }
   .btn{
-    width:calc(var(--ctrlH) - 22px);height:calc(var(--ctrlH) - 22px);
+    width:var(--btn);height:var(--btn);
     border-radius:50%;border:3px solid rgba(255,255,255,.45);
     font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
     font-size:clamp(10px,2.4vmin,14px);letter-spacing:.5px;color:#fff;
@@ -146,17 +148,17 @@
 
   <div id="cab">
     <div id="marquee">GRIND: The Business Owner's Gauntlet <small>A Weldwood Marketing Joint</small></div>
-    <div id="screen">
-      <canvas id="game" width="960" height="540"></canvas>
-      <div id="bPause">❚❚</div>
-      <div id="crt"></div>
-    </div>
-    <div id="controls">
-      <div class="cgroup">
+    <div id="stage">
+      <div class="side" id="sideL">
         <div class="btn" id="bKick"><b>X</b><i>KICK</i></div>
         <div class="btn" id="bShoot"><b>Z</b><i>SHOOT</i></div>
       </div>
-      <div class="cgroup">
+      <div id="screen">
+        <canvas id="game" width="960" height="540"></canvas>
+        <div id="bPause">❚❚</div>
+        <div id="crt"></div>
+      </div>
+      <div class="side" id="sideR">
         <div class="btn" id="bJump"><b>▲</b><i>JUMP</i></div>
         <div class="btn" id="bDuck"><b>▼</b><i>DUCK</i></div>
       </div>
