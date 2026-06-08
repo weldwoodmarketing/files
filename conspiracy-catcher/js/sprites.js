@@ -151,12 +151,12 @@ const Spr = (function () {
 
   /* ---------------- CRYPTIDS ---------------- */
   const CREATURE_SIZE = {
-    bigfoot: [18, 26], mothman: [20, 20], chupacabra: [18, 14], nessie: [30, 22],
-    grey: [14, 20], reptilian: [16, 22], kraken: [30, 24], jersey: [18, 24],
-    door: [16, 26], flamingo: [16, 26]
+    bigfoot: [20, 28], mothman: [22, 22], chupacabra: [22, 16], nessie: [32, 22],
+    grey: [14, 22], reptilian: [24, 22], kraken: [22, 28], jersey: [22, 24],
+    door: [16, 26], flamingo: [16, 28]
   };
   // which creatures stand on the ground (get a contact shadow)
-  const GROUNDED = { bigfoot: 1, chupacabra: 1, grey: 1, reptilian: 1, jersey: 1, door: 1, flamingo: 1 };
+  const GROUNDED = { bigfoot: 1, chupacabra: 1, grey: 1, reptilian: 1, jersey: 1, door: 1, flamingo: 1, kraken: 1 };
 
   function creature(ctx, type, x, y, facing, t) {
     const bob = Math.round(Math.sin(t * 6) * 1);
@@ -169,114 +169,212 @@ const Spr = (function () {
 
   const DRAW = {
     bigfoot(ctx) {
-      osRect(ctx, 1, 4, 16, 20, '#6b4a2a', '#8a6238', '#48301a');
-      rect(ctx, 5, 12, 8, 7, '#7d5832');                  // lit belly patch
-      rect(ctx, 6, 12, 6, 1, '#9a7042');
-      for (let i = 3; i < 15; i += 3) rect(ctx, i, 5, 1, 3, '#3c2a16'); // fur tufts
-      osRect(ctx, 4, 0, 10, 8, '#5a3c20', '#754e2a', '#3a2614'); // head
-      rect(ctx, 5, 1, 8, 1, '#754e2a');                   // brow highlight
-      rect(ctx, 6, 4, 7, 1, '#2e1f10');                   // brow ridge shadow
-      oRect(ctx, 6, 3, 3, 3, '#fff'); oRect(ctx, 10, 3, 3, 3, '#fff');
-      rect(ctx, 7, 4, 1, 1, '#000'); rect(ctx, 11, 4, 1, 1, '#000'); glint(ctx, 7, 3); glint(ctx, 11, 3);
-      rect(ctx, 8, 6, 2, 1, '#2e1f10');                   // nostrils/mouth
-      osRect(ctx, 4, 22, 5, 3, '#3c2a16', '#523a1f', '#241608'); osRect(ctx, 10, 22, 5, 3, '#3c2a16', '#523a1f', '#241608');
-      osRect(ctx, 0, 10, 3, 9, '#5a3c20', '#6f4a28', '#3a2614'); osRect(ctx, 15, 10, 3, 9, '#5a3c20', '#6f4a28', '#3a2614');
+      const B = '#6b4a2a', L = '#8a6238', D = '#46301a';
+      // long shaggy arms down both sides
+      osRect(ctx, 0, 9, 4, 13, B, L, D); osRect(ctx, 16, 9, 4, 13, B, L, D);
+      rect(ctx, 1, 20, 3, 2, '#3c2a16'); rect(ctx, 17, 20, 3, 2, '#3c2a16'); // hands
+      // two thick legs
+      osRect(ctx, 5, 19, 5, 8, B, L, D); osRect(ctx, 10, 19, 5, 8, B, L, D);
+      rect(ctx, 9, 20, 1, 7, D);                          // leg gap shadow
+      // big flat feet
+      osRect(ctx, 3, 26, 8, 2, '#3c2a16', '#523a1f', '#241608'); osRect(ctx, 10, 26, 8, 2, '#3c2a16', '#523a1f', '#241608');
+      // hunched torso
+      osRect(ctx, 3, 8, 14, 13, B, L, D);
+      rect(ctx, 6, 12, 8, 7, '#7d5832'); rect(ctx, 7, 12, 6, 1, '#9a7042'); // lit belly patch
+      // shaggy fur — vertical strands over body & arms
+      for (let i = 4; i < 17; i += 2) rect(ctx, i, 9, 1, 4, D);
+      rect(ctx, 1, 11, 1, 4, D); rect(ctx, 18, 11, 1, 4, D);
+      rect(ctx, 3, 8, 1, 2, B); rect(ctx, 16, 8, 1, 2, B); // shoulder tufts
+      // head
+      osRect(ctx, 6, 0, 9, 9, '#5a3c20', '#754e2a', '#3a2614');
+      rect(ctx, 5, 0, 1, 2, '#5a3c20'); rect(ctx, 15, 0, 1, 2, '#5a3c20'); // head fur
+      rect(ctx, 7, 4, 7, 4, '#8a6238');                   // lighter muzzle
+      rect(ctx, 6, 3, 8, 1, '#2e1f10');                   // brow ridge
+      oRect(ctx, 7, 3, 3, 3, '#fff'); oRect(ctx, 11, 3, 3, 3, '#fff');
+      rect(ctx, 8, 4, 1, 1, '#000'); rect(ctx, 12, 4, 1, 1, '#000'); glint(ctx, 8, 3); glint(ctx, 12, 3);
+      rect(ctx, 9, 5, 1, 1, '#3a2614'); rect(ctx, 11, 5, 1, 1, '#3a2614'); // nostrils
+      rect(ctx, 9, 7, 3, 1, '#2e1f10');                   // mouth
     },
     mothman(ctx, t) {
       const w = Math.sin(t * 10) * 2;
-      osRect(ctx, 6, 4, 8, 14, '#3a3a44', '#52525f', '#222230');
-      rect(ctx, 8, 6, 4, 6, '#4a4a58');                   // lit chest
-      rect(ctx, 9, 6, 2, 1, '#5e5e6e');
-      osRect(ctx, 0, 6 - w, 7, 9, '#2a2a33', '#3e3e4a', '#161620'); // wings
-      osRect(ctx, 13, 6 + w, 7, 9, '#2a2a33', '#3e3e4a', '#161620');
-      rect(ctx, 1, 8 - w, 5, 1, '#4a4a58'); rect(ctx, 14, 8 + w, 5, 1, '#1a1a24'); // wing edges
-      oRect(ctx, 7, 2, 2, 3, '#ff5a4a'); oRect(ctx, 11, 2, 2, 3, '#ff5a4a'); // glowing eyes
-      rect(ctx, 7, 2, 2, 1, '#ffb0a0'); rect(ctx, 11, 2, 2, 1, '#ffb0a0');
-      rect(ctx, 7, 1, 6, 1, '#000');
+      const WB = '#2a2a33', WL = '#3e3e4a', WD = '#161620';
+      // big spread wings with strut + scalloped lower edge
+      osRect(ctx, 0, 4 - w, 8, 12, WB, WL, WD); osRect(ctx, 14, 4 + w, 8, 12, WB, WL, WD);
+      rect(ctx, 1, 6 - w, 6, 1, WL); rect(ctx, 15, 6 + w, 6, 1, WL);        // leading edge
+      rect(ctx, 2, 5 - w, 1, 9, WD); rect(ctx, 5, 5 - w, 1, 9, WD);          // wing struts
+      rect(ctx, 16, 5 + w, 1, 9, WD); rect(ctx, 19, 5 + w, 1, 9, WD);
+      // legs
+      osRect(ctx, 8, 16, 3, 5, '#222230', '#36363f', '#14141c'); osRect(ctx, 11, 16, 3, 5, '#222230', '#36363f', '#14141c');
+      // arms
+      osRect(ctx, 5, 7, 3, 6, WB, WL, WD); osRect(ctx, 14, 7, 3, 6, WB, WL, WD);
+      // torso
+      osRect(ctx, 7, 4, 8, 13, '#3a3a44', '#52525f', '#222230');
+      rect(ctx, 9, 6, 4, 7, '#4a4a58'); rect(ctx, 9, 6, 2, 1, '#5e5e6e');   // chest fuzz
+      // head, antennae, glowing eyes
+      rect(ctx, 9, 0, 1, 2, WD); rect(ctx, 12, 0, 1, 2, WD);                 // antennae
+      osRect(ctx, 8, 1, 6, 4, '#33333d', '#46464f', '#1c1c26');
+      oRect(ctx, 8, 2, 2, 2, '#ff5a4a'); oRect(ctx, 12, 2, 2, 2, '#ff5a4a'); // glowing eyes
+      rect(ctx, 8, 2, 2, 1, '#ffb0a0'); rect(ctx, 12, 2, 2, 1, '#ffb0a0');
     },
     chupacabra(ctx) {
-      osRect(ctx, 2, 4, 14, 8, '#5a6650', '#74826a', '#3a4434');
-      rect(ctx, 4, 8, 10, 3, '#6a785e');                  // lit belly
-      for (let i = 3; i < 14; i += 3) { rect(ctx, i, 1, 1, 4, '#2a3026'); rect(ctx, i, 1, 1, 1, '#48543e'); } // spines + lit tips
-      osRect(ctx, 11, 1, 6, 6, '#4a564a', '#5e6c5c', '#323c32'); // head
-      oRect(ctx, 13, 3, 2, 2, '#ff4a3a'); rect(ctx, 14, 3, 1, 1, '#ffb0a0'); // glowing eye
-      rect(ctx, 15, 5, 1, 1, '#2a3026');
-      osRect(ctx, 3, 11, 2, 3, '#3a463a', '#4c5a4a', '#26302a'); osRect(ctx, 12, 11, 2, 3, '#3a463a', '#4c5a4a', '#26302a');
+      const B = '#5a6650', L = '#74826a', D = '#3a4434';
+      const LG = '#3a463a', LL = '#4c5a4a', LD = '#26302a';
+      // four legs (two front, two back) with claws
+      osRect(ctx, 3, 11, 3, 5, LG, LL, LD); osRect(ctx, 7, 11, 3, 4, LG, LL, LD);
+      osRect(ctx, 13, 11, 3, 4, LG, LL, LD); osRect(ctx, 16, 11, 3, 5, LG, LL, LD);
+      rect(ctx, 3, 15, 3, 1, '#cfcf6a'); rect(ctx, 16, 15, 3, 1, '#cfcf6a'); // claws
+      // thin up-curling tail (back-left)
+      osRect(ctx, 0, 6, 4, 2, B, L, D); rect(ctx, 0, 5, 1, 2, B);
+      // arched body
+      osRect(ctx, 3, 5, 15, 7, B, L, D);
+      rect(ctx, 5, 9, 11, 2, '#6a785e');                  // lit belly
+      // spiny back ridge
+      for (let i = 4; i < 16; i += 2) { rect(ctx, i, 3, 1, 3, '#2a3026'); rect(ctx, i, 3, 1, 1, '#48543e'); }
+      // head + snout (right)
+      osRect(ctx, 15, 3, 7, 6, '#4a564a', '#5e6c5c', '#323c32');
+      rect(ctx, 21, 5, 1, 2, D);                          // snout tip
+      oRect(ctx, 17, 4, 2, 2, '#ff4a3a'); rect(ctx, 18, 4, 1, 1, '#ffb0a0'); // glowing eye
+      rect(ctx, 19, 7, 3, 1, '#fff');                     // fangs
     },
     nessie(ctx, t) {
-      osRect(ctx, 0, 14, 22, 8, '#2f7d54', '#46a070', '#1f5a3a');   // body
+      const B = '#2f7d54', L = '#46a070', D = '#1f5a3a';
       const h = Math.round(Math.sin(t * 5) * 2);
-      osRect(ctx, 6, 10 + h, 6, 5, '#2f7d54', '#46a070', '#1f5a3a'); // hump
-      osRect(ctx, 20, 2, 7, 14, '#3a8a60', '#52a878', '#256044');    // neck
+      // long tapering tail to the left
+      osRect(ctx, 0, 14, 7, 4, B, L, D); rect(ctx, 0, 13, 3, 2, B); rect(ctx, 1, 14, 4, 1, L);
+      // body
+      osRect(ctx, 6, 13, 15, 7, B, L, D);
+      osRect(ctx, 9, 9 + h, 6, 5, B, L, D); rect(ctx, 10, 9 + h, 4, 1, L); // hump
+      // flippers
+      osRect(ctx, 7, 18, 4, 3, '#276845', '#3a8a60', '#1a4a30'); osRect(ctx, 14, 18, 4, 3, '#276845', '#3a8a60', '#1a4a30');
+      // neck rising on the right + small head
+      osRect(ctx, 20, 2, 7, 14, '#3a8a60', '#52a878', '#256044');
       rect(ctx, 21, 3, 1, 12, '#5cb886');                            // neck highlight
-      osRect(ctx, 23, 0, 7, 6, '#3a8a60', '#52a878', '#256044');     // head
-      rect(ctx, 27, 2, 1, 2, '#000'); glint(ctx, 27, 2); rect(ctx, 29, 3, 1, 1, '#256044'); // eye + nostril
-      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(2, 15, 6, 1); ctx.fillRect(12, 16, 6, 1); // ripples
+      osRect(ctx, 23, 0, 8, 6, '#3a8a60', '#52a878', '#256044');     // head
+      rect(ctx, 30, 2, 1, 2, D);                                     // snout
+      rect(ctx, 27, 2, 1, 2, '#000'); glint(ctx, 27, 2);
+      // water ripples
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(2, 19, 7, 1); ctx.fillRect(12, 20, 7, 1);
     },
     grey(ctx) {
-      osRect(ctx, 3, 0, 9, 9, '#bcc6c2', '#d8e0dc', '#8e9894'); // big head
-      rect(ctx, 4, 1, 7, 1, '#e4ebE7');
-      rect(ctx, 5, 7, 5, 1, '#90999a');                   // chin shade
-      oRect(ctx, 4, 4, 3, 3, '#000'); oRect(ctx, 8, 4, 3, 3, '#000'); // almond eyes
-      glint(ctx, 5, 4); glint(ctx, 9, 4);
-      osRect(ctx, 5, 8, 5, 12, '#a8b2ae', '#c2ccc8', '#7c8682'); // body
-      rect(ctx, 6, 9, 3, 6, '#b6c0bc');
-      osRect(ctx, 3, 10, 2, 6, '#a8b2ae', '#c2ccc8', '#7c8682'); osRect(ctx, 10, 10, 2, 6, '#a8b2ae', '#c2ccc8', '#7c8682');
+      const B = '#a8b2ae', L = '#c2ccc8', D = '#7c8682';
+      // long thin limbs (arms + legs)
+      osRect(ctx, 1, 9, 2, 7, B, L, D); osRect(ctx, 11, 9, 2, 7, B, L, D);
+      rect(ctx, 1, 15, 2, 1, D); rect(ctx, 11, 15, 2, 1, D);          // hands
+      osRect(ctx, 4, 16, 2, 6, B, L, D); osRect(ctx, 8, 16, 2, 6, B, L, D);
+      rect(ctx, 4, 21, 2, 1, D); rect(ctx, 8, 21, 2, 1, D);           // feet
+      // slender torso + neck
+      osRect(ctx, 5, 8, 4, 9, B, L, D); rect(ctx, 6, 9, 2, 6, '#b6c0bc');
+      rect(ctx, 6, 6, 2, 2, B);                                       // neck
+      // big bulbous head, almond eyes
+      osRect(ctx, 2, 0, 10, 8, '#bcc6c2', '#d8e0dc', '#8e9894');
+      rect(ctx, 3, 1, 8, 1, '#e4ebe7');
+      oRect(ctx, 3, 3, 3, 3, '#000'); oRect(ctx, 8, 3, 3, 3, '#000'); glint(ctx, 4, 3); glint(ctx, 9, 3);
+      rect(ctx, 6, 6, 2, 1, '#90999a');                              // mouth slit
     },
     reptilian(ctx) {
-      osRect(ctx, 3, 2, 10, 8, '#3f7a3a', '#58a050', '#285024'); // head
-      rect(ctx, 4, 3, 8, 1, '#62ad58');
-      osRect(ctx, 5, 4, 2, 2, '#f2d23c'); osRect(ctx, 9, 4, 2, 2, '#f2d23c'); // eyes
-      rect(ctx, 6, 5, 1, 1, '#000'); rect(ctx, 10, 5, 1, 1, '#000');
-      osRect(ctx, 4, 9, 8, 13, '#2f5a2c', '#447a40', '#1d3a1a'); // body
-      for (let j = 11; j < 21; j += 3) { rect(ctx, 5, j, 6, 1, '#3f7038'); rect(ctx, 6, j, 4, 1, '#244a20'); } // belly ridges
-      for (let i = 5; i < 12; i += 2) rect(ctx, i, 9, 1, 2, '#1f3a1c'); // back scales
-      rect(ctx, 4, 21, 2, 1, '#1d3a1a'); rect(ctx, 10, 21, 2, 1, '#1d3a1a'); // claws
+      const B = '#2f5a2c', L = '#447a40', D = '#1d3a1a';
+      // long tail curling down to the left
+      osRect(ctx, 6, 15, 5, 3, B, L, D); osRect(ctx, 3, 17, 4, 3, B, L, D); osRect(ctx, 0, 19, 4, 2, B, L, D);
+      rect(ctx, 1, 19, 2, 1, L);
+      for (let i = 2; i < 9; i += 2) rect(ctx, i, 16, 1, 1, D); // tail scales
+      // two legs with clawed feet
+      osRect(ctx, 11, 15, 3, 6, B, L, D); osRect(ctx, 15, 15, 3, 6, B, L, D);
+      rect(ctx, 11, 20, 4, 1, D); rect(ctx, 15, 20, 4, 1, D);
+      rect(ctx, 11, 21, 1, 1, '#cfcf6a'); rect(ctx, 13, 21, 1, 1, '#cfcf6a'); rect(ctx, 17, 21, 1, 1, '#cfcf6a');
+      // far arm (behind, darker)
+      osRect(ctx, 8, 9, 3, 6, '#27491f', '#3a6630', '#173012');
+      // upright torso with belly ridges + back spikes
+      osRect(ctx, 10, 7, 9, 10, B, L, D);
+      for (let j = 9; j < 16; j += 2) { rect(ctx, 11, j, 6, 1, '#3f7038'); rect(ctx, 12, j, 4, 1, '#244a20'); }
+      for (let j = 7; j < 16; j += 2) rect(ctx, 9, j, 1, 1, D); // spine
+      // near arm reaching forward + claws
+      osRect(ctx, 17, 8, 3, 6, B, L, D); rect(ctx, 18, 13, 2, 1, '#cfcf6a');
+      // head with snout + fangs
+      osRect(ctx, 13, 0, 8, 7, B, L, D);
+      for (let i = 14; i < 20; i += 2) rect(ctx, i, 0, 1, 1, D); // head crest
+      rect(ctx, 20, 3, 3, 2, B); rect(ctx, 20, 3, 3, 1, L); rect(ctx, 22, 4, 1, 1, D); // snout
+      osRect(ctx, 15, 2, 2, 2, '#f2d23c'); osRect(ctx, 18, 2, 2, 2, '#f2d23c'); // eyes
+      rect(ctx, 15, 3, 1, 1, '#000'); rect(ctx, 18, 3, 1, 1, '#000');
+      rect(ctx, 20, 5, 3, 1, '#fff');                     // teeth
     },
     kraken(ctx, t) {
-      osRect(ctx, 8, 2, 14, 12, '#6a3f8a', '#8a5faa', '#46285e'); // head
-      rect(ctx, 10, 3, 9, 1, '#9a6fba');
-      oRect(ctx, 11, 6, 2, 2, '#fff'); oRect(ctx, 17, 6, 2, 2, '#fff');
-      rect(ctx, 12, 7, 1, 1, '#000'); rect(ctx, 18, 7, 1, 1, '#000'); glint(ctx, 11, 6); glint(ctx, 17, 6);
-      for (let i = 0; i < 5; i++) {
-        const ox = i * 6, wig = Math.round(Math.sin(t * 8 + i) * 2);
-        osRect(ctx, ox, 14, 4, 10 + wig, '#7a4f9a', '#9a6fba', '#523072');
-        for (let s = 16; s < 22 + wig; s += 3) rect(ctx, ox + 1, s, 1, 1, '#c49fd8'); // suckers
+      const B = '#7a3f9a', L = '#a060c4', D = '#4e2868';
+      const A = '#8a4faa', AL = '#a878c8', AD = '#5e3478';
+      // two side fins near the top of the mantle
+      osRect(ctx, 2, 2, 5, 5, A, AL, AD); osRect(ctx, 15, 2, 5, 5, A, AL, AD);
+      // pointed mantle
+      rect(ctx, 9, 0, 4, 2, D);
+      osRect(ctx, 7, 1, 8, 6, B, L, D);
+      osRect(ctx, 5, 6, 12, 10, B, L, D);                 // head/mantle
+      rect(ctx, 7, 7, 8, 1, L);
+      // big squid eye + brow
+      oRect(ctx, 7, 9, 4, 4, '#fff'); rect(ctx, 8, 10, 2, 2, '#000'); glint(ctx, 8, 10);
+      rect(ctx, 7, 8, 5, 1, D); rect(ctx, 13, 9, 3, 3, '#3a1f4a'); // far-side shade
+      // cluster of waving arms reaching to the ground
+      for (let i = 0; i < 6; i++) {
+        const ox = 2 + i * 3, wig = Math.round(Math.sin(t * 8 + i) * 2);
+        osRect(ctx, ox, 15, 2, 11 + wig, A, AL, AD);
+        for (let s = 17; s < 25 + wig; s += 3) rect(ctx, ox, s, 1, 1, '#d8b0e8'); // suckers
       }
+      // two longer tentacles
+      osRect(ctx, 1, 15, 2, 13, B, L, D); osRect(ctx, 19, 15, 2, 13, B, L, D);
     },
     jersey(ctx, t) {
       const w = Math.sin(t * 9) * 2;
-      osRect(ctx, 6, 6, 7, 14, '#3a2a3a', '#544054', '#241624'); // body
-      rect(ctx, 7, 7, 5, 5, '#4a364a');                   // lit chest
-      osRect(ctx, 5, 0, 8, 7, '#4a3320', '#664830', '#2e1f12'); // head
-      rect(ctx, 6, 1, 6, 1, '#664830');
-      rect(ctx, 6, -2, 1, 3, '#3a2614'); rect(ctx, 11, -2, 1, 3, '#3a2614'); // horns
-      rect(ctx, 6, -2, 1, 1, '#5a4028'); rect(ctx, 11, -2, 1, 1, '#5a4028');
-      oRect(ctx, 8, 3, 2, 2, '#ff4a3a'); rect(ctx, 9, 3, 1, 1, '#ffb0a0'); // glowing eye
-      osRect(ctx, 0, 8 - w, 7, 8, '#2a1f2a', '#3e2f3e', '#180f18'); // wings
-      osRect(ctx, 12, 8 + w, 6, 8, '#2a1f2a', '#3e2f3e', '#180f18');
-      osRect(ctx, 7, 18, 5, 4, '#2a1f2a', '#3e2f3e', '#180f18'); // legs
+      const B = '#3a2a3a', L = '#544054', D = '#241624';
+      const WB = '#2a1f2a', WL = '#3e2f3e', WD = '#180f18';
+      // bat wings spread both sides, with finger struts
+      osRect(ctx, 0, 6 - w, 7, 9, WB, WL, WD); osRect(ctx, 15, 6 + w, 7, 9, WB, WL, WD);
+      rect(ctx, 1, 8 - w, 5, 1, '#4a364a'); rect(ctx, 16, 8 + w, 5, 1, '#4a364a');
+      rect(ctx, 3, 7 - w, 1, 7, WD); rect(ctx, 18, 7 + w, 1, 7, WD);
+      // forked tail curling down-left
+      osRect(ctx, 4, 16, 4, 2, B, L, D); osRect(ctx, 1, 17, 4, 2, B, L, D);
+      rect(ctx, 0, 16, 2, 1, D); rect(ctx, 0, 19, 2, 1, D);   // fork tip
+      // two legs with hooves
+      osRect(ctx, 8, 17, 3, 5, B, L, D); osRect(ctx, 12, 17, 3, 5, B, L, D);
+      rect(ctx, 8, 21, 3, 1, '#1a121a'); rect(ctx, 12, 21, 3, 1, '#1a121a');
+      // torso + small clawed arm
+      osRect(ctx, 7, 7, 8, 11, B, L, D); rect(ctx, 8, 8, 6, 4, '#4a364a');
+      osRect(ctx, 14, 9, 3, 5, B, L, D); rect(ctx, 16, 13, 1, 1, '#cfcf6a');
+      // horse-like head, horns, snout, glowing eye
+      osRect(ctx, 11, 0, 8, 7, '#4a3320', '#664830', '#2e1f12');
+      rect(ctx, 17, 3, 2, 2, '#4a3320');                      // snout
+      rect(ctx, 12, -2, 1, 3, '#3a2614'); rect(ctx, 16, -2, 1, 3, '#3a2614'); // horns
+      rect(ctx, 12, -2, 1, 1, '#5a4028'); rect(ctx, 16, -2, 1, 1, '#5a4028');
+      oRect(ctx, 13, 2, 2, 2, '#ff4a3a'); rect(ctx, 14, 2, 1, 1, '#ffb0a0');
     },
     door(ctx, t) {
-      osRect(ctx, 1, 0, 14, 26, '#8a5a2a', '#a8743a', '#5e3c1a'); // slab
-      for (let i = 3; i < 13; i += 4) rect(ctx, i, 1, 1, 24, '#6e4620'); // wood grain
-      osRect(ctx, 3, 2, 10, 11, '#6b4420', '#5e3a1a', '#86592c'); // recessed panels (inverted bevel)
-      osRect(ctx, 3, 14, 10, 10, '#6b4420', '#5e3a1a', '#86592c');
-      rect(ctx, 4, 3, 8, 1, '#4e3014'); rect(ctx, 4, 15, 8, 1, '#4e3014');
-      oRect(ctx, 11, 12, 2, 2, '#f2c33c'); glint(ctx, 11, 12); // brass knob
       const s = Math.round(Math.sin(t * 8) * 1);
+      // little flailing stick arms
+      rect(ctx, 0, 9, 1, 5, '#3a2a14'); rect(ctx, 0, 13, 2, 1, '#3a2a14');
+      rect(ctx, 15, 9, 1, 5, '#3a2a14'); rect(ctx, 14, 13, 2, 1, '#3a2a14');
+      // slab + grain + recessed panels
+      osRect(ctx, 1, 0, 14, 24, '#8a5a2a', '#a8743a', '#5e3c1a');
+      for (let i = 3; i < 13; i += 4) rect(ctx, i, 1, 1, 22, '#6e4620');
+      osRect(ctx, 3, 2, 10, 10, '#6b4420', '#5e3a1a', '#86592c');
+      osRect(ctx, 3, 13, 10, 9, '#6b4420', '#5e3a1a', '#86592c');
+      rect(ctx, 4, 3, 8, 1, '#4e3014'); rect(ctx, 4, 14, 8, 1, '#4e3014');
+      oRect(ctx, 11, 11, 2, 2, '#f2c33c'); glint(ctx, 11, 11); // brass knob
+      // two little walking feet
       osRect(ctx, 3, 24 + s, 4, 2, '#3a2a14', '#52401f', '#241608'); osRect(ctx, 9, 24 - s, 4, 2, '#3a2a14', '#52401f', '#241608');
     },
     flamingo(ctx, t) {
-      osRect(ctx, 5, 4, 9, 9, '#f25fa0', '#ff8fc0', '#c43a78'); // body
-      rect(ctx, 6, 5, 6, 1, '#ffa8d0');
-      rect(ctx, 5, 4, 1, 9, '#ff9ec8'); rect(ctx, 13, 4, 1, 9, '#ff4a96'); // neon rim
-      osRect(ctx, 8, 0, 5, 6, '#ff7ab0', '#ffa8d0', '#d2548c'); // head
-      rect(ctx, 12, 2, 3, 1, '#f2c33c'); rect(ctx, 14, 2, 1, 1, '#a8730f'); // beak + tip
-      rect(ctx, 11, 1, 1, 1, '#000'); glint(ctx, 11, 1);
+      const B = '#f25fa0', L = '#ff8fc0', D = '#c43a78';
       const k = Math.round(Math.sin(t * 6) * 2);
-      rect(ctx, 7, 13, 1, 9 + k, '#f2c33c'); rect(ctx, 10, 13, 1, 9 - k, '#f2c33c'); // legs
-      rect(ctx, 7, 17, 1, 1, '#a8730f'); rect(ctx, 10, 16, 1, 1, '#a8730f'); // knees
+      // long thin legs with backward-bending knees + feet
+      rect(ctx, 6, 16, 1, 11 + k, '#f2c33c'); rect(ctx, 9, 16, 1, 11 - k, '#f2c33c');
+      rect(ctx, 6, 21, 1, 1, '#a8730f'); rect(ctx, 9, 20, 1, 1, '#a8730f');   // knees
+      rect(ctx, 5, 27 + k, 3, 1, '#f2c33c'); rect(ctx, 8, 27 - k, 3, 1, '#f2c33c'); // feet
+      // plump body
+      osRect(ctx, 4, 9, 9, 8, B, L, D); rect(ctx, 5, 10, 6, 1, L);
+      rect(ctx, 4, 9, 1, 8, '#ff9ec8'); rect(ctx, 12, 9, 1, 8, '#ff4a96');   // neon rim
+      // folded wing
+      osRect(ctx, 5, 11, 6, 4, '#e34f90', '#ff7ab0', '#b8336e'); rect(ctx, 6, 12, 4, 1, '#ff9ec8');
+      // long curved neck up to the head
+      rect(ctx, 10, 5, 2, 5, B); rect(ctx, 11, 2, 2, 4, B); rect(ctx, 10, 5, 1, 5, L);
+      osRect(ctx, 11, 0, 4, 4, '#ff7ab0', '#ffa8d0', '#d2548c');             // head
+      rect(ctx, 14, 1, 2, 2, '#f2c33c'); rect(ctx, 15, 2, 1, 1, '#000'); rect(ctx, 15, 1, 1, 1, '#a8730f'); // hooked beak
+      rect(ctx, 12, 1, 1, 1, '#000'); glint(ctx, 12, 1);
     }
   };
 
