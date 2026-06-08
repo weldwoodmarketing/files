@@ -26,6 +26,7 @@
     --sky-hi:#2c2350;
     --sky-mid:#7d4a64;
     --sky-lo:#e0794b;
+    --ctrlH:clamp(74px,15.5vh,126px);  /* height of the control deck under the screen */
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html,body{height:100%;background:#0e0a07;}
@@ -44,7 +45,8 @@
   #cab{
     position:relative;
     width:fit-content;max-width:100vw;margin:auto;
-    padding:8px 12px 6px;
+    display:flex;flex-direction:column;align-items:stretch;
+    padding:8px 12px 10px;
     border-radius:16px;
     background:linear-gradient(180deg,#3a2b1e,#241811);
     box-shadow:0 24px 60px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.06);
@@ -62,7 +64,7 @@
      limit so the whole cabinet always fits the viewport (no top clipping) */
   #screen{
     position:relative;
-    width:min(calc(100vw - 26px), 1100px, calc((100vh - 56px) * 1.7778));
+    width:min(calc(100vw - 26px), 1100px, calc((100vh - 52px - var(--ctrlH)) * 1.7778));
     aspect-ratio:960 / 540;
     border-radius:10px;overflow:hidden;
     background:#120d18;
@@ -82,61 +84,82 @@
   #crt::after{content:"";position:absolute;inset:0;
     background:radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.07), rgba(255,255,255,0) 60%);}
 
-  /* on-screen action buttons — JUMP/KICK stacked on the left, DUCK/SHOOT on the
-     right, each coloured to match its obstacle action. Edge-hugging so they
-     clear the player; translucent so gameplay shows through. */
-  #pad{position:absolute;inset:0;z-index:6;pointer-events:none;}
+  /* control deck — sits BELOW the screen so buttons never cover gameplay.
+     KICK/SHOOT on the left, JUMP/DUCK on the right, colour-matched. */
+  #controls{
+    width:100%;height:var(--ctrlH);margin-top:8px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 clamp(8px,3vw,30px);gap:10px;
+  }
+  .cgroup{ display:flex;align-items:center;gap:clamp(12px,4vw,30px); }
   .btn{
-    position:absolute;
-    width:clamp(56px,12.5vmin,94px);height:clamp(56px,12.5vmin,94px);
-    border-radius:50%;border:3px solid rgba(255,255,255,.35);
+    width:calc(var(--ctrlH) - 22px);height:calc(var(--ctrlH) - 22px);
+    border-radius:50%;border:3px solid rgba(255,255,255,.45);
     font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
-    font-size:clamp(10px,2.1vmin,14px);letter-spacing:.5px;
-    pointer-events:auto;
-    /* kill iOS long-press selection / callout magnifier / tap highlight / gesture delay */
+    font-size:clamp(10px,2.4vmin,14px);letter-spacing:.5px;color:#fff;
     user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
     -webkit-tap-highlight-color:transparent;touch-action:none;
-    text-shadow:0 1px 1px rgba(0,0,0,.35);
-    box-shadow:0 3px 0 rgba(0,0,0,.35);opacity:.82;
+    text-shadow:0 1px 1px rgba(0,0,0,.4);
+    box-shadow:0 4px 0 rgba(0,0,0,.4);
   }
-  .btn b{ font-size:clamp(14px,3.1vmin,22px); }
-  .btn i{ font-style:normal; font-size:clamp(7px,1.5vmin,10px); margin-top:1px; }
+  .btn b{ font-size:clamp(15px,3.6vmin,24px); }
+  .btn i{ font-style:normal; font-size:clamp(8px,1.7vmin,11px); margin-top:2px; }
   .btn b, .btn i{ pointer-events:none; user-select:none;-webkit-user-select:none;-webkit-touch-callout:none; }
-  .btn:active{transform:translateY(2px);box-shadow:none;opacity:1;}
-  /* left column: KICK (X) on top, SHOOT (Z) below — lifted toward the thumb */
-  #bKick{ left:4%; bottom:calc(9% + clamp(56px,12.5vmin,94px) + 12px);
-          background:#d6402fe6; border-color:var(--red-dk); color:#fff6e2; }
-  #bShoot{ left:4%; bottom:9%;
-           background:#e98ca3f2; border-color:#b14e63; color:var(--ink); }
-  /* right column: JUMP (▲) on top, DUCK (▼) below */
-  #bJump{ right:4%; bottom:calc(9% + clamp(56px,12.5vmin,94px) + 12px);
-          background:#f2b134e6; border-color:var(--gold-dk); color:var(--ink); }
-  #bDuck{ right:4%; bottom:9%;
-          background:#1f8a82e6; border-color:var(--teal-dk); color:#fff6e2; }
-  /* pause — small, top-right corner */
-  #bPause{ top:3%; right:2%; bottom:auto;
-           width:clamp(26px,5.4vmin,40px); height:clamp(26px,5.4vmin,40px);
+  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.4);filter:brightness(1.12);}
+  #bKick{ background:var(--red);  border-color:var(--red-dk);  color:#fff6e2; }
+  #bShoot{ background:var(--pink); border-color:#b14e63;       color:var(--ink); }
+  #bJump{ background:var(--gold);  border-color:var(--gold-dk); color:var(--ink); }
+  #bDuck{ background:var(--teal);  border-color:var(--teal-dk); color:#fff6e2; }
+  /* pause — small, top-right corner of the screen */
+  #bPause{ position:absolute; top:3%; right:2%;
+           width:clamp(28px,5.6vmin,42px); height:clamp(28px,5.6vmin,42px);
            font-size:clamp(11px,2.6vmin,15px);
-           background:rgba(20,12,8,.55); border-color:rgba(255,255,255,.55); color:#fff; opacity:.7; }
-  #hint{position:absolute;left:0;right:0;bottom:1%;text-align:center;color:#fff;
-    opacity:.34;font-size:clamp(8px,1.6vw,11px);z-index:6;pointer-events:none;letter-spacing:.5px;}
-  @media (hover:hover) and (pointer:fine){ .btn{opacity:.62;} }
+           background:rgba(20,12,8,.6); border:3px solid rgba(255,255,255,.55); color:#fff;
+           border-radius:50%;display:flex;align-items:center;justify-content:center;
+           user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+           -webkit-tap-highlight-color:transparent;touch-action:none;z-index:7;
+           box-shadow:0 3px 0 rgba(0,0,0,.4);font-weight:900; }
+
+  /* rotate-to-landscape gate (mobile/portrait only) */
+  #rotate{ display:none; position:fixed; inset:0; z-index:50;
+    flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px;
+    text-align:center; color:var(--paper);
+    background:radial-gradient(700px 500px at 50% 30%,#3a2b1e,#0e0a07); }
+  #rotate .phone{ font-size:clamp(48px,16vw,84px); line-height:1; animation:tilt 1.8s ease-in-out infinite; }
+  #rotate .rmsg{ font-weight:900; text-transform:uppercase; letter-spacing:1px;
+    color:var(--gold); font-size:clamp(20px,7vw,32px); text-shadow:0 2px 0 var(--red-dk); }
+  #rotate .rsub{ font-size:clamp(12px,3.6vw,16px); opacity:.85; max-width:320px; }
+  @keyframes tilt{ 0%,42%{transform:rotate(0)} 58%,100%{transform:rotate(-90deg)} }
+  @media (orientation:portrait) and (pointer:coarse){
+    #rotate{ display:flex; }
+    #cab{ display:none; }
+  }
 </style>
 </head>
 <body>
+  <!-- portrait gate: GRIND is landscape-only on phones -->
+  <div id="rotate">
+    <div class="phone">📱</div>
+    <div class="rmsg">Turn your phone sideways</div>
+    <div class="rsub">GRIND plays in landscape. Rotate your phone to start grinding.<br>A Weldwood Marketing Joint</div>
+  </div>
+
   <div id="cab">
     <div id="marquee">GRIND: The Business Owner's Gauntlet <small>A Weldwood Marketing Joint</small></div>
     <div id="screen">
       <canvas id="game" width="960" height="540"></canvas>
-      <div id="pad">
+      <div id="bPause">❚❚</div>
+      <div id="crt"></div>
+    </div>
+    <div id="controls">
+      <div class="cgroup">
         <div class="btn" id="bKick"><b>X</b><i>KICK</i></div>
         <div class="btn" id="bShoot"><b>Z</b><i>SHOOT</i></div>
+      </div>
+      <div class="cgroup">
         <div class="btn" id="bJump"><b>▲</b><i>JUMP</i></div>
         <div class="btn" id="bDuck"><b>▼</b><i>DUCK</i></div>
-        <div class="btn" id="bPause">❚❚</div>
       </div>
-      <div id="hint">KICK X / SHOOT Z left &nbsp;·&nbsp; JUMP ▲ / DUCK ▼ right &nbsp;·&nbsp; keys: SPACE ▲ ▼ X Z · P pause · M mute</div>
-      <div id="crt"></div>
     </div>
   </div>
 
@@ -321,13 +344,18 @@ function togglePause(){
   const pb=document.getElementById('bPause'); if(pb) pb.textContent = G.paused?'▶':'❚❚';
   if(G.paused){ Music.stop(); } else { Music.set(G.musicTrack); Sound.resume(); }
 }
-// tap halves of the screen (left=jump, right=duck) — buttons sit on top and stopPropagation via own handlers
+// tap the screen to start / restart (or resume when paused)
 screenEl.addEventListener('pointerdown',e=>{
   if(e.target.classList.contains('btn')) return;       // the four action buttons handle themselves
   if(G.state==='play' && G.paused){ togglePause(); return; } // tap anywhere to resume
   Sound.resume();
-  press('start');                                      // tap the screen to start / restart
+  press('start');
 });
+// landscape-only on phones: pause the run if rotated to portrait so you don't die behind the gate
+function isPortraitPhone(){ try{ return window.matchMedia('(orientation:portrait) and (pointer:coarse)').matches; }catch(_){ return false; } }
+function onOrient(){ if(isPortraitPhone() && G.state==='play' && !G.paused) togglePause(); }
+window.addEventListener('orientationchange', ()=>setTimeout(onOrient,200));
+window.addEventListener('resize', onOrient);
 
 //---------------- high score (sandbox-safe) ----------------------------
 function loadHi(){ try{ return parseInt(localStorage.getItem('grind_hi')||'0',10)||0; }catch(e){ return 0; } }
@@ -356,6 +384,7 @@ const P = {
   x:150, y:GROUND-54, w:38, h:54,
   vy:0, onGround:true, ducking:false,
   kick:0, shootCd:0, invuln:0, shield:0, platform:null,
+  jumpBuf:0, coyote:0,
   run:0
 };
 
@@ -366,7 +395,7 @@ function resetRun(){
   G.obstacles.length=0; G.pickups.length=0; G.shots.length=0; G.particles.length=0; G.floaters.length=0;
   G.spawnGap=70; G.spawnTimer=50; G.pickTimer=320; G.lastObKey=''; G.shake=0; G.flash=0; G.newHi=false;
   P.x=150; P.y=GROUND-54; P.w=38; P.h=54; P.vy=0; P.onGround=true; P.ducking=false;
-  P.kick=0; P.shootCd=0; P.invuln=0; P.shield=0; P.platform=null; P.run=0;
+  P.kick=0; P.shootCd=0; P.invuln=0; P.shield=0; P.platform=null; P.jumpBuf=0; P.coyote=0; P.run=0;
   G.paused=false; G.musicTrack='city';
   const pb=document.getElementById('bPause'); if(pb) pb.textContent='❚❚';
   Sound.start(); Sound.resume(); Music.set('city');
@@ -498,14 +527,17 @@ function gameOver(){
 //============================================================
 //  PLAYER UPDATE
 //============================================================
-const JUMP_V = -15.4, GRAV = 0.86;
+const JUMP_V = -16.6, GRAV = 0.8;   // higher, floatier jump = easier to clear obstacles
 function updatePlayer(){
   P.run+=1;
   const wantDuck = (Input.duckHeld || touchDuck);
 
-  // jump
-  if(Input.jumpEdge && (P.onGround || P.platform)){
-    P.vy=JUMP_V; P.onGround=false; P.platform=null; Sound.jump();
+  // jump — buffered (a press just before landing still fires) + coyote time
+  // (brief grace after leaving the ground), so taps feel responsive
+  if(Input.jumpEdge) P.jumpBuf=9;
+  if(P.jumpBuf>0) P.jumpBuf--;
+  if(P.jumpBuf>0 && (P.onGround || P.platform || P.coyote>0)){
+    P.vy=JUMP_V; P.onGround=false; P.platform=null; P.jumpBuf=0; P.coyote=0; Sound.jump();
     burst(P.x+P.w/2,GROUND,C.paper,5,2);
   }
   // gravity
@@ -523,8 +555,8 @@ function updatePlayer(){
     }
   }
   if(P.y+P.h>=GROUND){ landY=GROUND; landed=true; P.platform=null; }
-  if(landed){ P.y=landY-P.h; P.vy=0; P.onGround=true; }
-  else { if(P.y+P.h<landY-2) P.onGround=false; }
+  if(landed){ P.y=landY-P.h; P.vy=0; P.onGround=true; P.coyote=7; }
+  else { if(P.y+P.h<landY-2) P.onGround=false; if(P.coyote>0) P.coyote--; }
 
   // duck (only meaningful on ground)
   P.ducking = wantDuck && P.onGround;
@@ -619,8 +651,8 @@ function updateWorld(){
 
     // Each obstacle's intended action is the ONLY safe one (no jump-spamming past everything):
     if(o.action==='jump'){
-      // ground hazard — safe only if airborne with feet above its top
-      if(!P.onGround && (P.y+P.h) <= o.y+8){ /* cleared */ }
+      // ground hazard — safe if airborne with feet roughly above its top (forgiving)
+      if(!P.onGround && (P.y+P.h) <= o.y+16){ /* cleared */ }
       else { o.collided=true; loseHeart('JUMP!'); }
     } else if(o.action==='duck'){
       // overhead hazard — safe only if ducking (jumping into it still hits)
