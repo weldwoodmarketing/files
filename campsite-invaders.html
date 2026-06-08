@@ -12,7 +12,7 @@
     --accent2: #c9a06a;
     --text: #e8f0e4;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0;
     padding: 0;
@@ -82,6 +82,7 @@
     box-shadow: 0 12px 40px rgba(0,0,0,.5), inset 0 0 60px rgba(0,0,0,.4);
     display: block;
     touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   }
   #pauseBtn {
     position: absolute;
@@ -128,6 +129,7 @@
     font-weight: bold;
     border-radius: 8px;
     cursor: pointer;
+    touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
     font-family: inherit;
     box-shadow: 0 4px 0 #4f7d36;
     transition: transform .05s, box-shadow .05s;

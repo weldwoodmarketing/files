@@ -88,7 +88,7 @@
   #pad{position:absolute;inset:0;z-index:6;pointer-events:none;}
   .btn{
     position:absolute;
-    width:clamp(46px,10vmin,82px);height:clamp(46px,10vmin,82px);
+    width:clamp(56px,12.5vmin,94px);height:clamp(56px,12.5vmin,94px);
     border-radius:50%;border:3px solid rgba(255,255,255,.35);
     font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
     font-size:clamp(10px,2.1vmin,14px);letter-spacing:.5px;
@@ -103,15 +103,15 @@
   .btn i{ font-style:normal; font-size:clamp(7px,1.5vmin,10px); margin-top:1px; }
   .btn b, .btn i{ pointer-events:none; user-select:none;-webkit-user-select:none;-webkit-touch-callout:none; }
   .btn:active{transform:translateY(2px);box-shadow:none;opacity:1;}
-  /* left column: KICK (X) on top, SHOOT (Z) below */
-  #bKick{ left:3%; bottom:calc(5% + clamp(46px,10vmin,82px) + 10px);
+  /* left column: KICK (X) on top, SHOOT (Z) below — lifted toward the thumb */
+  #bKick{ left:4%; bottom:calc(9% + clamp(56px,12.5vmin,94px) + 12px);
           background:#d6402fe6; border-color:var(--red-dk); color:#fff6e2; }
-  #bShoot{ left:3%; bottom:5%;
+  #bShoot{ left:4%; bottom:9%;
            background:#e98ca3f2; border-color:#b14e63; color:var(--ink); }
   /* right column: JUMP (▲) on top, DUCK (▼) below */
-  #bJump{ right:3%; bottom:calc(5% + clamp(46px,10vmin,82px) + 10px);
+  #bJump{ right:4%; bottom:calc(9% + clamp(56px,12.5vmin,94px) + 12px);
           background:#f2b134e6; border-color:var(--gold-dk); color:var(--ink); }
-  #bDuck{ right:3%; bottom:5%;
+  #bDuck{ right:4%; bottom:9%;
           background:#1f8a82e6; border-color:var(--teal-dk); color:#fff6e2; }
   /* pause — small, top-right corner */
   #bPause{ top:3%; right:2%; bottom:auto;
