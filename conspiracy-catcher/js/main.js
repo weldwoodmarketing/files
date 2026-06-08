@@ -243,6 +243,11 @@
     Render.ground(ctx, g.env, g.camX, g.width, g.groundY);
     g.platforms.forEach(function (p) { Render.platform(ctx, p); });
     Render.safety(ctx, g.env, g.creature.safetyX - 8, g.groundY);
+    // soft contact shadows for depth (drawn over ground, under sprites)
+    Spr.shadow(ctx, g.player.centerX(), g.groundY, 13);
+    if (g.quest && !g.quest.caught) Spr.shadow(ctx, g.quest.centerX(), g.groundY, g.quest.w);
+    if (g.creature.state !== 'caught' && Spr.GROUNDED[g.creature.type])
+      Spr.shadow(ctx, g.creature.centerX(), g.groundY, g.creature.w * 0.8);
     for (const c of g.coinItems) if (!c.got) Spr.coin(ctx, c.x, c.y, g.t);
     if (g.quest) g.quest.draw(ctx);
     g.creature.draw(ctx);

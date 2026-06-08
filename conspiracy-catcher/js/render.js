@@ -32,24 +32,30 @@ const Render = (function () {
     }
   }
 
-  // parallax hills — camX scaled to two depths
+  // nudge a #rrggbb hex by amt per channel (for cheap shading)
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const cl = v => Math.max(0, Math.min(255, v + amt));
+    const r = cl((n >> 16) & 255), g = cl((n >> 8) & 255), b = cl(n & 255);
+    return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+  }
+
+  // parallax hills — camX scaled to two depths, each lit on the left slope
   function hills(ctx, env, camX, levelWidth) {
     const far = -camX * 0.25, near = -camX * 0.5;
-    ctx.fillStyle = env.hill2;
-    for (let i = -1; i < levelWidth / 120 + 2; i++) {
-      const bx = far + i * 120;
-      tri(ctx, bx, 130, 120, 46);
-    }
-    ctx.fillStyle = env.hill;
-    for (let i = -1; i < levelWidth / 90 + 2; i++) {
-      const bx = near + i * 90 + 40;
-      tri(ctx, bx, 138, 90, 38);
-    }
+    const f2 = env.hill2, f1 = env.hill;
+    for (let i = -1; i < levelWidth / 120 + 2; i++)
+      tri(ctx, far + i * 120, 130, 120, 46, f2, shade(f2, 24), shade(f2, -22));
+    for (let i = -1; i < levelWidth / 90 + 2; i++)
+      tri(ctx, near + i * 90 + 40, 138, 90, 38, f1, shade(f1, 28), shade(f1, -24));
   }
-  function tri(ctx, x, baseY, w, h) {
+  function tri(ctx, x, baseY, w, h, fill, light, dark) {
+    ctx.fillStyle = fill;
     ctx.beginPath();
     ctx.moveTo(x, baseY); ctx.lineTo(x + w / 2, baseY - h); ctx.lineTo(x + w, baseY);
     ctx.closePath(); ctx.fill();
+    if (light) { ctx.strokeStyle = light; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, baseY); ctx.lineTo(x + w / 2, baseY - h); ctx.stroke(); }
+    if (dark) { ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + w / 2, baseY - h); ctx.lineTo(x + w, baseY); ctx.stroke(); }
   }
 
   function ground(ctx, env, camX, levelWidth, groundY) {
@@ -58,13 +64,19 @@ const Render = (function () {
     ctx.fillStyle = env.ground;
     ctx.fillRect(0, groundY, levelWidth, BH - groundY + 40);
     ctx.fillStyle = env.groundTop;
-    ctx.fillRect(0, groundY, levelWidth, 3);
-    // chunky tile speckle
+    ctx.fillRect(0, groundY, levelWidth, 2);              // lit crust
+    ctx.fillStyle = shade(env.groundTop, 30);
+    ctx.fillRect(0, groundY, levelWidth, 1);              // bright top edge
+    ctx.fillStyle = shade(env.ground, -22);
+    ctx.fillRect(0, groundY + 3, levelWidth, 2);          // shadow band under crust
+    // chunky tile lines + dither speckle
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     for (let x = 0; x < levelWidth; x += 16) {
       ctx.fillRect(x, groundY + 6, 1, BH - groundY);
       if ((x / 16) % 2 === 0) ctx.fillRect(x + 8, groundY + 10, 2, 2);
     }
+    ctx.fillStyle = shade(env.ground, 22);                // scattered lit pebbles
+    for (let x = 6; x < levelWidth; x += 37) ctx.fillRect(x, groundY + 7 + (x % 3) * 4, 2, 1);
   }
 
   function platform(ctx, p) {
