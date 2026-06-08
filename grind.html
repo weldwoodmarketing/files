@@ -726,6 +726,8 @@ function startBoss(){
   const def=BOSSES[G.bossIdx % BOSSES.length];
   G.inBoss=true; G.bossWarn=0;
   G.obstacles.length=0; G.pickups.length=0;
+  // checkpoint: enter every catastrophe at full morale so a single hit can't one-shot you
+  G.hearts=3; G.burnout=Math.max(0,G.burnout-40); P.invuln=Math.max(P.invuln,30);
   G.musicTrack='boss'; Music.set('boss');
   flash('#fff',0.9); shake(18); Sound.warn();
   const b={
@@ -1166,6 +1168,78 @@ function drawShots(){
   }
 }
 
+// THE IRS AUDIT — a giant clipboard with an AUDIT stamp and angry eyes
+function drawBossClipboard(b){
+  const x=b.x,y=b.y,w=b.w,h=b.h;
+  ctx.fillStyle='#7a5a32'; roundRect(x,y,w,h,8); ctx.fill();           // board
+  ctx.strokeStyle=C.ink; ctx.lineWidth=3; roundRect(x,y,w,h,8); ctx.stroke();
+  ctx.fillStyle=C.cream; roundRect(x+10,y+22,w-20,h-34,3); ctx.fill(); // paper
+  ctx.strokeStyle=C.ink; ctx.lineWidth=1.5; roundRect(x+10,y+22,w-20,h-34,3); ctx.stroke();
+  ctx.strokeStyle='rgba(34,26,19,0.22)'; ctx.lineWidth=1.5;            // ruled lines
+  for(let ly=y+58; ly<y+h-18; ly+=14){ ctx.beginPath(); ctx.moveTo(x+18,ly); ctx.lineTo(x+w-18,ly); ctx.stroke(); }
+  ctx.fillStyle=C.ink; ctx.fillRect(x+28,y+38,17,8); ctx.fillRect(x+w-45,y+38,17,8); // angry eyes
+  ctx.fillStyle=C.ink; ctx.fillRect(x+30,y+34,13,3); ctx.fillRect(x+w-43,y+34,13,3); // brows
+  ctx.save(); ctx.translate(x+w/2,y+h*0.62); ctx.rotate(-0.16);        // AUDIT stamp
+  ctx.strokeStyle=C.red; ctx.lineWidth=3; ctx.strokeRect(-40,-14,80,28);
+  ctx.fillStyle=C.red; ctx.font="900 17px 'Arial Black',sans-serif"; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('AUDIT',0,1); ctx.textBaseline='alphabetic'; ctx.restore();
+  ctx.fillStyle='#b9bdc4'; roundRect(x+w/2-19,y-9,38,18,4); ctx.fill(); // metal clip
+  ctx.strokeStyle=C.ink; ctx.lineWidth=2; roundRect(x+w/2-19,y-9,38,18,4); ctx.stroke();
+  ctx.fillStyle='#8b9097'; roundRect(x+w/2-9,y-13,18,8,3); ctx.fill();
+}
+// THE BUSTED PIPE — an actual plumbing pipe with flanges + a valve wheel
+function drawBossPipe(b){
+  const x=b.x,y=b.y,w=b.w,h=b.h;
+  ctx.fillStyle='#6f7e88'; roundRect(x+18,y,w-36,h,12); ctx.fill();    // pipe body
+  ctx.strokeStyle=C.ink; ctx.lineWidth=3; roundRect(x+18,y,w-36,h,12); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.18)'; roundRect(x+26,y+8,9,h-16,5); ctx.fill(); // sheen
+  for(const fy of [y+8, y+h*0.5-8, y+h-26]){                          // flanges + bolts
+    ctx.fillStyle='#566169'; roundRect(x+8,fy,w-16,16,4); ctx.fill();
+    ctx.strokeStyle=C.ink; ctx.lineWidth=2; roundRect(x+8,fy,w-16,16,4); ctx.stroke();
+    ctx.fillStyle='#2c343a'; for(let bx=x+18; bx<x+w-14; bx+=15) ctx.fillRect(bx,fy+5,4,6);
+  }
+  const vx=x+w/2, vy=y+h*0.30;                                        // valve wheel
+  ctx.strokeStyle=C.red; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(vx,vy,19,0,Math.PI*2); ctx.stroke();
+  ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(vx-19,vy); ctx.lineTo(vx+19,vy); ctx.moveTo(vx,vy-19); ctx.lineTo(vx,vy+19); ctx.stroke();
+  ctx.fillStyle=C.redDk; ctx.beginPath(); ctx.arc(vx,vy,6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#9fd6ee'; ctx.beginPath();                            // drip
+  ctx.arc(x+w-24,y+h-12+Math.abs(Math.sin(b.t*0.12))*8,4,0,Math.PI*2); ctx.fill();
+}
+// THE BREAK-IN — a masked bandit with a loot bag
+function drawBossBandit(b){
+  ctx.globalAlpha = b.state==='lurk'?0.55:1;
+  ctx.fillStyle=b.color; roundRect(b.x,b.y+12,b.w,b.h-12,8); ctx.fill();
+  ctx.strokeStyle=C.ink; ctx.lineWidth=2; roundRect(b.x,b.y+12,b.w,b.h-12,8); ctx.stroke();
+  ctx.fillStyle=C.ink; ctx.fillRect(b.x+12,b.y+b.h-10,9,10); ctx.fillRect(b.x+b.w-21,b.y+b.h-10,9,10);
+  ctx.fillStyle='#2a2540'; ctx.beginPath(); ctx.arc(b.x+b.w/2,b.y+14,14,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=C.ink; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle=C.ink; ctx.fillRect(b.x+b.w/2-14,b.y+10,28,8);
+  ctx.fillStyle=C.red; ctx.fillRect(b.x+b.w/2-9,b.y+11,5,4); ctx.fillRect(b.x+b.w/2+4,b.y+11,5,4);
+  ctx.fillStyle='#3a3550'; ctx.beginPath(); ctx.arc(b.x+b.w-6,b.y+b.h-26,12,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=C.gold; ctx.font="900 13px sans-serif"; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('$',b.x+b.w-6,b.y+b.h-25); ctx.textBaseline='alphabetic';
+  if(b.state==='charge'){ ctx.fillStyle=C.red; ctx.font="900 15px 'Arial Black',sans-serif"; ctx.textAlign='center';
+    ctx.strokeStyle=C.ink; ctx.lineWidth=3; ctx.strokeText('KICK! X',b.x+b.w/2,b.y-6); ctx.fillText('KICK! X',b.x+b.w/2,b.y-6); }
+  ctx.globalAlpha=1;
+}
+// THE INSURANCE CLAIM — a tangled ball of red tape with CLAIM DENIED forms
+function drawBossRedTape(b){
+  const x=b.x,y=b.y,w=b.w,h=b.h, cx=x+w/2, cy=y+h*0.42, r=w*0.42;
+  ctx.save();                                                          // form papers poking out
+  ctx.fillStyle=C.cream; ctx.strokeStyle=C.ink; ctx.lineWidth=2;
+  ctx.translate(x+16,y+20); ctx.rotate(-0.45); roundRect(-11,-15,22,30,2); ctx.fill(); roundRect(-11,-15,22,30,2); ctx.stroke();
+  ctx.restore();
+  ctx.save(); ctx.fillStyle=C.cream; ctx.strokeStyle=C.ink; ctx.lineWidth=2;
+  ctx.translate(x+w-16,y+24); ctx.rotate(0.5); roundRect(-11,-15,22,30,2); ctx.fill(); roundRect(-11,-15,22,30,2); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle=C.red; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); // tape ball
+  ctx.strokeStyle=C.ink; ctx.lineWidth=3; ctx.stroke();
+  ctx.strokeStyle=C.redDk; ctx.lineWidth=3;                            // tangled swirl
+  for(let rr=10; rr<r; rr+=9){ ctx.beginPath(); ctx.arc(cx,cy,rr, b.t*0.02+rr, b.t*0.02+rr+4.2); ctx.stroke(); }
+  ctx.fillStyle=C.cream; ctx.font="900 11px 'Arial Black',sans-serif"; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('CLAIM',cx,cy-6); ctx.fillText('DENIED',cx,cy+7); ctx.textBaseline='alphabetic';
+}
+
 function drawBoss(){
   const b=G.boss;
   // banner during intro
@@ -1180,33 +1254,11 @@ function drawBoss(){
 
   const wp=bossWeakRect(b);
   ctx.save();
-  // boss body
-  if(b.idx===2){ // the bandit
-    ctx.globalAlpha = b.state==='lurk'?0.55:1;
-    // body
-    ctx.fillStyle=b.color; roundRect(b.x,b.y+12,b.w,b.h-12,8); ctx.fill();
-    ctx.strokeStyle=C.ink; ctx.lineWidth=2; roundRect(b.x,b.y+12,b.w,b.h-12,8); ctx.stroke();
-    // legs
-    ctx.fillStyle=C.ink; ctx.fillRect(b.x+12,b.y+b.h-10,9,10); ctx.fillRect(b.x+b.w-21,b.y+b.h-10,9,10);
-    // head + robber mask
-    ctx.fillStyle='#2a2540'; ctx.beginPath(); ctx.arc(b.x+b.w/2,b.y+14,14,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=C.ink; ctx.lineWidth=2; ctx.stroke();
-    ctx.fillStyle=C.ink; ctx.fillRect(b.x+b.w/2-14,b.y+10,28,8);
-    ctx.fillStyle=C.red; ctx.fillRect(b.x+b.w/2-9,b.y+11,5,4); ctx.fillRect(b.x+b.w/2+4,b.y+11,5,4);
-    // loot bag with $
-    ctx.fillStyle='#3a3550'; ctx.beginPath(); ctx.arc(b.x+b.w-6,b.y+b.h-26,12,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle=C.gold; ctx.font="900 13px sans-serif"; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('$',b.x+b.w-6,b.y+b.h-25); ctx.textBaseline='alphabetic';
-    // KICK prompt while charging
-    if(b.state==='charge'){ ctx.fillStyle=C.red; ctx.font="900 15px 'Arial Black',sans-serif"; ctx.textAlign='center';
-      ctx.strokeStyle=C.ink; ctx.lineWidth=3; ctx.strokeText('KICK! X',b.x+b.w/2,b.y-6); ctx.fillText('KICK! X',b.x+b.w/2,b.y-6); }
-  } else {
-    ctx.fillStyle=b.color; roundRect(b.x,b.y,b.w,b.h,12); ctx.fill();
-    ctx.strokeStyle=C.ink; ctx.lineWidth=3; roundRect(b.x,b.y,b.w,b.h,12); ctx.stroke();
-    // face-ish
-    ctx.fillStyle=C.ink; ctx.fillRect(b.x+24,b.y+24,14,10); ctx.fillRect(b.x+b.w-38,b.y+24,14,10);
-    ctx.fillStyle=C.redDk; ctx.fillRect(b.x+30,b.y+b.h-30,b.w-60,8);
-  }
+  // boss body — each catastrophe drawn as the actual object it is
+  if(b.idx===0) drawBossClipboard(b);
+  else if(b.idx===1) drawBossPipe(b);
+  else if(b.idx===2) drawBossBandit(b);
+  else if(b.idx===3) drawBossRedTape(b);
   // target indicator
   if(b.idx===3 && wp){
     // Insurance core — small glowing weak point
