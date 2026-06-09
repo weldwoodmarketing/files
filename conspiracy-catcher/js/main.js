@@ -101,9 +101,19 @@
 
     const quest = level.quest ? new Quest(level.quest, Math.round(level.width * 0.28), GROUND_Y) : null;
 
+    // themed obstacles to jump over — spaced out, away from start and den.
+    // A level may list one type or several (picked per obstacle).
+    const obstacles = [];
+    const obTypes = Array.isArray(level.obstacle) ? level.obstacle : [level.obstacle];
+    for (let ox = 440; ox < level.width - 180; ox += 280 + Math.random() * 200) {
+      const ty = obTypes[Math.floor(Math.random() * obTypes.length)];
+      const sz = Render.OB_SIZE[ty] || [12, 12];
+      obstacles.push({ type: ty, x: Math.round(ox), w: sz[0], h: sz[1] });
+    }
+
     g = {
       idx: idx, level: level, env: env, width: level.width, groundY: GROUND_Y,
-      player: player, creature: creature, quest: quest,
+      player: player, creature: creature, quest: quest, obstacles: obstacles,
       platforms: platforms, coinItems: coins, particles: [],
       coins: save.coins,           // running total shown in the HUD
       camX: 0, t: 0,
@@ -197,6 +207,18 @@
             spawnText(c.x, c.y - 2, '+1', '#f2c33c'); beep(880, 0.05);
           }
         }
+        // obstacle bonk — jump them; a hit roots + knocks you back briefly
+        if (p.hitCool <= 0) {
+          for (const ob of g.obstacles) {
+            const oy = g.groundY - ob.h;
+            if (p.x < ob.x + ob.w && p.x + p.w > ob.x && p.y + p.h > oy + 3) {
+              p.stunT = 0.35; p.hitCool = 0.9; p.x = Math.max(0, p.x - 14);
+              spawnText(p.centerX(), p.y - 2, 'OOF!', '#d23b2f');
+              spawnPuff(p.centerX(), p.centerY(), '#caa'); beep(110, 0.12, 'sawtooth');
+              break;
+            }
+          }
+        }
       }
     } else {
       // won / lost transition: let the hero settle, freeze the rest
@@ -235,14 +257,18 @@
   // ---------- rendering ----------
   function drawPlay() {
     ctx.clearRect(0, 0, BW, BH);
-    Render.sky(ctx, g.env);
-    Render.hills(ctx, g.env, g.camX, g.width);
+    Render.background(ctx, g.env, g.camX, g.width, g.groundY, g.t);
 
     ctx.save();
     ctx.translate(-Math.round(g.camX), 0);
-    Render.ground(ctx, g.env, g.camX, g.width, g.groundY);
+    Render.ground(ctx, g.env, g.width, g.groundY, g.t);
     g.platforms.forEach(function (p) { Render.platform(ctx, p); });
-    Render.safety(ctx, g.env, g.creature.safetyX - 8, g.groundY);
+    Render.safety(ctx, g.env, g.creature.safetyX - 8, g.groundY, g.t);
+    // themed obstacles (with contact shadows) sit on the ground
+    for (const ob of g.obstacles) {
+      Spr.shadow(ctx, ob.x + ob.w / 2, g.groundY, ob.w);
+      Render.obstacle(ctx, ob.type, ob.x, g.groundY, g.t);
+    }
     // soft contact shadows for depth (drawn over ground, under sprites)
     Spr.shadow(ctx, g.player.centerX(), g.groundY, 13);
     if (g.quest && !g.quest.caught) Spr.shadow(ctx, g.quest.centerX(), g.groundY, g.quest.w);

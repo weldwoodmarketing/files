@@ -33,6 +33,9 @@ function Player(x, groundY, tool, cosmetics, fast) {
   this.catching = false;
   this.catchT = 0;
   this.catchDur = this.stats.windup / 1000;
+  // obstacle hit feedback
+  this.stunT = 0;     // briefly rooted after a bonk
+  this.hitCool = 0;   // ignore further hits while > 0
 }
 
 Player.prototype.centerX = function () { return this.x + this.w / 2; };
@@ -48,10 +51,15 @@ Player.prototype.startCatch = function () {
 Player.prototype.update = function (dt, inp, level) {
   const st = this.stats;
 
+  // obstacle bonk timers
+  if (this.hitCool > 0) this.hitCool -= dt;
+  if (this.stunT > 0) this.stunT -= dt;
+
   // --- horizontal (you keep chasing through the swing; only ducking roots you).
   //     The catch resolves at the END of the windup, so timing the tap is the
-  //     skill — not being frozen in place while the creature walks away. ---
-  const canMove = !this.ducking;
+  //     skill — not being frozen in place while the creature walks away.
+  //     A fresh obstacle bonk also roots you for a beat. ---
+  const canMove = !this.ducking && this.stunT <= 0;
   let move = 0;
   if (canMove) {
     if (inp.left) move -= 1;
