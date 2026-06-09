@@ -426,8 +426,102 @@ const Spr = (function () {
     rect(ctx, x + 3, y + 5, 2, 2, '#f2c33c'); glint(ctx, x + 3, y + 5);          // $ glint
   }
 
+  /* ---------------- SHOP: sea-monster keeper ----------------
+     Drawn into a 72x72 box. `talk` animates the mouth. A friendly
+     octopus merchant behind a counter, with a captain's cap. */
+  function keeper(ctx, t, talk) {
+    const oy = Math.round(Math.sin(t * 2) * 1);
+    const TB = '#5a3f8a', TL = '#7a5faa', TD = '#3a2560';
+    // tentacles resting on the counter
+    for (let i = 0; i < 3; i++) { osRect(ctx, 8 + i * 7, 50 + (i % 2), 5, 16, TB, TL, TD); rect(ctx, 9 + i * 7, 58, 1, 1, '#c49fd8'); }
+    for (let i = 0; i < 3; i++) { osRect(ctx, 44 + i * 7, 50 + ((i + 1) % 2), 5, 16, TB, TL, TD); rect(ctx, 45 + i * 7, 58, 1, 1, '#c49fd8'); }
+    // mantle / head
+    osRect(ctx, 18, 14 + oy, 36, 30, '#6a4f9a', '#8a6fba', '#46306a');
+    rect(ctx, 22, 16 + oy, 28, 2, '#9a7fca');
+    // a coin pinched in a raised tentacle
+    osRect(ctx, 52, 30 + oy, 4, 12, TB, TL, TD);
+    coin(ctx, 51, 26 + oy, t);
+    // captain's cap
+    osRect(ctx, 20, 9 + oy, 32, 5, '#1a2740', '#33405a', '#0c1422');
+    osRect(ctx, 25, 4 + oy, 22, 6, '#22304c', '#3a4a66', '#121c30');
+    rect(ctx, 33, 10 + oy, 6, 3, '#f2c33c'); rect(ctx, 35, 11 + oy, 2, 1, '#fff7c8'); // badge
+    // eyes (blink occasionally)
+    const blink = Math.sin(t * 1.1 + 1) > 0.93;
+    if (blink) { rect(ctx, 24, 27 + oy, 8, 2, '#3a2560'); rect(ctx, 40, 27 + oy, 8, 2, '#3a2560'); }
+    else {
+      oRect(ctx, 24, 23 + oy, 8, 8, '#fff'); oRect(ctx, 40, 23 + oy, 8, 8, '#fff');
+      rect(ctx, 28, 26 + oy, 3, 3, '#101018'); rect(ctx, 44, 26 + oy, 3, 3, '#101018');
+      glint(ctx, 28, 26 + oy); glint(ctx, 44, 26 + oy);
+    }
+    // cheeks + mouth (open when talking)
+    rect(ctx, 21, 34 + oy, 2, 2, 'rgba(255,120,160,0.5)'); rect(ctx, 49, 34 + oy, 2, 2, 'rgba(255,120,160,0.5)');
+    if (talk && Math.sin(t * 14) > 0) { oRect(ctx, 30, 34 + oy, 12, 6, '#2a1030'); rect(ctx, 32, 35 + oy, 8, 1, '#e8a0b8'); rect(ctx, 33, 34 + oy, 6, 1, '#fff'); }
+    else { rect(ctx, 30, 37 + oy, 12, 2, '#2a1030'); rect(ctx, 31, 39 + oy, 10, 1, '#8a5faa'); }
+  }
+
+  /* ---------------- SHOP: standalone item "photos" ----------------
+     Drawn centred in a 64x64 box for the shop preview panel. */
+  function itemIcon(ctx, id, t) {
+    const b = Math.round(Math.sin(t * 3) * 1);
+    ctx.save(); ctx.translate(0, b);
+    if (id === 'net') {
+      osRect(ctx, 30, 24, 4, 28, '#7a5a2a', '#a07a3a', '#4e3417');
+      ctx.strokeStyle = '#dfe7ef'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(32, 18, 13, 9, 0, 0, 7); ctx.stroke();
+      ctx.fillStyle = 'rgba(220,230,240,0.30)'; ctx.beginPath(); ctx.ellipse(32, 18, 12, 8, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(220,230,240,0.5)'; ctx.lineWidth = 1;
+      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(32 + i * 5, 11); ctx.lineTo(32 + i * 3, 25); ctx.stroke(); }
+    } else if (id === 'cage') {
+      osRect(ctx, 18, 22, 28, 26, 'rgba(150,160,170,0.12)', '#d4ddE6', '#7a828c');
+      ctx.fillStyle = '#c2cad4'; for (let x = 18; x <= 46; x += 5) ctx.fillRect(x, 22, 2, 26);
+      for (let y = 22; y <= 48; y += 6) ctx.fillRect(18, y, 28, 2);
+      osRect(ctx, 28, 16, 8, 6, '#9aa4b0', '#c2ccd6', '#6a7480');
+    } else if (id === 'netgun') {
+      osRect(ctx, 16, 30, 26, 10, '#4a4a4a', '#6e6e6e', '#222'); osRect(ctx, 40, 32, 12, 5, '#3a3a3a', '#5a5a5a', '#1a1a1a');
+      osRect(ctx, 20, 38, 6, 9, '#3a3a3a', '#5a5a5a', '#1a1a1a');
+      ctx.strokeStyle = '#cfd8e2'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(54, 34, 8, 7, 0, 0, 7); ctx.stroke();
+      ctx.fillStyle = 'rgba(220,230,240,0.25)'; ctx.beginPath(); ctx.ellipse(54, 34, 7, 6, 0, 0, 7); ctx.fill();
+    } else if (id === 'forcefield') {
+      osRect(ctx, 14, 30, 20, 9, '#5a3f8a', '#8a6fc0', '#34245a'); osRect(ctx, 17, 38, 6, 9, '#5a3f8a', '#8a6fc0', '#34245a');
+      ctx.strokeStyle = '#9ad8ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(46, 28, 11 + b, 0, 7); ctx.stroke();
+      ctx.fillStyle = 'rgba(150,210,255,0.20)'; ctx.beginPath(); ctx.arc(46, 28, 10, 0, 7); ctx.fill();
+      rect(ctx, 43, 26, 6, 5, '#6b4a2a'); rect(ctx, 44, 27, 1, 1, '#fff'); rect(ctx, 47, 27, 1, 1, '#fff'); // captive critter
+    } else if (id === 'tranq') {
+      osRect(ctx, 14, 30, 30, 7, '#444', '#666', '#222'); osRect(ctx, 18, 37, 7, 9, '#3a2a1a', '#5a4330', '#1a120a');
+      osRect(ctx, 24, 25, 10, 5, '#333', '#555', '#1a1a1a');
+      rect(ctx, 44, 32, 11, 2, '#caa'); rect(ctx, 55, 32, 3, 2, '#f2c33c'); rect(ctx, 42, 31, 2, 4, '#d23b2f');
+    } else if (id === 'helmet') {
+      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(32, 33, 17, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#4a5a6a'; ctx.beginPath(); ctx.arc(32, 33, 15, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#6a7a8a'; ctx.beginPath(); ctx.arc(32, 31, 12, Math.PI, 0); ctx.fill();
+      osRect(ctx, 14, 33, 36, 5, '#3a4a5a', '#5a6a7a', '#26323e');
+      rect(ctx, 24, 22, 5, 2, '#cfe0ff'); rect(ctx, 47, 33, 2, 6, '#2e2110');
+    } else if (id === 'boots') {
+      const boot = bx => { osRect(ctx, bx, 24, 9, 16, '#c23a26', '#e8694c', '#7a1f12'); osRect(ctx, bx - 2, 40, 13, 5, '#3a2a18', '#5a4330', '#1a120a'); rect(ctx, bx + 1, 27, 2, 11, '#ff8a6a'); };
+      boot(20); boot(34);
+    } else if (id === 'backpack') {
+      osRect(ctx, 20, 22, 24, 26, '#7a5326', '#a07440', '#4e3417');
+      osRect(ctx, 23, 17, 18, 8, '#6b4a22', '#8a6438', '#4a3217');
+      rect(ctx, 23, 25, 2, 21, '#5a3d1c'); rect(ctx, 39, 25, 2, 21, '#5a3d1c');
+      rect(ctx, 30, 40, 4, 3, '#c9a23a'); glint(ctx, 30, 40);
+    } else if (id === 'jacket') {
+      osRect(ctx, 20, 22, 24, 24, '#3a5a8a', '#5f86c0', '#243f63');
+      rect(ctx, 31, 23, 2, 22, '#1f3550'); for (let y = 24; y < 44; y += 3) rect(ctx, 30, y, 1, 1, '#9ab0d0');
+      rect(ctx, 22, 23, 5, 4, '#2a3f5a'); rect(ctx, 37, 23, 5, 4, '#2a3f5a');
+      rect(ctx, 23, 37, 6, 4, '#2a3f5a'); rect(ctx, 35, 37, 6, 4, '#2a3f5a');
+    } else if (id === 'gloves') {
+      const glove = gx => { osRect(ctx, gx, 28, 10, 12, '#f2c33c', '#ffe07a', '#b8881a'); rect(ctx, gx + 1, 24, 2, 5, '#f2c33c'); rect(ctx, gx + 4, 24, 2, 5, '#f2c33c'); rect(ctx, gx + 7, 25, 2, 4, '#f2c33c'); rect(ctx, gx, 38, 10, 2, '#b8881a'); };
+      glove(18); glove(34);
+    } else if (id === 'goggles') {
+      osRect(ctx, 14, 27, 36, 10, '#2a2a2a', '#4a4a4a', '#111');
+      osRect(ctx, 17, 25, 13, 13, '#1a1a1a', '#333', '#000'); osRect(ctx, 34, 25, 13, 13, '#1a1a1a', '#333', '#000');
+      rect(ctx, 19, 27, 9, 9, '#3fd0e0'); rect(ctx, 36, 27, 9, 9, '#3fd0e0');
+      rect(ctx, 20, 28, 3, 2, '#bff6ff'); rect(ctx, 37, 28, 3, 2, '#bff6ff');
+    }
+    ctx.restore();
+  }
+
   return {
-    rect, oRect, osRect, flip, shadow, hero, creature, quest, coin, bag,
+    rect, oRect, osRect, flip, shadow, hero, creature, quest, coin, bag, keeper, itemIcon,
     CREATURE_SIZE, QUEST_SIZE, GROUNDED
   };
 })();
