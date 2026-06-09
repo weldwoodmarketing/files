@@ -310,6 +310,7 @@
     }
 
     if (state === 'play' && g) { updatePlay(dt, inp); if (state === 'play') drawPlay(); }
+    else if (state === 'shop') Shop.tick(now);
     requestAnimationFrame(frame);
   }
 

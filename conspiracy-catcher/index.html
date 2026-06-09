@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Conspiracy Theory Catcher</title>
 <meta name="description" content="Hunt mythical conspiracy creatures across 10 chunky-pixel levels. Net 'em before they reach safety. Mobile + desktop.">
-<link rel="stylesheet" href="css/style.css?v=20260609">
+<link rel="stylesheet" href="css/style.css?v=20260610">
 </head>
 <body>
 <div id="stage">
@@ -51,7 +51,15 @@
 
   <!-- ===== Shop ===== -->
   <div id="shopScreen" class="screen hidden">
-    <h2>SUPPLY DEPOT</h2>
+    <h2>REEF SUPPLY</h2>
+    <div id="shopStage">
+      <canvas id="shopKeeper" width="72" height="72"></canvas>
+      <div id="shopSpeech">Glug glug! Welcome to me reef shop.</div>
+      <div id="photoWrap">
+        <canvas id="shopPhoto" width="64" height="64"></canvas>
+        <div id="photoLabel">&mdash;</div>
+      </div>
+    </div>
     <p class="coins">Coins: <span id="shopCoins">0</span></p>
     <div id="shopList"></div>
     <p id="shopGate" class="gate"></p>
@@ -67,13 +75,13 @@
   </div>
 </div>
 
-<script src="js/sprites.js?v=20260609"></script>
-<script src="js/input.js?v=20260609"></script>
-<script src="js/levels.js?v=20260609"></script>
-<script src="js/player.js?v=20260609"></script>
-<script src="js/creatures.js?v=20260609"></script>
-<script src="js/shop.js?v=20260609"></script>
-<script src="js/render.js?v=20260609"></script>
-<script src="js/main.js?v=20260609"></script>
+<script src="js/sprites.js?v=20260610"></script>
+<script src="js/input.js?v=20260610"></script>
+<script src="js/levels.js?v=20260610"></script>
+<script src="js/player.js?v=20260610"></script>
+<script src="js/creatures.js?v=20260610"></script>
+<script src="js/shop.js?v=20260610"></script>
+<script src="js/render.js?v=20260610"></script>
+<script src="js/main.js?v=20260610"></script>
 </body>
 </html>
