@@ -101,11 +101,14 @@
 
     const quest = level.quest ? new Quest(level.quest, Math.round(level.width * 0.28), GROUND_Y) : null;
 
-    // themed obstacles to jump over — spaced out, away from start and den
+    // themed obstacles to jump over — spaced out, away from start and den.
+    // A level may list one type or several (picked per obstacle).
     const obstacles = [];
-    const osz = Render.OB_SIZE[level.obstacle] || [12, 12];
+    const obTypes = Array.isArray(level.obstacle) ? level.obstacle : [level.obstacle];
     for (let ox = 440; ox < level.width - 180; ox += 280 + Math.random() * 200) {
-      obstacles.push({ type: level.obstacle, x: Math.round(ox), w: osz[0], h: osz[1] });
+      const ty = obTypes[Math.floor(Math.random() * obTypes.length)];
+      const sz = Render.OB_SIZE[ty] || [12, 12];
+      obstacles.push({ type: ty, x: Math.round(ox), w: sz[0], h: sz[1] });
     }
 
     g = {

@@ -98,6 +98,21 @@ const Render = (function () {
     fr(ctx, x + 15, gy - 24, 2, 2, '#5a4628');
   }
 
+  function coral(ctx, x, gy, i, t) {
+    i = Math.abs(i | 0);
+    const cols = ['#3a2440', '#243a44', '#402a34', '#1f3a3a'], c = cols[i % cols.length];
+    if (i % 3 === 2) { // sea fan
+      ctx.strokeStyle = c; ctx.lineWidth = 1; const h = 22 + (i % 2) * 8;
+      for (let f = -3; f <= 3; f++) { ctx.beginPath(); ctx.moveTo(x + 3, gy); ctx.lineTo(x + 3 + f * 3, gy - h); ctx.stroke(); }
+      ctx.fillStyle = shade(c, 14); fr(ctx, x, gy - h, 1, 1, shade(c, 30));
+    } else { // antler coral
+      const h = 20 + (i % 3) * 9;
+      fr(ctx, x + 2, gy - h, 3, h, c);
+      for (let b = 0; b < 3; b++) { const by = gy - 6 - b * Math.round(h / 3); fr(ctx, x - 2 + (b % 2 ? 6 : -3), by - 7, 3, 8, c); fr(ctx, x + (b % 2 ? 4 : -1), by - 8, 1, 2, shade(c, 22)); }
+      fr(ctx, x + 2, gy - h, 3, 2, shade(c, 22)); // dim lit tip
+    }
+  }
+
   const BG = {
     forest(ctx, env, camX, W, gy, t) {
       sun(ctx, 46, 34, 12, '#fff2a0', '#ffe06a');
@@ -157,6 +172,18 @@ const Render = (function () {
       fr(ctx, 0, gy - 10, BW, 10, '#8a7a4a'); fr(ctx, 0, gy - 10, BW, 1, '#a89858');  // wainscot
       rep(-camX * 0.5, 90, W, x => hallDoor(ctx, x, gy - 10));
     },
+    reef(ctx, env, camX, W, gy, t) {
+      // faint, dim god-rays filtering down
+      ctx.fillStyle = 'rgba(70,150,150,0.035)';
+      rep(-camX * 0.1, 110, W, x => { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 30, 0); ctx.lineTo(x + 10, gy); ctx.lineTo(x - 12, gy); ctx.fill(); });
+      // distant dark reef wall
+      ctx.fillStyle = '#0a2028'; rep(-camX * 0.2, 130, W, x => { ctx.beginPath(); ctx.ellipse(x + 40, gy - 6, 50, 34, 0, Math.PI, 0); ctx.fill(); });
+      // coral thicket (mid)
+      rep(-camX * 0.4, 56, W, (x, i) => coral(ctx, x + (i % 2 ? 6 : 0), gy, i, t));
+      // bioluminescent specks + sparse bubbles
+      for (let i = 0; i < 22; i++) { if (Math.sin(t * 1.5 + i) < 0.3) continue; const x = ((((i * 67 - camX * 0.5) % BW) + BW) % BW) | 0; fr(ctx, x, (50 + (i * 17 % 80)) | 0, 1, 1, i % 2 ? 'rgba(90,210,200,0.7)' : 'rgba(150,110,210,0.6)'); }
+      for (let i = 0; i < 14; i++) { const x = (i * 71) % BW, y = (gy - ((t * 10 + i * 33) % gy)) | 0; fr(ctx, x, y, 1, 1, 'rgba(150,200,205,0.35)'); }
+    },
     neon(ctx, env, camX, W, gy, t) {
       moon(ctx, 246, 24, 7, env.sky[0]); stars(ctx, 26);
       fr(ctx, 0, gy - 22, BW, 22, 'rgba(90,30,120,0.4)');
@@ -186,6 +213,11 @@ const Render = (function () {
       fr(ctx, 0, gy + 3, W, 2, shade(env.ground, -16));
       ctx.fillStyle = shade(env.ground, 18); for (let x = 4; x < W; x += 14) fr(ctx, x, gy + 7 + (x % 3) * 3, 4, 1, shade(env.ground, 18));
       if (gs === 'seabed') { ctx.fillStyle = shade(env.ground, -26); for (let x = 10; x < W; x += 40) { ctx.beginPath(); ctx.arc(x, gy + 12, 3, Math.PI, 0); ctx.fill(); } }
+    } else if (gs === 'reef') {
+      fr(ctx, 0, gy + 3, W, 2, shade(env.ground, -16));
+      ctx.fillStyle = shade(env.ground, -26); for (let x = 10; x < W; x += 44) { ctx.beginPath(); ctx.arc(x, gy + 12, 3, Math.PI, 0); ctx.fill(); }
+      for (let x = 6; x < W; x += 20) fr(ctx, x, gy + 1, 3, 2, x % 3 ? '#2a4a44' : '#3a2a40'); // coral nubs
+      ctx.fillStyle = 'rgba(80,180,170,0.25)'; for (let x = 14; x < W; x += 30) fr(ctx, x, gy + 6, 4, 1, 'rgba(80,180,170,0.25)');
     } else if (gs === 'regolith') {
       ctx.fillStyle = shade(env.ground, -22); for (let x = 6; x < W; x += 24) ctx.fillRect(x, gy + 8 + (x % 4) * 3, 3, 2);
       ctx.fillStyle = shade(env.ground, 20); for (let x = 16; x < W; x += 30) ctx.fillRect(x, gy + 6, 2, 1);
@@ -226,6 +258,13 @@ const Render = (function () {
       Spr.osRect(ctx, x - 3, gy - 38, 36, 6, '#5a5a5a', '#787878', '#3a3a3a');
       if (kind === 'doorway') { Spr.osRect(ctx, x - 3, gy - 38, 6, 40, '#9a7a4a', '#b8966a', '#6a5230'); Spr.osRect(ctx, x + 27, gy - 38, 6, 40, '#9a7a4a', '#b8966a', '#6a5230'); fr(ctx, x + 4, gy - 30, 22, 30, '#1a1408'); }
     }
+    else if (kind === 'reefcave') {
+      ctx.fillStyle = '#01070b'; ctx.beginPath(); ctx.ellipse(x + 24, gy, 24, 30, 0, Math.PI, 0); ctx.fill(); // dark maw
+      ctx.fillStyle = '#03161a'; ctx.beginPath(); ctx.ellipse(x + 24, gy, 24, 30, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#01070b'; ctx.beginPath(); ctx.ellipse(x + 24, gy, 17, 24, 0, Math.PI, 0); ctx.fill();
+      coral(ctx, x - 2, gy, 0, t); coral(ctx, x + 44, gy, 2, t);   // coral framing the cave
+      fr(ctx, x + 16, gy - 18, 1, 1, 'rgba(90,210,200,0.7)'); fr(ctx, x + 30, gy - 12, 1, 1, 'rgba(150,110,210,0.6)'); // eyes in the dark
+    }
     else if (kind === 'thicket') { ctx.fillStyle = '#0e2410'; for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.arc(x + i * 8, gy - 8 - (i % 2) * 6, 12, 0, 7); ctx.fill(); } ctx.fillStyle = '#16331a'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(x + 4 + i * 9, gy - 12, 6, 0, 7); ctx.fill(); } }
     else { fr(ctx, x, gy - 30, 24, 30, '#000'); }
   }
@@ -233,7 +272,8 @@ const Render = (function () {
   /* ---------------- obstacles ---------------- */
   const OB_SIZE = {
     bramble: [16, 11], barrel: [11, 14], cactus: [11, 16], urchin: [13, 10], tentacle: [12, 17],
-    pipe: [10, 14], crate: [13, 12], gator: [22, 7], cone: [10, 12], log: [18, 8]
+    pipe: [10, 14], crate: [13, 12], gator: [22, 7], cone: [10, 12], log: [18, 8],
+    seaweed: [13, 16], eel: [12, 17]
   };
   function obstacle(ctx, type, x, gy, t) { (OB[type] || OB.crate)(ctx, x, gy, t); }
   const OB = {
@@ -303,6 +343,27 @@ const Render = (function () {
       ctx.fillStyle = '#3a2a16'; ctx.beginPath(); ctx.ellipse(x + 1, gy - 4, 2, 3, 0, 0, 7); ctx.fill();
       fr(ctx, x + 3, gy - 6, 12, 1, '#74552f');
       ctx.fillStyle = '#3a7a3a'; for (let i = 0; i < 4; i++) fr(ctx, x + 3 + i * 4, gy - 8, 3, 2, '#3a7a3a'); // moss
+    },
+    seaweed(ctx, x, gy, t) {
+      const cols = ['#1f4a3a', '#27543f', '#163a30'];
+      for (let k = 0; k < 3; k++) {
+        const base = x + 2 + k * 4, c = cols[k % 3];
+        for (let s = 0; s < 16; s += 3) {
+          const off = Math.round(Math.sin(t * 2 + k * 1.6 + s * 0.35) * 3);
+          fr(ctx, base + off, gy - 3 - s, 2, 3, c);
+          if (s > 4 && s % 6 === 0) fr(ctx, base + off, gy - 3 - s, 2, 1, shade(c, 18)); // frond node
+        }
+      }
+      fr(ctx, x + 1, gy - 1, 12, 1, '#102a22'); // rooted base
+    },
+    eel(ctx, x, gy, t) {
+      ctx.fillStyle = '#10181c'; ctx.beginPath(); ctx.ellipse(x + 6, gy - 1, 6, 2, 0, 0, 7); ctx.fill(); // hole
+      for (let s = 0; s < 13; s += 3) { const off = Math.round(Math.sin(t * 3 + s * 0.4) * 2); fr(ctx, x + 4 + off, gy - 2 - s, 4, 3, s % 6 ? '#2f5a4a' : '#37684f'); }
+      const hx = x + 4 + Math.round(Math.sin(t * 3 + 5) * 2), hy = gy - 17, open = Math.sin(t * 3) > 0;
+      Spr.osRect(ctx, hx - 1, hy, 6, 5, '#37684f', '#4a8064', '#1f4032'); // head
+      fr(ctx, hx - 1, hy + 3, 6, 2, open ? '#1a0c0c' : '#2f5a4a');         // jaw
+      if (open) fr(ctx, hx - 1, hy + 3, 6, 1, '#dfe7d8');                  // teeth
+      fr(ctx, hx + 3, hy + 1, 1, 1, '#f2c33c'); fr(ctx, hx + 3, hy + 1, 1, 1, '#f2c33c'); // eye
     }
   };
 
