@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ghosty &amp; Bones Arcade 🎮</title>
-<meta name="description" content="Pick a game to play: Campsite Invaders, Seashell Shore Dash, GRIND, or Conspiracy Theory Catcher.">
+<meta name="description" content="Pick a game to play: Present Patrol, Campsite Invaders, Seashell Shore Dash, GRIND, or Conspiracy Theory Catcher.">
 <style>
   :root {
     --ink: #1f2937;
@@ -94,6 +94,8 @@
   .card.grind .tag { background:#f7ede0; color:#c2351f; }
   .card.cryptid .play { background: linear-gradient(180deg, #6b7e35, #46551f); }
   .card.cryptid .tag { background:#eef1e2; color:#46551f; }
+  .card.presentpatrol .play { background: linear-gradient(180deg, #ff9ccd, #d44a91); }
+  .card.presentpatrol .tag { background:#ffe7f4; color:#d44a91; }
 
   footer { margin-top: 44px; color: #eaf7ff; font-size: 13px; text-align: center; opacity: 0.85; }
   footer a { color: #fff; }
@@ -107,10 +109,81 @@
   <header>
     <span class="badge">GHOSTY &amp; BONES ARCADE</span>
     <h1>Pick a Game! 🎮</h1>
-    <p class="sub">Four free browser games — no download, just tap and play.</p>
+    <p class="sub">Five free browser games — no download, just tap and play.</p>
   </header>
 
   <main class="cards">
+
+    <!-- Present Patrol -->
+    <a class="card presentpatrol" href="present-patrol.html" aria-label="Play Present Patrol">
+      <div class="art">
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" role="img" aria-hidden="true">
+          <defs>
+            <linearGradient id="pp-sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffd1ea"/>
+              <stop offset="1" stop-color="#ffb0db"/>
+            </linearGradient>
+          </defs>
+          <rect width="400" height="200" fill="url(#pp-sky)"/>
+          <!-- grass -->
+          <rect y="142" width="400" height="58" fill="#8fdf73"/>
+          <rect y="142" width="400" height="6" fill="#76c95c"/>
+          <!-- sun -->
+          <circle cx="352" cy="38" r="18" fill="#ffe06a"/>
+          <!-- balloons -->
+          <line x1="62" y1="62" x2="62" y2="112" stroke="#d44a91" stroke-width="2"/>
+          <ellipse cx="62" cy="48" rx="14" ry="18" fill="#ff5fa2"/>
+          <line x1="104" y1="54" x2="104" y2="104" stroke="#d44a91" stroke-width="2"/>
+          <ellipse cx="104" cy="42" rx="12" ry="16" fill="#7ed0ff"/>
+          <!-- pink house -->
+          <rect x="150" y="92" width="112" height="58" fill="#ffe3f1" stroke="#d77bb0" stroke-width="3"/>
+          <polygon points="142,95 206,52 270,95" fill="#ff5fa2" stroke="#d44a91" stroke-width="3"/>
+          <rect x="191" y="112" width="30" height="38" rx="3" fill="#8a5a2b" stroke="#6b4a2a" stroke-width="2"/>
+          <circle cx="214" cy="132" r="2.5" fill="#ffd54a"/>
+          <rect x="162" y="106" width="20" height="18" rx="3" fill="#cdeafe" stroke="#d77bb0" stroke-width="2"/>
+          <rect x="230" y="106" width="20" height="18" rx="3" fill="#cdeafe" stroke="#d77bb0" stroke-width="2"/>
+          <!-- flowers -->
+          <g>
+            <circle cx="285" cy="172" r="4" fill="#ff8fc7"/><circle cx="278" cy="166" r="4" fill="#ff8fc7"/><circle cx="292" cy="166" r="4" fill="#ff8fc7"/><circle cx="285" cy="160" r="4" fill="#ff8fc7"/><circle cx="285" cy="166" r="3" fill="#ffd54a"/>
+            <circle cx="150" cy="184" r="4" fill="#fff"/><circle cx="143" cy="178" r="4" fill="#fff"/><circle cx="157" cy="178" r="4" fill="#fff"/><circle cx="150" cy="172" r="4" fill="#fff"/><circle cx="150" cy="178" r="3" fill="#ffd54a"/>
+          </g>
+          <!-- present on the grass -->
+          <g transform="translate(330,156)">
+            <rect x="-13" y="-15" width="26" height="24" fill="#ff5fa2" stroke="#d44a91" stroke-width="2"/>
+            <rect x="-3" y="-15" width="6" height="24" fill="#ffd54a"/>
+            <rect x="-13" y="-5" width="26" height="5" fill="#ffd54a"/>
+            <path d="M0,-15 q-8,-10 -12,-4 q6,2 12,4 q6,-2 12,4 q-4,-6 -12,-4Z" fill="#ffd54a"/>
+          </g>
+          <!-- Birthday Girl with crown + braid -->
+          <g transform="translate(100,150)">
+            <polygon points="-13,-16 13,-16 19,8 -19,8" fill="#ff7bc0"/>
+            <circle cx="-8" cy="-2" r="1.6" fill="#fff"/><circle cx="6" cy="0" r="1.6" fill="#fff"/><circle cx="0" cy="-8" r="1.6" fill="#ffd54a"/>
+            <rect x="-7" y="8" width="5" height="12" rx="2.5" fill="#ffe0c2"/>
+            <rect x="3" y="8" width="5" height="12" rx="2.5" fill="#ffe0c2"/>
+            <ellipse cx="-7" cy="22" rx="4" ry="2.6" fill="#ff5fa2"/><ellipse cx="6" cy="22" rx="4" ry="2.6" fill="#ff5fa2"/>
+            <g fill="#9a6a37"><circle cx="14" cy="-22" r="4"/><circle cx="15" cy="-15" r="4"/><circle cx="14" cy="-8" r="3.4"/></g>
+            <circle cx="0" cy="-27" r="12" fill="#ffe3c4"/>
+            <path d="M-12,-27 a12,12 0 0 1 24,0 q-6,-4 -12,0 q-6,-4 -12,0Z" fill="#9a6a37"/>
+            <circle cx="-4.4" cy="-26" r="2.6" fill="#fff"/><circle cx="4.4" cy="-26" r="2.6" fill="#fff"/>
+            <circle cx="-4.2" cy="-25.4" r="1.6" fill="#4a2d18"/><circle cx="4.6" cy="-25.4" r="1.6" fill="#4a2d18"/>
+            <circle cx="-7.5" cy="-22" r="2.1" fill="#ff9bbf"/><circle cx="7.5" cy="-22" r="2.1" fill="#ff9bbf"/>
+            <path d="M-3.5,-21 q3.5,3 7,0" stroke="#cf5a7c" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            <polygon points="-10,-35 -6,-42 -2,-36 2,-43 6,-36 10,-42 10,-34 -10,-34" fill="#ffd54a" stroke="#e0a800" stroke-width="1"/>
+          </g>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="title"><span class="emoji">🎀🎁</span>Present Patrol</div>
+        <p class="desc"><b>It's Birthday Girl's big day — but her presents are hiding!</b> Solve riddles to find the right house and room, then walk up to the furniture to peek behind it. A cute Zelda-style hunt with warmer/colder hints.</p>
+        <div class="meta">
+          <span class="tag">Adventure</span>
+          <span class="tag">Riddles</span>
+          <span class="tag">Ages 4+</span>
+        </div>
+        <span class="play">Play Present Patrol ▶</span>
+      </div>
+    </a>
+
 
     <!-- Campsite Invaders -->
     <a class="card invaders" href="campsite-invaders.html" aria-label="Play Campsite Invaders">
