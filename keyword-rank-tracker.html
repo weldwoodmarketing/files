@@ -1,245 +1,231 @@
 <title>Weldwood Rank Tracker — weldwoodmarketing.com</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-/* ===== NOIR — light variant: bone paper, ink black, lone amber ===== */
+/* ============================================================
+   WELDWOOD MISSION CONTROL — cosmic, bold, monster-slaying.
+   Deep-space ground · starfield · weld-spark ember accent.
+   ============================================================ */
 :root{
-  color-scheme: light;
-  --page:#e6e2d8; --surface:#f1ede4; --surface-2:#e9e4d9;
-  --ink:#16150f; --ink-2:#4a473d; --muted:#7c786c;
-  --grid:#d4cfc1; --baseline:#b9b3a2; --border:rgba(22,21,15,.14);
-  --accent:#8a6222; --accent-2:#6f4d18; --accent-soft:rgba(138,98,34,.12);
-  --series:#8a6222; --series-soft:rgba(138,98,34,.14); --series-line:#7a5518;
-  --good:#4f7a4a; --good-ink:#3c6238; --critical:#a23b30; --warning:#8a6222;
-  --chip:#ded9cc;
-  --grain:.05; --vignette:rgba(22,21,15,.16);
-  --shadow:0 1px 2px rgba(22,21,15,.10),0 10px 26px -14px rgba(22,21,15,.30);
+  color-scheme:dark;
+  --space:#080a12; --space-2:#0b0e18;
+  --surface:#111524; --surface-2:#161b2c; --raise:#1b2133;
+  --ink:#f3f1ea; --ink-2:#a7abbe; --muted:#6b7089;
+  --grid:rgba(255,255,255,.07); --baseline:rgba(255,255,255,.15); --border:rgba(255,255,255,.09);
+  --ember:#ff6a3a; --ember-2:#ff875e; --ember-soft:rgba(255,106,58,.13);
+  --spark:#ffb23a; /* secondary warm star */
+  --series:#ff6a3a; --series-line:#ff8055; --series-soft:rgba(255,106,58,.15);
+  --win:#4ecb8a; --win-ink:#77dca6; --loss:#ff5c78; --warn:#ffb23a;
+  --chip:#1a1f30;
+  --star:#cdd6ff;
+  --shadow:0 2px 4px rgba(0,0,0,.4),0 22px 48px -22px rgba(0,0,0,.85);
   --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  --disp:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
-/* ===== NOIR — dark variant (the default mood): deep shadow, warm bone, amber lamp ===== */
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  color-scheme:dark;
-  --page:#0a0a0b; --surface:#141416; --surface-2:#1b1b1f;
-  --ink:#ece8df; --ink-2:#a6a298; --muted:#6d6a63;
-  --grid:rgba(236,232,223,.07); --baseline:rgba(236,232,223,.16); --border:rgba(236,232,223,.11);
-  --accent:#cda15c; --accent-2:#e6c078; --accent-soft:rgba(205,161,92,.12);
-  --series:#cda15c; --series-soft:rgba(205,161,92,.16); --series-line:#e0b56e;
-  --good:#8fae86; --good-ink:#a6c39c; --critical:#c05a4e; --warning:#cda15c;
-  --chip:#22221f;
-  --grain:.06; --vignette:rgba(0,0,0,.55);
-  --shadow:0 1px 2px rgba(0,0,0,.5),0 14px 40px -16px rgba(0,0,0,.8);
-}}
-:root[data-theme="dark"]{
-  color-scheme:dark;
-  --page:#0a0a0b; --surface:#141416; --surface-2:#1b1b1f;
-  --ink:#ece8df; --ink-2:#a6a298; --muted:#6d6a63;
-  --grid:rgba(236,232,223,.07); --baseline:rgba(236,232,223,.16); --border:rgba(236,232,223,.11);
-  --accent:#cda15c; --accent-2:#e6c078; --accent-soft:rgba(205,161,92,.12);
-  --series:#cda15c; --series-soft:rgba(205,161,92,.16); --series-line:#e0b56e;
-  --good:#8fae86; --good-ink:#a6c39c; --critical:#c05a4e; --warning:#cda15c;
-  --chip:#22221f;
-  --grain:.06; --vignette:rgba(0,0,0,.55);
-  --shadow:0 1px 2px rgba(0,0,0,.5),0 14px 40px -16px rgba(0,0,0,.8);
+/* daylight variant — still bold, still Weldwood, just lit */
+:root[data-theme="light"]{
+  color-scheme:light;
+  --space:#efe9dd; --space-2:#e9e2d3;
+  --surface:#f7f3ea; --surface-2:#f1ece0; --raise:#ffffff;
+  --ink:#14141c; --ink-2:#4c4e5c; --muted:#7d7f8f;
+  --grid:rgba(20,20,28,.10); --baseline:rgba(20,20,28,.22); --border:rgba(20,20,28,.13);
+  --ember:#e04a1c; --ember-2:#c33f16; --ember-soft:rgba(224,74,28,.10);
+  --spark:#c67f10;
+  --series:#e04a1c; --series-line:#c33f16; --series-soft:rgba(224,74,28,.13);
+  --win:#2f8f5b; --win-ink:#256f47; --loss:#c8324e; --warn:#b7790c;
+  --chip:#e5ddcd; --star:#b9a06a;
+  --shadow:0 2px 4px rgba(20,20,28,.08),0 18px 40px -22px rgba(20,20,28,.30);
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{
-  margin:0; background:var(--page); color:var(--ink);
-  font-family:var(--sans); font-size:15px; line-height:1.5;
-  -webkit-font-smoothing:antialiased;
-}
-/* film-noir atmosphere: a lamp-glow from top, a closing vignette, and grain */
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
+body{margin:0;background:var(--space);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+/* nebula wash + fixed starfield */
+#stars{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
   background:
-    radial-gradient(120% 80% at 78% -10%, color-mix(in srgb,var(--accent) 16%,transparent), transparent 42%),
-    radial-gradient(140% 120% at 50% 120%, var(--vignette), transparent 55%),
-    radial-gradient(100% 100% at 50% 40%, transparent 60%, var(--vignette));}
-body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:2;opacity:var(--grain);mix-blend-mode:overlay;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
-.topbar,.wrap{position:relative;z-index:3}
-.wrap{max-width:1200px;margin:0 auto;padding:0 22px 80px}
-h1,h2,h3{margin:0;font-weight:640;letter-spacing:-.01em;text-wrap:balance}
-a{color:var(--accent-2)}
+    radial-gradient(90% 55% at 82% -8%, color-mix(in srgb,var(--ember) 20%,transparent), transparent 55%),
+    radial-gradient(80% 60% at 8% 4%, color-mix(in srgb,#3a5cff 14%,transparent), transparent 60%),
+    radial-gradient(120% 90% at 50% 118%, color-mix(in srgb,var(--space-2) 92%,#000), transparent 60%);}
+:root[data-theme="light"] body::before{background:
+    radial-gradient(90% 55% at 82% -8%, color-mix(in srgb,var(--ember) 12%,transparent), transparent 55%),
+    radial-gradient(120% 90% at 50% 118%, color-mix(in srgb,var(--space-2) 88%,#fff), transparent 60%);}
+.wrap{max-width:1220px;margin:0 auto;padding:0 24px 90px;position:relative;z-index:2}
+h1,h2,h3{margin:0;font-family:var(--disp);font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+a{color:var(--ember-2)}
 .tnum{font-variant-numeric:tabular-nums}
+.kick{font-family:var(--disp);font-size:11.5px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--ember)}
 
-/* ---- top bar ---- */
-.topbar{
-  position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--page) 88%,transparent);
-  backdrop-filter:saturate(1.4) blur(10px);
-  border-bottom:1px solid var(--border);
-}
-.topbar-inner{max-width:1200px;margin:0 auto;padding:13px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:11px;min-width:0}
-.mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(150deg,var(--accent),var(--accent-2));
-  display:grid;place-items:center;flex:none;box-shadow:0 2px 8px -2px color-mix(in srgb,var(--accent) 60%,transparent)}
-.mark svg{width:19px;height:19px}
-.brand .name{font-weight:680;letter-spacing:-.02em;font-size:15.5px;line-height:1.1}
-.brand .sub{font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--space) 82%,transparent);backdrop-filter:saturate(1.3) blur(12px);border-bottom:1px solid var(--border)}
+.topbar-inner{max-width:1220px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{width:38px;height:38px;flex:none;position:relative;display:grid;place-items:center;
+  background:radial-gradient(circle at 32% 28%, var(--ember-2), var(--ember) 55%, #b8340f);
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);box-shadow:0 0 22px -4px color-mix(in srgb,var(--ember) 75%,transparent)}
+.mark svg{width:20px;height:20px}
+.brand .name{font-family:var(--disp);font-weight:800;letter-spacing:-.02em;font-size:16px;line-height:1.05}
+.brand .sub{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
 .spacer{flex:1 1 auto}
-.dompick{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);
-  border-radius:9px;padding:7px 11px;font-weight:600;font-size:13.5px;box-shadow:var(--shadow)}
-.dompick .dot{width:7px;height:7px;border-radius:50%;background:var(--accent-2);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 26%,transparent),0 0 8px 1px color-mix(in srgb,var(--accent) 55%,transparent)}
-.dompick select{border:0;background:transparent;color:var(--ink);font:inherit;font-weight:600;cursor:pointer;outline:none}
-.iconbtn{width:36px;height:36px;border-radius:9px;border:1px solid var(--border);background:var(--surface);
-  color:var(--ink-2);cursor:pointer;display:grid;place-items:center;box-shadow:var(--shadow)}
-.iconbtn:hover{color:var(--ink)}
+.dompick{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-weight:640;font-size:13.5px}
+.dompick .dot{width:7px;height:7px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 3px color-mix(in srgb,var(--ember) 25%,transparent),0 0 10px 1px var(--ember);animation:pulse 2.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.dompick select{border:0;background:transparent;color:var(--ink);font:inherit;font-weight:640;cursor:pointer;outline:none}
+.iconbtn{width:38px;height:38px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--ink-2);cursor:pointer;display:grid;place-items:center}
+.iconbtn:hover{color:var(--ink);border-color:var(--ember)}
 .iconbtn svg{width:17px;height:17px}
 .theme-moon{display:none}
-:root[data-theme="dark"] .theme-sun,:root:not([data-theme="light"]) .theme-sun{}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .theme-sun{display:none}:root:not([data-theme="light"]) .theme-moon{display:block}}
-:root[data-theme="dark"] .theme-sun{display:none}:root[data-theme="dark"] .theme-moon{display:block}
 :root[data-theme="light"] .theme-sun{display:block}:root[data-theme="light"] .theme-moon{display:none}
+:root:not([data-theme="light"]) .theme-sun{display:none}:root:not([data-theme="light"]) .theme-moon{display:block}
 
-/* ---- page head ---- */
-.head{padding:30px 0 6px}
-.head .eyebrow{font-size:11.5px;font-weight:680;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
-.head h1{font-size:29px;margin:9px 0 6px}
-.head p{margin:0;color:var(--ink-2);max-width:70ch}
-.snapshot{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-size:12.5px;color:var(--muted);
-  background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:5px 12px}
-.snapshot b{color:var(--ink-2);font-weight:620}
+/* ---------- hero ---------- */
+.hero{padding:58px 0 30px;position:relative}
+.hero .kick{margin-bottom:16px;display:inline-flex;align-items:center;gap:10px}
+.hero .kick::before{content:"";width:26px;height:2px;background:var(--ember)}
+.hero h1{font-size:clamp(32px,6.2vw,58px);font-weight:850;line-height:1.02;letter-spacing:-.035em;max-width:16ch}
+.hero h1 em{font-style:normal;color:var(--ember)}
+.hero .lede{margin:20px 0 0;color:var(--ink-2);max-width:60ch;font-size:16.5px;line-height:1.55}
+.hero .lede b{color:var(--ink);font-weight:680}
+.hero .meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:26px;font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.hero .meta span{display:inline-flex;align-items:center;gap:7px}
+.hero .meta b{color:var(--ink-2);font-weight:680}
+.hero .meta .pip{width:6px;height:6px;background:var(--ember);border-radius:1px;transform:rotate(45deg)}
 
-/* ---- kpi grid ---- */
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:24px 0 8px}
-@media(max-width:980px){.kpis{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
-.kpi{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px 15px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-.kpi .label{font-size:11.5px;font-weight:620;letter-spacing:.03em;color:var(--ink-2);text-transform:uppercase;display:flex;align-items:center;gap:6px}
-.kpi .val{font-size:27px;font-weight:680;letter-spacing:-.03em;margin-top:9px;line-height:1}
-.kpi .val small{font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0}
-.kpi .foot{margin-top:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
-.delta{display:inline-flex;align-items:center;gap:3px;font-weight:680;font-size:12px;border-radius:6px;padding:2px 6px}
-.delta.up{color:var(--good-ink);background:color-mix(in srgb,var(--good) 15%,transparent)}
-.delta.down{color:var(--critical);background:color-mix(in srgb,var(--critical) 14%,transparent)}
-.delta svg{width:11px;height:11px}
-.as-meter{height:5px;border-radius:3px;background:var(--grid);margin-top:11px;overflow:hidden}
-.as-meter i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--warning),var(--accent))}
+/* ---------- stat readout ---------- */
+.readout{display:grid;grid-template-columns:repeat(6,1fr);margin:38px 0 8px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,var(--surface),var(--surface-2));overflow:hidden;box-shadow:var(--shadow)}
+@media(max-width:940px){.readout{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:520px){.readout{grid-template-columns:repeat(2,1fr)}}
+.stat{padding:18px 18px 16px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);position:relative}
+.stat::before{content:"";position:absolute;left:0;top:0;width:100%;height:2px;background:linear-gradient(90deg,var(--ember),transparent);opacity:0;transition:opacity .3s}
+.stat:hover::before{opacity:1}
+.readout .stat:nth-child(6n){border-right:0}
+@media(max-width:940px){.readout .stat:nth-child(6n){border-right:1px solid var(--border)}.readout .stat:nth-child(3n){border-right:0}}
+@media(max-width:520px){.readout .stat:nth-child(3n){border-right:1px solid var(--border)}.readout .stat:nth-child(2n){border-right:0}}
+.stat .s-lab{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.stat .s-val{font-family:var(--disp);font-size:30px;font-weight:850;letter-spacing:-.035em;line-height:1;margin-top:11px;font-variant-numeric:tabular-nums}
+.stat .s-val small{font-size:14px;font-weight:700;color:var(--muted);letter-spacing:0}
+.stat .s-foot{margin-top:9px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.tag{display:inline-flex;align-items:center;gap:3px;font-weight:800;font-size:11.5px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.tag.up{color:var(--win-ink)}.tag.down{color:var(--loss)}
+.tag svg{width:11px;height:11px}
+.as-meter{height:4px;border-radius:2px;background:var(--grid);margin-top:12px;overflow:hidden}
+.as-meter i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--ember))}
 
-/* ---- panels ---- */
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);margin-top:22px}
-.panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:18px 20px 4px;flex-wrap:wrap}
-.panel-h h2{font-size:17px}
-.panel-h .desc{font-size:12.5px;color:var(--muted)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+/* ---------- section + panels ---------- */
+section.block{margin-top:52px}
+.sec-h{margin-bottom:18px}
+.sec-h h2{font-size:clamp(22px,3.4vw,29px);font-weight:850;letter-spacing:-.03em}
+.sec-h p{margin:7px 0 0;color:var(--ink-2);max-width:64ch;font-size:14.5px}
+.sec-h p b{color:var(--ink)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-radius:14px;overflow:hidden}
 @media(max-width:820px){.grid2{grid-template-columns:1fr}}
-.chartcard{padding:6px 20px 18px}
-.chartcard .ctitle{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-top:12px}
-.chartcard .ctitle .now{font-size:20px;font-weight:680;letter-spacing:-.02em}
-.chartcard .ctitle .now span{font-size:12px;font-weight:600;color:var(--muted)}
-.chartcard .clabel{font-size:12.5px;font-weight:620;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em}
+.chartcard{background:var(--surface);padding:20px 22px 20px}
+.chartcard .ctitle{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:6px}
+.chartcard .clabel{font-size:11.5px;font-weight:750;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+.chartcard .now{font-family:var(--disp);font-size:23px;font-weight:850;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.chartcard .now span{font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:0}
 svg.chart{display:block;width:100%;height:auto;overflow:visible}
 .axislbl{fill:var(--muted);font-size:10.5px;font-family:var(--sans)}
 .gridline{stroke:var(--grid);stroke-width:1}
-.baseline{stroke:var(--baseline);stroke-width:1}
 .crosshair{stroke:var(--baseline);stroke-width:1;stroke-dasharray:3 3}
-.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--page);font-size:12px;
-  padding:7px 10px;border-radius:8px;transform:translate(-50%,-118%);white-space:nowrap;opacity:0;transition:opacity .1s;z-index:5;
-  box-shadow:0 6px 20px -6px rgba(0,0,0,.4);line-height:1.35;font-variant-numeric:tabular-nums}
-.tip b{color:#fff}
-:root[data-theme="dark"] .tip,:root:not([data-theme="light"]) .tip{color:#0b0e0c}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .tip b{color:#0b0e0c}}
-:root[data-theme="dark"] .tip b{color:#0b0e0c}
 .chart-host{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--space);font-size:12px;font-weight:600;padding:7px 10px;border-radius:7px;transform:translate(-50%,-120%);white-space:nowrap;opacity:0;transition:opacity .1s;z-index:10;box-shadow:0 8px 24px -6px rgba(0,0,0,.5);line-height:1.35;font-variant-numeric:tabular-nums}
+.tip b{color:var(--ember)}
 
-/* ---- position bars ---- */
-.posbars{padding:8px 20px 20px;display:flex;flex-direction:column;gap:9px}
-.posrow{display:grid;grid-template-columns:78px 1fr 46px;align-items:center;gap:12px}
-.posrow .plab{font-size:12.5px;font-weight:620;color:var(--ink-2);text-align:right}
-.posrow .ptrack{height:26px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;overflow:hidden}
-.posrow .pfill{height:100%;border-radius:6px 5px 5px 6px;transition:width .5s cubic-bezier(.2,.7,.3,1)}
-.posrow .pnum{font-size:13px;font-weight:680;text-align:right;font-variant-numeric:tabular-nums}
+/* ---------- position bars ---------- */
+.posbars{padding:8px 22px 22px;display:flex;flex-direction:column;gap:10px}
+.posrow{display:grid;grid-template-columns:82px 1fr 44px;align-items:center;gap:14px}
+.posrow .plab{font-family:var(--disp);font-size:13px;font-weight:750;color:var(--ink-2);text-align:right}
+.posrow .ptrack{height:28px;background:var(--space-2);border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.posrow .pfill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.2,.7,.3,1)}
+.posrow .pnum{font-family:var(--disp);font-size:14px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
 
-/* ---- controls ---- */
-.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 20px 6px}
-.search{flex:1 1 240px;min-width:180px;display:flex;align-items:center;gap:8px;background:var(--surface-2);
-  border:1px solid var(--border);border-radius:9px;padding:8px 12px}
+/* ---------- controls ---------- */
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:18px 22px 6px}
+.search{flex:1 1 240px;min-width:180px;display:flex;align-items:center;gap:8px;background:var(--space-2);border:1px solid var(--border);border-radius:7px;padding:9px 12px}
+.search:focus-within{border-color:var(--ember)}
 .search svg{width:15px;height:15px;color:var(--muted);flex:none}
 .search input{border:0;background:transparent;color:var(--ink);font:inherit;width:100%;outline:none}
-.seg{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:3px;gap:2px;flex-wrap:wrap}
-.seg button{border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:12.5px;font-weight:600;
-  padding:5px 11px;border-radius:6px;cursor:pointer;white-space:nowrap}
-.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
-.count{font-size:12.5px;color:var(--muted);margin-left:auto;padding-left:6px}
+.seg{display:flex;background:var(--space-2);border:1px solid var(--border);border-radius:7px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:12.5px;font-weight:680;padding:6px 12px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--ember);color:#fff}
+:root[data-theme="light"] .seg button.on{color:#fff}
+.count{font-size:12px;color:var(--muted);margin-left:auto;padding-left:6px;font-weight:600}
 
-/* ---- table ---- */
-.tablescroll{overflow-x:auto;padding:6px 10px 12px}
+/* ---------- table ---------- */
+.tablescroll{overflow-x:auto;padding:6px 12px 14px}
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:720px}
-thead th{position:sticky;top:0;text-align:left;font-size:11px;font-weight:660;letter-spacing:.04em;text-transform:uppercase;
-  color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none;background:var(--surface)}
+thead th{position:sticky;top:0;text-align:left;font-family:var(--disp);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:11px 10px;border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none;background:var(--surface)}
 thead th.num{text-align:right}
+thead th.sorted{color:var(--ember)}
 thead th .arr{opacity:0;font-size:9px;margin-left:3px}
 thead th.sorted .arr{opacity:1}
-tbody td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
 tbody tr:hover{background:var(--surface-2)}
-td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
-td.kw{font-weight:600;max-width:280px}
-td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
-.pos-pill{display:inline-flex;min-width:26px;justify-content:center;font-weight:700;font-variant-numeric:tabular-nums;
-  padding:2px 7px;border-radius:6px;font-size:12.5px}
-.pos-1{color:#fff;background:var(--accent)}
-:root[data-theme="dark"] .pos-1,:root:not([data-theme="light"]) .pos-1{color:#08120d}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .pos-1{color:#08120d}}
-.pos-2{color:var(--accent-2);background:var(--accent-soft)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:640;font-family:var(--mono);font-size:12.5px}
+td.kw{font-weight:640;max-width:290px}
+td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:290px;font-family:var(--mono)}
+.pos-pill{display:inline-flex;min-width:28px;justify-content:center;font-family:var(--disp);font-weight:800;font-variant-numeric:tabular-nums;padding:3px 8px;border-radius:5px;font-size:12.5px}
+.pos-1{color:#fff;background:var(--ember)}
+.pos-2{color:var(--ember-2);background:var(--ember-soft)}
 .pos-3{color:var(--ink-2);background:var(--chip)}
 .pos-4{color:var(--muted);background:transparent;border:1px solid var(--border)}
-.intent{font-size:11px;font-weight:680;letter-spacing:.02em;padding:2px 7px;border-radius:5px;white-space:nowrap}
-.i-C{color:#7a5518;background:rgba(138,98,34,.14)}
-.i-T{color:#8f4f2c;background:rgba(154,90,51,.14)}
-.i-N{color:#455767;background:rgba(69,87,103,.13)}
-.i-I{color:#5a574d;background:rgba(90,87,77,.13)}
-:root[data-theme="dark"] .i-C,:root:not([data-theme="light"]) .i-C{color:#cda15c;background:rgba(205,161,92,.15)}
-:root[data-theme="dark"] .i-T,:root:not([data-theme="light"]) .i-T{color:#cd9b74;background:rgba(205,155,116,.15)}
-:root[data-theme="dark"] .i-N,:root:not([data-theme="light"]) .i-N{color:#8ea6ba;background:rgba(142,166,186,.14)}
-:root[data-theme="dark"] .i-I,:root:not([data-theme="light"]) .i-I{color:#9a968b;background:rgba(154,150,139,.14)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){}}
-.kd{display:inline-flex;align-items:center;gap:6px}
-.kd .bar{width:34px;height:5px;border-radius:3px;background:var(--grid);overflow:hidden}
+.intent{font-family:var(--disp);font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:3px 7px;border-radius:4px;white-space:nowrap}
+.i-C{color:var(--ember-2);background:var(--ember-soft)}
+.i-T{color:var(--spark);background:color-mix(in srgb,var(--spark) 14%,transparent)}
+.i-N{color:#8ea6ff;background:rgba(142,166,255,.13)}
+.i-I{color:var(--ink-2);background:var(--chip)}
+:root[data-theme="light"] .i-N{color:#3a56c8;background:rgba(58,86,200,.11)}
+.kd{display:inline-flex;align-items:center;gap:6px;justify-content:flex-end}
+.kd .bar{width:32px;height:5px;border-radius:3px;background:var(--grid);overflow:hidden}
 .kd .bar i{display:block;height:100%;border-radius:3px}
-.delta-cell{font-weight:700;font-variant-numeric:tabular-nums}
-.delta-cell.flat{color:var(--muted);font-weight:500}
+.delta-cell{font-weight:800}
+.delta-cell.flat{color:var(--muted);font-weight:600}
+.note{font-size:12px;color:var(--muted);padding:12px 22px 18px;line-height:1.6;border-top:1px solid var(--border)}
+.note b{color:var(--ink-2);font-weight:680}
 
-/* ---- competitors ---- */
-.comp{padding:6px 20px 18px;display:flex;flex-direction:column}
-.comprow{display:grid;grid-template-columns:1.4fr 1fr 88px;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--border)}
-.comprow:last-child{border-bottom:0}
-.comprow .cd{font-weight:640;display:flex;align-items:center;gap:9px;min-width:0}
-.comprow .cd .fav{width:22px;height:22px;border-radius:6px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:800;color:#12100a}
-.comprow .cd .tag{font-size:10.5px;font-weight:640;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:1px 5px}
-.comprow .rel{display:flex;align-items:center;gap:9px}
-.comprow .rel .rt{flex:1;height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
-.comprow .rel .rt i{display:block;height:100%;border-radius:3px;background:var(--series)}
-.comprow .rel .rv{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;width:30px;text-align:right}
-.comprow .ck{text-align:right;font-weight:680;font-variant-numeric:tabular-nums}
-.comprow .ck small{display:block;font-size:10.5px;color:var(--muted);font-weight:500}
-.comphead{display:grid;grid-template-columns:1.4fr 1fr 88px;gap:14px;padding:6px 4px 4px;font-size:11px;
-  font-weight:660;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+/* ---------- competitors ---------- */
+.comphead,.comprow{display:grid;grid-template-columns:1.5fr 1fr 92px;gap:16px;align-items:center}
+.comphead{padding:8px 6px 6px;font-family:var(--disp);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .comphead .r3{text-align:right}
+.comp{padding:6px 22px 20px}
+.comprow{padding:13px 6px;border-bottom:1px solid var(--border)}
+.comprow:last-child{border-bottom:0}
+.comprow .cd{font-weight:680;display:flex;align-items:center;gap:11px;min-width:0}
+.comprow .cd .fav{width:26px;height:26px;flex:none;display:grid;place-items:center;font-family:var(--disp);font-size:12px;font-weight:800;color:#0a0a12;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.comprow .cd .tag2{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:2px 6px}
+.comprow .rel{display:flex;align-items:center;gap:10px}
+.comprow .rel .rt{flex:1;height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
+.comprow .rel .rt i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ember),var(--spark))}
+.comprow .rel .rv{font-family:var(--mono);font-size:11.5px;color:var(--muted);width:30px;text-align:right}
+.comprow .ck{font-family:var(--disp);text-align:right;font-weight:850;font-variant-numeric:tabular-nums;font-size:16px}
+.comprow .ck small{display:block;font-size:10px;color:var(--muted);font-weight:600;font-family:var(--sans);letter-spacing:.04em;text-transform:uppercase}
 
-/* ---- footer ---- */
-.foot{margin-top:30px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-.foot .badge{display:inline-flex;align-items:center;gap:6px}
-.foot b{color:var(--ink-2);font-weight:620}
-.note{font-size:12px;color:var(--muted);padding:10px 20px 18px;line-height:1.55;border-top:1px solid var(--border);margin-top:4px}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ---------- footer ---------- */
+.foot{margin-top:44px;padding-top:22px;border-top:1px solid var(--border);color:var(--muted);font-size:13px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.foot .slay{font-family:var(--disp);font-weight:800;color:var(--ink-2);letter-spacing:-.01em}
+.foot .slay em{font-style:normal;color:var(--ember)}
+.foot b{color:var(--ink-2);font-weight:680}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
+
+<canvas id="stars" aria-hidden="true"></canvas>
 
 <header class="topbar">
   <div class="topbar-inner">
     <div class="brand">
       <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#161009" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l5-5 4 3 6-8"/><path d="M14 6h5v5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a12" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 4 3 7-9"/></svg>
       </div>
       <div>
         <div class="name">Weldwood Rank Tracker</div>
-        <div class="sub">Organic keyword positions · Google US</div>
+        <div class="sub">Organic Search Intel</div>
       </div>
     </div>
     <div class="spacer"></div>
     <div class="dompick">
       <span class="dot" aria-hidden="true"></span>
-      <select aria-label="Tracked domain">
-        <option>weldwoodmarketing.com</option>
-      </select>
+      <select aria-label="Tracked domain"><option>weldwoodmarketing.com</option></select>
     </div>
     <button class="iconbtn" id="themeBtn" title="Toggle theme" aria-label="Toggle light/dark theme">
       <svg class="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -249,118 +235,121 @@ td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflo
 </header>
 
 <div class="wrap">
-  <section class="head">
-    <div class="eyebrow">SEO Visibility Report</div>
-    <h1>weldwoodmarketing.com</h1>
-    <p>Live organic-search footprint for the domain — every keyword it ranks for in Google's US top 100, tracked with position, search volume, difficulty and estimated traffic. The story in the numbers is a steep climb: from 44 ranking keywords a year ago to <b>455</b> today.</p>
-    <span class="snapshot">Snapshot <b>Aug 7, 2026</b> · Source <b>Semrush</b> · Database <b>Google US (desktop)</b></span>
+  <section class="hero">
+    <span class="kick">Organic Search · Google US</span>
+    <h1>You're showing up for <em>455 keywords</em> — and climbing.</h1>
+    <p class="lede">A year ago it was <b>44</b>. This is the whole battlefield for <b>weldwoodmarketing.com</b>: every term you rank for in Google, where you land on the page, who else is hunting the same words, and exactly how much ground you've taken. Digital marketing's a monster — here's the scoreboard on slaying it.</p>
+    <div class="meta">
+      <span><i class="pip"></i> Snapshot <b>Aug 7, 2026</b></span>
+      <span><i class="pip"></i> Source <b>Semrush</b></span>
+      <span><i class="pip"></i> Google US <b>Desktop</b></span>
+    </div>
   </section>
 
-  <section class="kpis" id="kpis"></section>
+  <section class="readout" id="readout"></section>
 
-  <!-- growth -->
-  <section class="panel">
-    <div class="panel-h">
-      <h2>Growth over time</h2>
-      <span class="desc">Monthly, last 24 months · each metric on its own scale</span>
+  <section class="block">
+    <div class="sec-h">
+      <h2>The climb</h2>
+      <p><b>44 → 455 keywords</b> in twelve months, traffic up ~45×. Two metrics, two scales — the lines do the talking.</p>
     </div>
     <div class="grid2">
       <div class="chartcard chart-host" id="kwHost">
         <div class="ctitle"><span class="clabel">Ranking keywords</span><span class="now">455 <span>now</span></span></div>
       </div>
       <div class="chartcard chart-host" id="trHost">
-        <div class="ctitle"><span class="clabel">Est. monthly organic traffic</span><span class="now">134 <span>visits</span></span></div>
+        <div class="ctitle"><span class="clabel">Est. monthly traffic</span><span class="now">134 <span>visits</span></span></div>
       </div>
     </div>
   </section>
 
-  <!-- position distribution -->
-  <section class="panel">
-    <div class="panel-h">
-      <h2>Where the rankings sit</h2>
-      <span class="desc">455 keywords by SERP position bucket</span>
+  <section class="block">
+    <div class="sec-h">
+      <h2>Where you land</h2>
+      <p>All 455 keywords, sorted by how close to the top of Google they sit. The top of the pile catches the light — the deep cuts are where the next wins hide.</p>
     </div>
-    <div class="posbars" id="posbars"></div>
+    <div class="panel"><div class="posbars" id="posbars"></div></div>
   </section>
 
-  <!-- keyword table -->
-  <section class="panel">
-    <div class="panel-h">
-      <h2>Keyword rankings</h2>
-      <span class="desc">Top 50 by estimated traffic — click a column to sort</span>
+  <section class="block">
+    <div class="sec-h">
+      <h2>Every keyword you rank for</h2>
+      <p>The top 50 by the traffic they actually send. Hunt through them — sort any column, filter by intent or position.</p>
     </div>
-    <div class="controls">
-      <label class="search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-        <input id="kwSearch" type="search" placeholder="Filter keywords or landing pages…" autocomplete="off">
-      </label>
-      <div class="seg" id="intentSeg" role="group" aria-label="Filter by intent">
-        <button class="on" data-int="all">All intent</button>
-        <button data-int="C">Commercial</button>
-        <button data-int="T">Transactional</button>
-        <button data-int="N">Navigational</button>
-        <button data-int="I">Informational</button>
+    <div class="panel">
+      <div class="controls">
+        <label class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <input id="kwSearch" type="search" placeholder="Filter keywords or landing pages…" autocomplete="off">
+        </label>
+        <div class="seg" id="intentSeg" role="group" aria-label="Filter by intent">
+          <button class="on" data-int="all">All</button>
+          <button data-int="C">Commercial</button>
+          <button data-int="T">Transactional</button>
+          <button data-int="N">Navigational</button>
+          <button data-int="I">Informational</button>
+        </div>
+        <div class="seg" id="posSeg" role="group" aria-label="Filter by position">
+          <button class="on" data-pos="all">All pos</button>
+          <button data-pos="top3">Top 3</button>
+          <button data-pos="top10">Top 10</button>
+          <button data-pos="p11">11–20</button>
+          <button data-pos="p21">21+</button>
+        </div>
+        <span class="count" id="rowCount"></span>
       </div>
-      <div class="seg" id="posSeg" role="group" aria-label="Filter by position">
-        <button class="on" data-pos="all">All positions</button>
-        <button data-pos="top3">Top 3</button>
-        <button data-pos="top10">Top 10</button>
-        <button data-pos="p11">11–20</button>
-        <button data-pos="p21">21+</button>
+      <div class="tablescroll">
+        <table>
+          <thead>
+            <tr>
+              <th data-k="keyword" class="sortable">Keyword <span class="arr"></span></th>
+              <th data-k="position" class="num sortable sorted">Pos <span class="arr">▲</span></th>
+              <th data-k="diff" class="num sortable">Δ <span class="arr"></span></th>
+              <th data-k="volume" class="num sortable">Volume <span class="arr"></span></th>
+              <th data-k="traffic" class="num sortable">Traffic <span class="arr"></span></th>
+              <th data-k="kd" class="num sortable">KD% <span class="arr"></span></th>
+              <th data-k="intent" class="sortable">Intent <span class="arr"></span></th>
+            </tr>
+          </thead>
+          <tbody id="kwBody"></tbody>
+        </table>
       </div>
-      <span class="count" id="rowCount"></span>
+      <div class="note" id="tableNote"></div>
     </div>
-    <div class="tablescroll">
-      <table>
-        <thead>
-          <tr>
-            <th data-k="keyword" class="sortable">Keyword <span class="arr"></span></th>
-            <th data-k="position" class="num sortable sorted">Pos <span class="arr">▲</span></th>
-            <th data-k="diff" class="num sortable">Δ <span class="arr"></span></th>
-            <th data-k="volume" class="num sortable">Volume <span class="arr"></span></th>
-            <th data-k="traffic" class="num sortable">Traffic <span class="arr"></span></th>
-            <th data-k="kd" class="num sortable">KD% <span class="arr"></span></th>
-            <th data-k="intent" class="sortable">Intent <span class="arr"></span></th>
-          </tr>
-        </thead>
-        <tbody id="kwBody"></tbody>
-      </table>
-    </div>
-    <div class="note" id="tableNote"></div>
   </section>
 
-  <!-- competitors -->
-  <section class="panel">
-    <div class="panel-h">
-      <h2>Organic competitors</h2>
-      <span class="desc">Domains competing for the same keywords, by relevance</span>
+  <section class="block">
+    <div class="sec-h">
+      <h2>Who else is hunting</h2>
+      <p>Domains fighting for your keywords, ranked by how much their profile overlaps <b>yours</b>. The agencies are your real rivals — the directories just show up to everything.</p>
     </div>
-    <div class="comp">
-      <div class="comphead"><div>Domain</div><div>Relevance to you</div><div class="r3">Shared kw</div></div>
-      <div id="compRows"></div>
+    <div class="panel">
+      <div class="comp">
+        <div class="comphead"><div>Domain</div><div>Overlap with you</div><div class="r3">Shared</div></div>
+        <div id="compRows"></div>
+      </div>
+      <div class="note">Overlap weights how much of a domain's keyword profile competes with <b>yours</b> specifically. Big directories (Yelp, Clutch) share head terms but aren't real competitors — the agencies above them are the field.</div>
     </div>
-    <div class="note">Relevance weights how much of a domain's keyword profile overlaps <b>yours</b> specifically. Large directories (Yelp, Clutch, DesignRush) share head terms but aren't direct competitors — the agencies below them are the real local field.</div>
   </section>
 
   <div class="foot">
-    <span class="badge">Data: <b>Semrush</b> Organic Research, Backlinks & Competitors APIs · pulled <b>Aug 7, 2026</b></span>
-    <span class="badge">Point-in-time snapshot — refresh from Semrush to update.</span>
+    <span class="slay">Digital marketing is a monster. <em>You're winning.</em></span>
+    <span>Pulled from <b>Semrush</b> · <b>Aug 7, 2026</b> · a snapshot in time — say the word and we'll wire it to refresh itself.</span>
   </div>
 </div>
 
 <div class="tip" id="tip"></div>
 
 <script>
-// ---------- REAL DATA (Semrush, weldwoodmarketing.com, google US) ----------
+// ---------- REAL DATA (Semrush · weldwoodmarketing.com · Google US) ----------
 const KPIS=[
-  {label:"Authority Score",val:"21",sub:"/100",meter:21,foot:"Backlink authority"},
-  {label:"Ranking keywords",val:"455",delta:{v:"10.3×",dir:"up"},foot:"vs 12 mo ago"},
-  {label:"Est. monthly traffic",val:"134",delta:{v:"45×",dir:"up"},foot:"vs 12 mo ago"},
-  {label:"Traffic value",val:"$129",sub:"/mo",foot:"Equivalent PPC spend"},
-  {label:"Backlinks",val:"3,393",foot:"330 referring domains"},
-  {label:"Top-3 rankings",val:"10",delta:{v:"+3",dir:"up"},foot:"51 keywords in top 10"},
+  {label:"Authority Score",val:"21",sub:"/100",meter:21,foot:"Backlink strength"},
+  {label:"Ranking keywords",val:"455",delta:{v:"10.3×",dir:"up"},foot:"vs last year"},
+  {label:"Monthly traffic",val:"134",delta:{v:"45×",dir:"up"},foot:"vs last year"},
+  {label:"Traffic value",val:"$129",sub:"/mo",foot:"PPC equivalent"},
+  {label:"Backlinks",val:"3,393",foot:"330 ref. domains"},
+  {label:"Top-3 spots",val:"10",delta:{v:"+3",dir:"up"},foot:"51 in the top 10"},
 ];
-// monthly history, ascending. {m:'YYYYMM', kw, tr}
 const HIST=[
   {m:"2024-08",kw:44,tr:3},{m:"2024-09",kw:35,tr:0},{m:"2024-10",kw:36,tr:0},{m:"2024-11",kw:51,tr:0},
   {m:"2024-12",kw:64,tr:2},{m:"2025-01",kw:53,tr:3},{m:"2025-02",kw:57,tr:16},{m:"2025-03",kw:57,tr:6},
@@ -369,14 +358,9 @@ const HIST=[
   {m:"2025-12",kw:89,tr:47},{m:"2026-01",kw:186,tr:63},{m:"2026-02",kw:244,tr:90},{m:"2026-03",kw:279,tr:137},
   {m:"2026-04",kw:317,tr:193},{m:"2026-05",kw:329,tr:212},{m:"2026-06",kw:391,tr:211},{m:"2026-07",kw:450,tr:145},
 ];
-// position buckets
-const POS=[
-  {lab:"Top 3",n:10},{lab:"4–10",n:41},{lab:"11–20",n:78},{lab:"21–30",n:93},{lab:"31–50",n:88},{lab:"51–100",n:135},
-];
-// intent codes: 0 Commercial, 1 Informational, 2 Navigational, 3 Transactional
+const POS=[{lab:"Top 3",n:10},{lab:"4–10",n:41},{lab:"11–20",n:78},{lab:"21–30",n:93},{lab:"31–50",n:88},{lab:"51–100",n:135}];
 const IMAP={0:"C",1:"I",2:"N",3:"T"};
 const INAME={C:"Commercial",I:"Informational",N:"Navigational",T:"Transactional"};
-// keyword;position;prev;diff;volume;cpc;url;traffic;kd;intent
 const RAW=[
 ["weldwood marketing",1,1,0,50,0,"/",40,31,2],
 ["corvallis seo company",5,5,0,320,0,"/location/corvallis-or/",7,4,0],
@@ -441,58 +425,65 @@ const COMP=[
   {d:"clutch.co",rel:0.004,ck:53,tag:"Directory"},
 ];
 
-// ---------- render KPIs ----------
-const up=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>`;
-const dn=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
-document.getElementById('kpis').innerHTML=KPIS.map(k=>{
-  const d=k.delta?`<span class="delta ${k.delta.dir}">${k.delta.dir==='up'?up:dn}${k.delta.v}</span>`:'';
+// ---------- starfield ----------
+(function(){
+  const c=document.getElementById('stars'),x=c.getContext('2d');
+  const reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  let stars=[],W,H,raf;
+  function size(){W=c.width=innerWidth*devicePixelRatio;H=c.height=innerHeight*devicePixelRatio;
+    const n=Math.min(180,Math.floor(innerWidth*innerHeight/9000));
+    stars=Array.from({length:n},(_,i)=>({x:((i*97+37)%1000)/1000*W,y:((i*57+13)%1000)/1000*H,
+      r:(((i*31)%10)/10*1.1+0.3)*devicePixelRatio,b:((i*13)%60)/100+0.25,s:((i%7)+2)/1400}));}
+  function col(){return getComputedStyle(document.documentElement).getPropertyValue('--star').trim()||'#cdd6ff';}
+  function draw(t){const cc=col();x.clearRect(0,0,W,H);
+    for(const s of stars){const tw=reduce?s.b:s.b*(0.55+0.45*Math.sin(t*s.s+s.x));
+      x.globalAlpha=Math.max(0,Math.min(1,tw));x.fillStyle=cc;x.beginPath();x.arc(s.x,s.y,s.r,0,6.29);x.fill();}
+    x.globalAlpha=1;if(!reduce)raf=requestAnimationFrame(draw);}
+  size();draw(0);if(reduce){/* single static frame */}
+  addEventListener('resize',()=>{cancelAnimationFrame(raf);size();draw(0);});
+})();
+
+// ---------- readout ----------
+const up=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>`;
+const dn=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
+document.getElementById('readout').innerHTML=KPIS.map(k=>{
+  const d=k.delta?`<span class="tag ${k.delta.dir}">${k.delta.dir==='up'?up:dn}${k.delta.v}</span>`:'';
   const meter=k.meter!=null?`<div class="as-meter"><i style="width:${k.meter}%"></i></div>`:'';
-  return `<div class="kpi"><div class="label">${k.label}</div>
-    <div class="val">${k.val}${k.sub?`<small>${k.sub}</small>`:''}</div>
-    ${meter}<div class="foot">${d}<span>${k.foot}</span></div></div>`;
+  return `<div class="stat"><div class="s-lab">${k.label}</div>
+    <div class="s-val">${k.val}${k.sub?`<small>${k.sub}</small>`:''}</div>
+    ${meter}<div class="s-foot">${d}<span>${k.foot}</span></div></div>`;
 }).join('');
 
 // ---------- area charts ----------
 const tip=document.getElementById('tip');
 function areaChart(host,data,key,fmt){
-  const W=520,H=170,pl=6,pr=6,pt=14,pb=22;
-  const xs=(i)=>pl+(i*(W-pl-pr)/(data.length-1));
-  const max=Math.max(...data.map(d=>d[key]))*1.12||1;
-  const ys=(v)=>H-pb-(v/max)*(H-pt-pb);
+  const W=520,H=176,pl=6,pr=6,pt=16,pb=22;
+  const xs=i=>pl+(i*(W-pl-pr)/(data.length-1));
+  const max=Math.max(...data.map(d=>d[key]))*1.14||1;
+  const ys=v=>H-pb-(v/max)*(H-pt-pb);
   let line="",area=`M ${xs(0)} ${H-pb} `;
   data.forEach((d,i)=>{line+=(i?"L":"M")+` ${xs(i).toFixed(1)} ${ys(d[key]).toFixed(1)} `;area+=`L ${xs(i).toFixed(1)} ${ys(d[key]).toFixed(1)} `;});
   area+=`L ${xs(data.length-1)} ${H-pb} Z`;
-  // gridlines at 3 levels
-  let grid="";for(let g=1;g<=3;g++){const v=max*g/3.4;const y=ys(v);grid+=`<line class="gridline" x1="${pl}" y1="${y.toFixed(1)}" x2="${W-pr}" y2="${y.toFixed(1)}"/><text class="axislbl" x="${pl}" y="${(y-4).toFixed(1)}">${Math.round(v)}</text>`;}
-  // x labels: first, middle, last
+  let grid="";for(let g=1;g<=3;g++){const v=max*g/3.4,y=ys(v);grid+=`<line class="gridline" x1="${pl}" y1="${y.toFixed(1)}" x2="${W-pr}" y2="${y.toFixed(1)}"/><text class="axislbl" x="${pl}" y="${(y-4).toFixed(1)}">${Math.round(v)}</text>`;}
   const xl=[0,Math.floor(data.length/2),data.length-1].map(i=>`<text class="axislbl" x="${xs(i).toFixed(1)}" y="${H-6}" text-anchor="${i===0?'start':i===data.length-1?'end':'middle'}">${data[i].m}</text>`).join('');
   const li=data.length-1;
-  const svg=`<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="trend">
+  host.insertAdjacentHTML('beforeend',`<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="trend">
     <defs><linearGradient id="g_${key}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="var(--series)" stop-opacity="0.28"/><stop offset="1" stop-color="var(--series)" stop-opacity="0.02"/>
-    </linearGradient></defs>
-    ${grid}
+      <stop offset="0" stop-color="var(--series)" stop-opacity="0.34"/><stop offset="1" stop-color="var(--series)" stop-opacity="0.02"/>
+    </linearGradient></defs>${grid}
     <path d="${area}" fill="url(#g_${key})"/>
-    <path d="${line}" fill="none" stroke="var(--series-line)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${line}" fill="none" stroke="var(--series-line)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
     <line class="crosshair" id="ch_${key}" x1="0" y1="${pt}" x2="0" y2="${H-pb}" style="opacity:0"/>
     <circle id="cd_${key}" r="4.5" fill="var(--surface)" stroke="var(--series-line)" stroke-width="2.5" style="opacity:0"/>
-    <circle cx="${xs(li).toFixed(1)}" cy="${ys(data[li][key]).toFixed(1)}" r="4" fill="var(--series-line)"/>
-    ${xl}
-    <rect x="0" y="0" width="${W}" height="${H}" fill="transparent" id="hit_${key}"/>
-  </svg>`;
-  host.insertAdjacentHTML('beforeend',svg);
-  const hit=host.querySelector('#hit_'+key),ch=host.querySelector('#ch_'+key),cd=host.querySelector('#cd_'+key);
-  const svgEl=host.querySelector('svg');
-  hit.addEventListener('mousemove',e=>{
-    const r=svgEl.getBoundingClientRect();const px=(e.clientX-r.left)/r.width*W;
+    <circle cx="${xs(li).toFixed(1)}" cy="${ys(data[li][key]).toFixed(1)}" r="4.2" fill="var(--series-line)"/>
+    ${xl}<rect x="0" y="0" width="${W}" height="${H}" fill="transparent" id="hit_${key}"/></svg>`);
+  const hit=host.querySelector('#hit_'+key),ch=host.querySelector('#ch_'+key),cd=host.querySelector('#cd_'+key),svgEl=host.querySelector('svg');
+  hit.addEventListener('mousemove',e=>{const r=svgEl.getBoundingClientRect();const px=(e.clientX-r.left)/r.width*W;
     let i=Math.round((px-pl)/((W-pl-pr)/(data.length-1)));i=Math.max(0,Math.min(data.length-1,i));
-    const cx=xs(i),cy=ys(data[i][key]);
-    ch.setAttribute('x1',cx);ch.setAttribute('x2',cx);ch.style.opacity=.7;
+    const cx=xs(i),cy=ys(data[i][key]);ch.setAttribute('x1',cx);ch.setAttribute('x2',cx);ch.style.opacity=.7;
     cd.setAttribute('cx',cx);cd.setAttribute('cy',cy);cd.style.opacity=1;
     tip.innerHTML=`<b>${fmt(data[i][key])}</b> · ${data[i].m}`;
-    tip.style.left=(r.left+cx/W*r.width)+'px';tip.style.top=(r.top+cy/H*r.height+window.scrollY)+'px';
-    tip.style.opacity=1;
-  });
+    tip.style.left=(r.left+cx/W*r.width)+'px';tip.style.top=(r.top+cy/H*r.height+scrollY)+'px';tip.style.opacity=1;});
   hit.addEventListener('mouseleave',()=>{ch.style.opacity=0;cd.style.opacity=0;tip.style.opacity=0;});
 }
 areaChart(document.getElementById('kwHost'),HIST,'kw',v=>v+' keywords');
@@ -500,26 +491,21 @@ areaChart(document.getElementById('trHost'),HIST,'tr',v=>v+' visits');
 
 // ---------- position bars ----------
 const posMax=Math.max(...POS.map(p=>p.n));
-// amber light fading into shadow — best positions catch the lamp, deep positions vanish
-const posShades=['var(--accent-2)','var(--accent)','color-mix(in srgb,var(--accent) 80%,var(--muted))','color-mix(in srgb,var(--accent) 55%,var(--muted))','color-mix(in srgb,var(--accent) 34%,var(--muted))','color-mix(in srgb,var(--muted) 85%,transparent)'];
-document.getElementById('posbars').innerHTML=POS.map((p,i)=>{
-  const pct=(p.n/posMax*100).toFixed(1);
-  return `<div class="posrow"><div class="plab">${p.lab}</div>
-    <div class="ptrack" title="${p.n} keywords in positions ${p.lab}"><div class="pfill" style="width:${pct}%;background:${posShades[i]}"></div></div>
-    <div class="pnum">${p.n}</div></div>`;
-}).join('');
+const posShades=['var(--ember)','var(--ember-2)','color-mix(in srgb,var(--ember) 74%,var(--muted))','color-mix(in srgb,var(--ember) 50%,var(--muted))','color-mix(in srgb,var(--ember) 30%,var(--muted))','color-mix(in srgb,var(--muted) 78%,transparent)'];
+document.getElementById('posbars').innerHTML=POS.map((p,i)=>`<div class="posrow"><div class="plab">${p.lab}</div>
+  <div class="ptrack" title="${p.n} keywords in positions ${p.lab}"><div class="pfill" style="width:${(p.n/posMax*100).toFixed(1)}%;background:${posShades[i]}"></div></div>
+  <div class="pnum">${p.n}</div></div>`).join('');
 
 // ---------- keyword table ----------
 const body=document.getElementById('kwBody'),rowCount=document.getElementById('rowCount');
 let sortK='position',sortDir=1,fInt='all',fPos='all',fQ='';
 function posClass(p){return p<=3?'pos-1':p<=10?'pos-2':p<=20?'pos-3':'pos-4';}
-function kdColor(kd){return kd<15?'var(--good)':kd<40?'var(--warning)':'var(--critical)';}
-function fmtDiff(d){if(d===0)return `<span class="delta-cell flat">—</span>`;const up=d>0;return `<span class="delta-cell" style="color:${up?'var(--good-ink)':'var(--critical)'}">${up?'▲':'▼'}${Math.abs(d)}</span>`;}
+function kdColor(kd){return kd<15?'var(--win)':kd<40?'var(--warn)':'var(--loss)';}
+function fmtDiff(d){if(d===0)return `<span class="delta-cell flat">—</span>`;const u=d>0;return `<span class="delta-cell" style="color:${u?'var(--win-ink)':'var(--loss)'}">${u?'▲':'▼'}${Math.abs(d)}</span>`;}
 function passPos(p){return fPos==='all'||(fPos==='top3'&&p<=3)||(fPos==='top10'&&p<=10)||(fPos==='p11'&&p>=11&&p<=20)||(fPos==='p21'&&p>=21);}
 function render(){
-  let rows=RAW.filter(r=>(fInt==='all'||r.intent===fInt)&&passPos(r.position)&&
-    (fQ===''||r.keyword.includes(fQ)||r.url.includes(fQ)));
-  rows.sort((a,b)=>{let x=a[sortK],y=b[sortK];if(sortK==='keyword'||sortK==='intent'){x=String(x);y=String(y);return x<y?-1*sortDir:x>y?1*sortDir:0;}return (x-y)*sortDir;});
+  let rows=RAW.filter(r=>(fInt==='all'||r.intent===fInt)&&passPos(r.position)&&(fQ===''||r.keyword.includes(fQ)||r.url.includes(fQ)));
+  rows.sort((a,b)=>{let x=a[sortK],y=b[sortK];if(sortK==='keyword'||sortK==='intent'){x=String(x);y=String(y);return x<y?-sortDir:x>y?sortDir:0;}return (x-y)*sortDir;});
   body.innerHTML=rows.map(r=>`<tr>
     <td class="kw">${r.keyword}<span class="u">${r.url}</span></td>
     <td class="num"><span class="pos-pill ${posClass(r.position)}">${r.position}</span></td>
@@ -528,47 +514,35 @@ function render(){
     <td class="num">${r.traffic}</td>
     <td class="num"><span class="kd"><span class="bar"><i style="width:${Math.min(100,r.kd)}%;background:${kdColor(r.kd)}"></i></span>${r.kd}</span></td>
     <td><span class="intent i-${r.intent}" title="${INAME[r.intent]}">${r.intent}</span></td>
-  </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:26px">No keywords match these filters.</td></tr>`;
-  rowCount.textContent=rows.length+' of '+RAW.length+' keywords';
+  </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">No keywords match these filters.</td></tr>`;
+  rowCount.textContent=rows.length+' of '+RAW.length;
 }
-document.querySelectorAll('thead th.sortable').forEach(th=>{
-  th.addEventListener('click',()=>{
-    const k=th.dataset.k;
-    if(sortK===k){sortDir*=-1;}else{sortK=k;sortDir=(k==='keyword'||k==='intent')?1:(k==='position'?1:-1);}
-    document.querySelectorAll('thead th').forEach(t=>{t.classList.remove('sorted');t.querySelector('.arr').textContent='';});
-    th.classList.add('sorted');th.querySelector('.arr').textContent=sortDir>0?'▲':'▼';
-    render();
-  });
-});
+document.querySelectorAll('thead th.sortable').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.k;
+  if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=(k==='keyword'||k==='intent')?1:(k==='position'?1:-1);}
+  document.querySelectorAll('thead th').forEach(t=>{t.classList.remove('sorted');t.querySelector('.arr').textContent='';});
+  th.classList.add('sorted');th.querySelector('.arr').textContent=sortDir>0?'▲':'▼';render();}));
 document.getElementById('intentSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   document.querySelectorAll('#intentSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');fInt=b.dataset.int;render();});
 document.getElementById('posSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   document.querySelectorAll('#posSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');fPos=b.dataset.pos;render();});
 document.getElementById('kwSearch').addEventListener('input',e=>{fQ=e.target.value.trim().toLowerCase();render();});
 render();
-
-document.getElementById('tableNote').innerHTML='Intent: <b>C</b> commercial · <b>T</b> transactional · <b>N</b> navigational · <b>I</b> informational. KD% is Semrush keyword difficulty (0 = easiest). Δ shows position change vs the prior month — flat this period across the tracked set.';
+document.getElementById('tableNote').innerHTML='Intent — <b>C</b> commercial · <b>T</b> transactional · <b>N</b> navigational · <b>I</b> informational. KD% is Semrush difficulty (0 = easiest to rank). Δ is position change vs the prior month — flat across the tracked set this period.';
 
 // ---------- competitors ----------
 const compMax=Math.max(...COMP.map(c=>c.rel));
-const favColors=['#cda15c','#b98e46','#a67c37','#8f6a2c','#6f5a3a','#5c5647','#3f4650','#33333a'];
-document.getElementById('compRows').innerHTML=COMP.map((c,i)=>{
-  const relPct=(c.rel/compMax*100).toFixed(0);
-  const init=c.d[0].toUpperCase();
-  return `<div class="comprow">
-    <div class="cd"><span class="fav" style="background:${favColors[i]}">${init}</span>${c.d}<span class="tag">${c.tag}</span></div>
-    <div class="rel"><span class="rt"><i style="width:${relPct}%"></i></span><span class="rv">${c.rel.toFixed(2)}</span></div>
-    <div class="ck">${c.ck}<small>keywords</small></div>
-  </div>`;
-}).join('');
+const favColors=['#ff6a3a','#ff7d4f','#ff9142','#ffb23a','#c98a3a','#8a7d5a','#5f6a86','#454b63'];
+document.getElementById('compRows').innerHTML=COMP.map((c,i)=>`<div class="comprow">
+  <div class="cd"><span class="fav" style="background:${favColors[i]}">${c.d[0].toUpperCase()}</span>${c.d}<span class="tag2">${c.tag}</span></div>
+  <div class="rel"><span class="rt"><i style="width:${(c.rel/compMax*100).toFixed(0)}%"></i></span><span class="rv">${c.rel.toFixed(2)}</span></div>
+  <div class="ck">${c.ck}<small>keywords</small></div>
+</div>`).join('');
 
 // ---------- theme toggle ----------
 document.getElementById('themeBtn').addEventListener('click',()=>{
-  const r=document.documentElement;
-  const cur=r.getAttribute('data-theme');
-  const sysDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
-  let next;
-  if(cur==='dark')next='light';else if(cur==='light')next='dark';else next=sysDark?'light':'dark';
-  r.setAttribute('data-theme',next);
+  const r=document.documentElement,cur=r.getAttribute('data-theme');
+  const sysLight=window.matchMedia('(prefers-color-scheme:light)').matches;
+  r.setAttribute('data-theme',cur==='light'?'dark':cur==='dark'?'light':(sysLight?'dark':'light'));
 });
 </script>
