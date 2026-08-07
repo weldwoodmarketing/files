@@ -1,40 +1,45 @@
 <title>Weldwood Rank Tracker — weldwoodmarketing.com</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+/* ===== NOIR — light variant: bone paper, ink black, lone amber ===== */
 :root{
   color-scheme: light;
-  --page:#f4f6f3; --surface:#ffffff; --surface-2:#fbfcfa;
-  --ink:#12211b; --ink-2:#55635c; --muted:#8a938d;
-  --grid:#e6e9e3; --baseline:#cfd5cd; --border:rgba(18,33,27,.10);
-  --accent:#16714a; --accent-2:#0f5638; --accent-soft:#e4f0ea;
-  --series:#148f63; --series-soft:rgba(20,143,99,.14); --series-line:#0f7a52;
-  --good:#0a9a2e; --good-ink:#067022; --critical:#d03b3b; --warning:#c98500;
-  --chip:#eef1ec;
-  --shadow:0 1px 2px rgba(18,33,27,.05),0 8px 24px -12px rgba(18,33,27,.14);
+  --page:#e6e2d8; --surface:#f1ede4; --surface-2:#e9e4d9;
+  --ink:#16150f; --ink-2:#4a473d; --muted:#7c786c;
+  --grid:#d4cfc1; --baseline:#b9b3a2; --border:rgba(22,21,15,.14);
+  --accent:#8a6222; --accent-2:#6f4d18; --accent-soft:rgba(138,98,34,.12);
+  --series:#8a6222; --series-soft:rgba(138,98,34,.14); --series-line:#7a5518;
+  --good:#4f7a4a; --good-ink:#3c6238; --critical:#a23b30; --warning:#8a6222;
+  --chip:#ded9cc;
+  --grain:.05; --vignette:rgba(22,21,15,.16);
+  --shadow:0 1px 2px rgba(22,21,15,.10),0 10px 26px -14px rgba(22,21,15,.30);
   --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
+/* ===== NOIR — dark variant (the default mood): deep shadow, warm bone, amber lamp ===== */
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   color-scheme:dark;
-  --page:#0b0e0c; --surface:#14181500; --surface:#141815; --surface-2:#191e1a;
-  --ink:#eef3ef; --ink-2:#aeb9b1; --muted:#7c867e;
-  --grid:#242a25; --baseline:#333b34; --border:rgba(255,255,255,.10);
-  --accent:#4bbd8a; --accent-2:#6fd0a4; --accent-soft:rgba(75,189,138,.13);
-  --series:#2fb884; --series-soft:rgba(47,184,132,.17); --series-line:#41c692;
-  --good:#28b44a; --good-ink:#4fd06d; --critical:#e46565; --warning:#e0a52a;
-  --chip:#1e241f;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -14px rgba(0,0,0,.6);
+  --page:#0a0a0b; --surface:#141416; --surface-2:#1b1b1f;
+  --ink:#ece8df; --ink-2:#a6a298; --muted:#6d6a63;
+  --grid:rgba(236,232,223,.07); --baseline:rgba(236,232,223,.16); --border:rgba(236,232,223,.11);
+  --accent:#cda15c; --accent-2:#e6c078; --accent-soft:rgba(205,161,92,.12);
+  --series:#cda15c; --series-soft:rgba(205,161,92,.16); --series-line:#e0b56e;
+  --good:#8fae86; --good-ink:#a6c39c; --critical:#c05a4e; --warning:#cda15c;
+  --chip:#22221f;
+  --grain:.06; --vignette:rgba(0,0,0,.55);
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 14px 40px -16px rgba(0,0,0,.8);
 }}
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --page:#0b0e0c; --surface:#141815; --surface-2:#191e1a;
-  --ink:#eef3ef; --ink-2:#aeb9b1; --muted:#7c867e;
-  --grid:#242a25; --baseline:#333b34; --border:rgba(255,255,255,.10);
-  --accent:#4bbd8a; --accent-2:#6fd0a4; --accent-soft:rgba(75,189,138,.13);
-  --series:#2fb884; --series-soft:rgba(47,184,132,.17); --series-line:#41c692;
-  --good:#28b44a; --good-ink:#4fd06d; --critical:#e46565; --warning:#e0a52a;
-  --chip:#1e241f;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -14px rgba(0,0,0,.6);
+  --page:#0a0a0b; --surface:#141416; --surface-2:#1b1b1f;
+  --ink:#ece8df; --ink-2:#a6a298; --muted:#6d6a63;
+  --grid:rgba(236,232,223,.07); --baseline:rgba(236,232,223,.16); --border:rgba(236,232,223,.11);
+  --accent:#cda15c; --accent-2:#e6c078; --accent-soft:rgba(205,161,92,.12);
+  --series:#cda15c; --series-soft:rgba(205,161,92,.16); --series-line:#e0b56e;
+  --good:#8fae86; --good-ink:#a6c39c; --critical:#c05a4e; --warning:#cda15c;
+  --chip:#22221f;
+  --grain:.06; --vignette:rgba(0,0,0,.55);
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 14px 40px -16px rgba(0,0,0,.8);
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -43,6 +48,15 @@ body{
   font-family:var(--sans); font-size:15px; line-height:1.5;
   -webkit-font-smoothing:antialiased;
 }
+/* film-noir atmosphere: a lamp-glow from top, a closing vignette, and grain */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:
+    radial-gradient(120% 80% at 78% -10%, color-mix(in srgb,var(--accent) 16%,transparent), transparent 42%),
+    radial-gradient(140% 120% at 50% 120%, var(--vignette), transparent 55%),
+    radial-gradient(100% 100% at 50% 40%, transparent 60%, var(--vignette));}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:2;opacity:var(--grain);mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.topbar,.wrap{position:relative;z-index:3}
 .wrap{max-width:1200px;margin:0 auto;padding:0 22px 80px}
 h1,h2,h3{margin:0;font-weight:640;letter-spacing:-.01em;text-wrap:balance}
 a{color:var(--accent-2)}
@@ -64,7 +78,7 @@ a{color:var(--accent-2)}
 .spacer{flex:1 1 auto}
 .dompick{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);
   border-radius:9px;padding:7px 11px;font-weight:600;font-size:13.5px;box-shadow:var(--shadow)}
-.dompick .dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 22%,transparent)}
+.dompick .dot{width:7px;height:7px;border-radius:50%;background:var(--accent-2);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 26%,transparent),0 0 8px 1px color-mix(in srgb,var(--accent) 55%,transparent)}
 .dompick select{border:0;background:transparent;color:var(--ink);font:inherit;font-weight:600;cursor:pointer;outline:none}
 .iconbtn{width:36px;height:36px;border-radius:9px;border:1px solid var(--border);background:var(--surface);
   color:var(--ink-2);cursor:pointer;display:grid;place-items:center;box-shadow:var(--shadow)}
@@ -169,14 +183,14 @@ td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflo
 .pos-3{color:var(--ink-2);background:var(--chip)}
 .pos-4{color:var(--muted);background:transparent;border:1px solid var(--border)}
 .intent{font-size:11px;font-weight:680;letter-spacing:.02em;padding:2px 7px;border-radius:5px;white-space:nowrap}
-.i-C{color:#0f766e;background:rgba(20,143,99,.13)}
-.i-I{color:#1d4ed8;background:rgba(42,120,214,.13)}
-.i-N{color:#7c3aed;background:rgba(124,58,237,.13)}
-.i-T{color:#b45309;background:rgba(235,104,52,.13)}
-:root[data-theme="dark"] .i-C,:root:not([data-theme="light"]) .i-C{color:#3fd7a1}
-:root[data-theme="dark"] .i-I,:root:not([data-theme="light"]) .i-I{color:#7fb0f5}
-:root[data-theme="dark"] .i-N,:root:not([data-theme="light"]) .i-N{color:#b9a4f5}
-:root[data-theme="dark"] .i-T,:root:not([data-theme="light"]) .i-T{color:#f0a878}
+.i-C{color:#7a5518;background:rgba(138,98,34,.14)}
+.i-T{color:#8f4f2c;background:rgba(154,90,51,.14)}
+.i-N{color:#455767;background:rgba(69,87,103,.13)}
+.i-I{color:#5a574d;background:rgba(90,87,77,.13)}
+:root[data-theme="dark"] .i-C,:root:not([data-theme="light"]) .i-C{color:#cda15c;background:rgba(205,161,92,.15)}
+:root[data-theme="dark"] .i-T,:root:not([data-theme="light"]) .i-T{color:#cd9b74;background:rgba(205,155,116,.15)}
+:root[data-theme="dark"] .i-N,:root:not([data-theme="light"]) .i-N{color:#8ea6ba;background:rgba(142,166,186,.14)}
+:root[data-theme="dark"] .i-I,:root:not([data-theme="light"]) .i-I{color:#9a968b;background:rgba(154,150,139,.14)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){}}
 .kd{display:inline-flex;align-items:center;gap:6px}
 .kd .bar{width:34px;height:5px;border-radius:3px;background:var(--grid);overflow:hidden}
@@ -189,7 +203,7 @@ td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflo
 .comprow{display:grid;grid-template-columns:1.4fr 1fr 88px;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--border)}
 .comprow:last-child{border-bottom:0}
 .comprow .cd{font-weight:640;display:flex;align-items:center;gap:9px;min-width:0}
-.comprow .cd .fav{width:22px;height:22px;border-radius:6px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff}
+.comprow .cd .fav{width:22px;height:22px;border-radius:6px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:800;color:#12100a}
 .comprow .cd .tag{font-size:10.5px;font-weight:640;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:1px 5px}
 .comprow .rel{display:flex;align-items:center;gap:9px}
 .comprow .rel .rt{flex:1;height:6px;border-radius:3px;background:var(--grid);overflow:hidden}
@@ -213,7 +227,7 @@ td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflo
   <div class="topbar-inner">
     <div class="brand">
       <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l5-5 4 3 6-8"/><path d="M14 6h5v5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#161009" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l5-5 4 3 6-8"/><path d="M14 6h5v5"/></svg>
       </div>
       <div>
         <div class="name">Weldwood Rank Tracker</div>
@@ -486,7 +500,8 @@ areaChart(document.getElementById('trHost'),HIST,'tr',v=>v+' visits');
 
 // ---------- position bars ----------
 const posMax=Math.max(...POS.map(p=>p.n));
-const posShades=['var(--accent-2)','var(--accent)','var(--series)','#3aa77c','#6fbf9c','#a7d6bf'];
+// amber light fading into shadow — best positions catch the lamp, deep positions vanish
+const posShades=['var(--accent-2)','var(--accent)','color-mix(in srgb,var(--accent) 80%,var(--muted))','color-mix(in srgb,var(--accent) 55%,var(--muted))','color-mix(in srgb,var(--accent) 34%,var(--muted))','color-mix(in srgb,var(--muted) 85%,transparent)'];
 document.getElementById('posbars').innerHTML=POS.map((p,i)=>{
   const pct=(p.n/posMax*100).toFixed(1);
   return `<div class="posrow"><div class="plab">${p.lab}</div>
@@ -536,7 +551,7 @@ document.getElementById('tableNote').innerHTML='Intent: <b>C</b> commercial · <
 
 // ---------- competitors ----------
 const compMax=Math.max(...COMP.map(c=>c.rel));
-const favColors=['#16714a','#0f5638','#148f63','#2a9d6f','#3aa77c','#4b8f6f','#c98500','#8a938d'];
+const favColors=['#cda15c','#b98e46','#a67c37','#8f6a2c','#6f5a3a','#5c5647','#3f4650','#33333a'];
 document.getElementById('compRows').innerHTML=COMP.map((c,i)=>{
   const relPct=(c.rel/compMax*100).toFixed(0);
   const init=c.d[0].toUpperCase();
