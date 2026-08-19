@@ -1,0 +1,4 @@
+# Copy this file to `.dev.vars` for local development (never commit .dev.vars).
+# Get the key from Semrush → Profile → API units / API key.
+SEMRUSH_API_KEY=your_semrush_api_key_here
+CACHE_TTL_HOURS=12

@@ -1,0 +1,14 @@
+{
+  "name": "weldwood-rank-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Weldwood Marketing keyword rank tracker — Cloudflare Pages + Semrush",
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "deploy": "wrangler pages deploy",
+    "tail": "wrangler pages deployment tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}
