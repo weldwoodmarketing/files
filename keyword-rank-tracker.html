@@ -298,7 +298,7 @@ td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflo
   <section class="block">
     <div class="sec-h"><span class="bolt" aria-hidden="true"></span><div>
       <h2>The climb</h2>
-      <p><b>44 → 455 keywords</b> in twelve months, traffic up ~45×. Two metrics, two scales — the lines do the talking.</p>
+      <p id="climbSub">Two metrics, two scales — the lines do the talking.</p>
     </div></div>
     <div class="grid2">
       <div class="chartcard chart-host" id="kwHost">
@@ -313,7 +313,7 @@ td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflo
   <section class="block">
     <div class="sec-h"><span class="bolt" aria-hidden="true"></span><div>
       <h2>Where you land</h2>
-      <p>All 455 keywords, sorted by how close to the top of Google they sit. Gold is the top of page one — the deep cuts are where the next wins hide.</p>
+      <p id="landSub">Keywords sorted by how close to the top of Google they sit. Gold is the top of page one — the deep cuts are where the next wins hide.</p>
     </div></div>
     <div class="panel"><div class="posbars" id="posbars"></div></div>
   </section>
@@ -499,6 +499,17 @@ function buildState(domain,out){
 const upSvg=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>`;
 const dnSvg=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
 
+function climbText(hist){
+  if(!hist||hist.length<2) return 'Live keyword and traffic history for this domain, month by month.';
+  const a=hist[0], b=hist[hist.length-1], months=hist.length;
+  let txt=`<b>${fmt(a.kw)} → ${fmt(b.kw)} keywords</b> over ${months} months`;
+  if(a.tr>0 && b.tr>0){
+    const m=b.tr/a.tr;
+    if(m>=1.5) txt+=`, traffic up ~${m>=10?Math.round(m):Math.round(m*10)/10}×`;
+    else if(m<=0.67) txt+=`, traffic down ~${Math.round((1-m)*100)}%`;
+  }
+  return txt+'. Two metrics, two scales — the lines do the talking.';
+}
 function render(s){
   state=s;
   $("errZone").hidden=true; $("dash").hidden=false;
@@ -517,6 +528,8 @@ function render(s){
   // charts
   drawArea($("kwHost"),s.hist,'kw',v=>v+' keywords');
   drawArea($("trHost"),s.hist,'tr',v=>v+' visits');
+  $("climbSub").innerHTML=climbText(s.hist);
+  $("landSub").innerHTML=`All <b>${fmt(s.kw)}</b> keywords, sorted by how close to the top of Google they sit. Gold is the top of page one — the deep cuts are where the next wins hide.`;
   // position bars
   const posMax=Math.max(1,...s.pos.map(p=>p.n));
   const shades=['var(--gold)','var(--teal)','color-mix(in srgb,var(--teal) 76%,var(--muted))','color-mix(in srgb,var(--teal) 54%,var(--muted))','color-mix(in srgb,var(--teal) 34%,var(--muted))','color-mix(in srgb,var(--muted) 72%,transparent)'];
