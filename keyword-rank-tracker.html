@@ -78,6 +78,11 @@ a{color:var(--rust-2)}
 .domsearch input{border:0;background:transparent;color:var(--ink);font:inherit;font-weight:700;outline:none;width:min(210px,40vw)}
 .domsearch button{border:0;background:var(--gold);color:#1c1e26;font:inherit;font-family:var(--disp);font-weight:900;text-transform:uppercase;letter-spacing:.03em;font-size:12px;padding:7px 12px;border-radius:6px;cursor:pointer}
 .domsearch button:disabled{opacity:.5;cursor:default}
+.devtog{display:flex;border:2px solid var(--outline);border-radius:9px;overflow:hidden;box-shadow:2px 2px 0 var(--outline);background:var(--surface)}
+.devtog button{border:0;background:transparent;color:var(--ink-2);font:inherit;font-family:var(--disp);font-weight:900;text-transform:uppercase;letter-spacing:.03em;font-size:11px;padding:9px 12px;cursor:pointer;white-space:nowrap}
+.devtog button+button{border-left:2px solid var(--outline)}
+.devtog button.on{background:var(--gold);color:#1c1e26}
+.devtog button:disabled{cursor:default;opacity:.6}
 #refreshBtn.spin svg{animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* live status + skeleton */
@@ -268,6 +273,10 @@ td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflo
       <input id="domInput" type="text" value="weldwoodmarketing.com" spellcheck="false" autocomplete="off" aria-label="Domain to research" placeholder="enter a domain…">
       <button type="submit" id="domGo" aria-label="Research domain">Research</button>
     </form>
+    <div class="devtog" id="devTog" role="group" aria-label="Device">
+      <button type="button" data-db="us" class="on" title="Desktop rankings">Desktop</button>
+      <button type="button" data-db="mobile-us" title="Mobile rankings">Mobile</button>
+    </div>
     <button class="iconbtn" id="refreshBtn" title="Refresh live data" aria-label="Refresh live data">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg>
     </button>
@@ -287,7 +296,7 @@ td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflo
     <div class="meta">
       <span class="livechip"><i class="d" id="statDot"></i> <span id="statText">Loading…</span></span>
       <span><i class="pip"></i> Source <b>Semrush</b></span>
-      <span><i class="pip"></i> Google US <b>Desktop</b></span>
+      <span><i class="pip"></i> Google US <b id="devLabel">Desktop</b></span>
     </div>
   </section>
 
@@ -394,7 +403,8 @@ td.kw .u{display:block;font-size:11px;color:var(--muted);font-weight:500;overflo
 //  LIVE DATA — Semrush via the artifact `mcp` capability.
 //  Search any domain; auto-refresh; graceful degraded states.
 // ============================================================
-const SERVER="Semrush", TOOL="execute_report", DB="us";
+const SERVER="Semrush", TOOL="execute_report";
+let db="us"; // 'us' = Google US desktop, 'mobile-us' = Google US mobile
 const IMAP={0:"C",1:"I",2:"N",3:"T"};
 const INAME={C:"Commercial",I:"Informational",N:"Navigational",T:"Transactional"};
 const DIRECTORIES=new Set(["yelp.com","clutch.co","designrush.com","bbb.org","thumbtack.com","manta.com","birdeye.com","upcity.com","goodfirms.co","expertise.com","g2.com","trustpilot.com","indeed.com","linkedin.com","facebook.com","semrush.com","sortlist.com","angi.com","houzz.com"]);
@@ -424,11 +434,11 @@ async function execReport(report,params,signal){
 async function fetchDomain(domain){
   const target=cleanDomain(domain);
   const jobs={
-    rank:execReport("domain_rank",{target,database:DB,export_columns:["domain","rank","organic_keywords","positions_1_3","positions_4_10","positions_11_20","positions_21_30","positions_31_40","positions_41_50","positions_51_60","positions_61_70","positions_71_80","positions_81_90","positions_91_100","organic_traffic","organic_traffic_cost"]}),
-    hist:execReport("resource_rank_history",{target,database:DB,display_limit:24,display_sort:"date_desc",export_columns:["date","rank","organic_keywords","organic_traffic","organic_traffic_cost"]}),
-    org:execReport("resource_organic",{target,database:DB,display_limit:50,display_sort:"traffic_desc",export_columns:["keyword","position","previous_position","position_difference","volume","cpc","url","traffic","keyword_difficulty","intent"]}),
+    rank:execReport("domain_rank",{target,database:db,export_columns:["domain","rank","organic_keywords","positions_1_3","positions_4_10","positions_11_20","positions_21_30","positions_31_40","positions_41_50","positions_51_60","positions_61_70","positions_71_80","positions_81_90","positions_91_100","organic_traffic","organic_traffic_cost"]}),
+    hist:execReport("resource_rank_history",{target,database:db,display_limit:24,display_sort:"date_desc",export_columns:["date","rank","organic_keywords","organic_traffic","organic_traffic_cost"]}),
+    org:execReport("resource_organic",{target,database:db,display_limit:50,display_sort:"traffic_desc",export_columns:["keyword","position","previous_position","position_difference","volume","cpc","url","traffic","keyword_difficulty","intent"]}),
     bl:execReport("backlinks_overview",{target,target_type:"root_domain",export_columns:["authority_score","total","domains_num"]}),
-    comp:execReport("domain_organic_organic",{domain:target,database:DB,display_limit:9,export_columns:["domain","competition_level","common_keywords","organic_keywords","organic_traffic"]}),
+    comp:execReport("domain_organic_organic",{domain:target,database:db,display_limit:9,export_columns:["domain","competition_level","common_keywords","organic_keywords","organic_traffic"]}),
   };
   const keys=Object.keys(jobs);
   const settled=await Promise.allSettled(keys.map(k=>jobs[k]));
@@ -661,6 +671,10 @@ $("domForm").addEventListener('submit',e=>{e.preventDefault();fInt='all';fPos='a
   const si=$("kwSearch"); if(si) si.value='';
   go($("domInput").value);});
 $("refreshBtn").addEventListener('click',()=>{ if(mcp) mcp.invalidate&&mcp.invalidate(SERVER); go($("domInput").value); });
+$("devTog").addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||b.classList.contains('on')||busy) return;
+  document.querySelectorAll('#devTog button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  db=b.dataset.db; $("devLabel").textContent = db==='mobile-us'?'Mobile':'Desktop';
+  if(mcp&&mcp.invalidate) mcp.invalidate(SERVER); go($("domInput").value); });
 
 document.querySelectorAll('thead th.sortable').forEach(th=>th.addEventListener('click',()=>{
   const k=th.dataset.k;
